@@ -1,0 +1,46 @@
+.tile {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(145deg, #f5e6c8, #e6d4a8);
+  border: 2px solid #c9a227;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: grab;
+  user-select: none;
+  font-family: 'Georgia', serif;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.tile.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.tile.placed {
+  cursor: default;
+  background: linear-gradient(145deg, #e6d4a8, #d4c298);
+}
+
+.tile-letter {
+  font-size: 24px;
+  font-weight: bold;
+  color: #2c1810;
+}
+
+.tile-value {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #5c4030;
+}

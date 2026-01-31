@@ -1,0 +1,57 @@
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 24px;
+  background: linear-gradient(180deg, #2a2a4a, #1a1a2e);
+  border-radius: 8px;
+  border: 2px solid #3a3a5a;
+  min-width: 400px;
+}
+
+.player-score {
+  text-align: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.player-score.active {
+  background: rgba(249, 168, 37, 0.15);
+  box-shadow: 0 0 0 2px rgba(249, 168, 37, 0.5);
+}
+
+.player-name {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 4px;
+  font-family: monospace;
+}
+
+.player-score.active .player-name {
+  color: #f9a825;
+}
+
+.player-points {
+  font-size: 32px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.tiles-remaining {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tiles-icon {
+  font-size: 24px;
+}
+
+.tiles-count {
+  font-size: 18px;
+  font-weight: bold;
+  color: #888;
+}

@@ -1,0 +1,383 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { GameState, TilePlacement, ValidationResult } from "../types/game";
+import type { DecryptedGameEvent } from "../types/nostr";
+import { GameEngine } from "../engine/GameEngine";
+import { NostrSync } from "../nostr/NostrSync";
+import { getCurrentUser } from "../nostr/client";
+
+export interface UseGameReturn {
+  gameState: GameState | null;
+  playerRack: string[];
+  isMyTurn: boolean;
+  isLoading: boolean;
+  error: string | null;
+  lastEventId: string | null;
+
+  // Actions
+  createGame: (opponentPubkey: string) => Promise<string>;
+  loadGame: (gameId: string, opponentPubkey: string) => Promise<void>;
+  makeMove: (placements: TilePlacement[]) => Promise<ValidationResult>;
+  pass: () => Promise<void>;
+  exchange: (tiles: string[]) => Promise<void>;
+  resign: () => Promise<void>;
+
+  // Validation
+  validateMove: (placements: TilePlacement[]) => ValidationResult;
+}
+
+export function useGame(): UseGameReturn {
+  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [playerRack, setPlayerRack] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastEventId, setLastEventId] = useState<string | null>(null);
+
+  const syncRef = useRef<NostrSync | null>(null);
+
+  const user = getCurrentUser();
+  const myPubkey = user?.pubkey || "";
+
+  const isMyTurn = gameState?.turn.activePlayer === myPubkey;
+
+  // Handle incoming game updates
+  const handleGameUpdate = useCallback(
+    (event: DecryptedGameEvent) => {
+      // Validate the update
+      if (gameState && lastEventId) {
+        const validation = syncRef.current?.validateStateUpdate(
+          gameState,
+          event,
+          lastEventId,
+        );
+
+        if (validation && !validation.valid) {
+          console.warn("Invalid state update:", validation.error);
+          return;
+        }
+      }
+
+      setGameState(event.state);
+      setLastEventId(event.event.id);
+    },
+    [gameState, lastEventId],
+  );
+
+  // Create a new game
+  const createGame = useCallback(
+    async (opponentPubkey: string): Promise<string> => {
+      if (!myPubkey) {
+        throw new Error("Must be logged in to create a game");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const { gameId, state } = await NostrSync.createGame(
+          myPubkey,
+          opponentPubkey,
+        );
+
+        // Draw initial rack for player one
+        const [rack, remainingBag] = GameEngine.drawInitialRack(state.tileBag);
+        const updatedState = { ...state, tileBag: remainingBag };
+
+        // Set up sync
+        syncRef.current = new NostrSync(gameId, opponentPubkey);
+
+        // Save rack
+        await syncRef.current.savePlayerRack({ rack });
+
+        setGameState(updatedState);
+        setPlayerRack(rack);
+        setLastEventId(""); // Initial state has no previous event
+
+        // Subscribe to updates
+        syncRef.current.subscribeToGameUpdates(handleGameUpdate, (err) => {
+          setError(err.message);
+        });
+
+        return gameId;
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to create game";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [myPubkey, handleGameUpdate],
+  );
+
+  // Load an existing game
+  const loadGame = useCallback(
+    async (gameId: string, opponentPubkey: string) => {
+      if (!myPubkey) {
+        throw new Error("Must be logged in to load a game");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Set up sync
+        syncRef.current = new NostrSync(gameId, opponentPubkey);
+
+        // Fetch latest state
+        const latest = await syncRef.current.fetchLatestGameState();
+        if (!latest) {
+          throw new Error("Game not found");
+        }
+
+        // Fetch player rack
+        const rackData = await syncRef.current.fetchPlayerRack();
+
+        setGameState(latest.state);
+        setLastEventId(latest.event.id);
+        setPlayerRack(rackData?.rack || []);
+
+        // Subscribe to updates
+        syncRef.current.subscribeToGameUpdates(handleGameUpdate, (err) => {
+          setError(err.message);
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to load game";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [myPubkey, handleGameUpdate],
+  );
+
+  // Validate a potential move
+  const validateMoveAction = useCallback(
+    (placements: TilePlacement[]): ValidationResult => {
+      if (!gameState) {
+        return { valid: false, error: "No game loaded" };
+      }
+
+      return GameEngine.validateMove(gameState, placements, playerRack);
+    },
+    [gameState, playerRack],
+  );
+
+  // Make a move
+  const makeMove = useCallback(
+    async (placements: TilePlacement[]): Promise<ValidationResult> => {
+      if (!gameState || !syncRef.current || !myPubkey) {
+        return { valid: false, error: "Game not ready" };
+      }
+
+      if (!isMyTurn) {
+        return { valid: false, error: "Not your turn" };
+      }
+
+      const validation = validateMoveAction(placements);
+      if (!validation.valid) {
+        return validation;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Apply the move
+        const {
+          state: newState,
+          move,
+          tilesDrawn,
+        } = GameEngine.applyMove(
+          gameState,
+          placements,
+          myPubkey,
+          lastEventId || "",
+        );
+
+        // Update rack: remove used tiles, add drawn tiles
+        const newRack = [...playerRack];
+        for (const p of placements) {
+          const tileToRemove = p.isBlank ? "BLANK" : p.letter;
+          const idx = newRack.indexOf(tileToRemove);
+          if (idx !== -1) {
+            newRack.splice(idx, 1);
+          }
+        }
+        newRack.push(...tilesDrawn);
+
+        // Publish to Nostr
+        const eventId = await syncRef.current.publishGameState(
+          newState,
+          lastEventId || "",
+        );
+
+        // Save updated rack
+        await syncRef.current.savePlayerRack({ rack: newRack });
+
+        // Update local state
+        setGameState(newState);
+        setPlayerRack(newRack);
+        setLastEventId(eventId);
+
+        return {
+          valid: true,
+          words: validation.words,
+          score: move.score,
+        };
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to make move";
+        setError(message);
+        return { valid: false, error: message };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      gameState,
+      myPubkey,
+      isMyTurn,
+      lastEventId,
+      playerRack,
+      validateMoveAction,
+    ],
+  );
+
+  // Pass turn
+  const pass = useCallback(async () => {
+    if (!gameState || !syncRef.current || !myPubkey) {
+      throw new Error("Game not ready");
+    }
+
+    if (!isMyTurn) {
+      throw new Error("Not your turn");
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const newState = GameEngine.applyPass(
+        gameState,
+        myPubkey,
+        lastEventId || "",
+      );
+      const eventId = await syncRef.current.publishGameState(
+        newState,
+        lastEventId || "",
+      );
+
+      setGameState(newState);
+      setLastEventId(eventId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to pass";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [gameState, myPubkey, isMyTurn, lastEventId]);
+
+  // Exchange tiles
+  const exchange = useCallback(
+    async (tiles: string[]) => {
+      if (!gameState || !syncRef.current || !myPubkey) {
+        throw new Error("Game not ready");
+      }
+
+      if (!isMyTurn) {
+        throw new Error("Not your turn");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const { state: newState, newTiles } = GameEngine.exchangeTiles(
+          gameState,
+          tiles,
+          playerRack,
+          myPubkey,
+          lastEventId || "",
+        );
+
+        // Update rack
+        const newRack = playerRack.filter((t) => !tiles.includes(t));
+        newRack.push(...newTiles);
+
+        const eventId = await syncRef.current.publishGameState(
+          newState,
+          lastEventId || "",
+        );
+        await syncRef.current.savePlayerRack({ rack: newRack });
+
+        setGameState(newState);
+        setPlayerRack(newRack);
+        setLastEventId(eventId);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to exchange";
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [gameState, myPubkey, isMyTurn, lastEventId, playerRack],
+  );
+
+  // Resign
+  const resign = useCallback(async () => {
+    if (!gameState || !syncRef.current || !myPubkey) {
+      throw new Error("Game not ready");
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const newState = GameEngine.abandonGame(gameState, myPubkey);
+      const eventId = await syncRef.current.publishGameState(
+        newState,
+        lastEventId || "",
+      );
+
+      setGameState(newState);
+      setLastEventId(eventId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to resign";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [gameState, myPubkey, lastEventId]);
+
+  // Cleanup subscription on unmount
+  useEffect(() => {
+    return () => {
+      syncRef.current?.stopSubscription();
+    };
+  }, []);
+
+  return {
+    gameState,
+    playerRack,
+    isMyTurn,
+    isLoading,
+    error,
+    lastEventId,
+    createGame,
+    loadGame,
+    makeMove,
+    pass,
+    exchange,
+    resign,
+    validateMove: validateMoveAction,
+  };
+}
+
+export default useGame;
