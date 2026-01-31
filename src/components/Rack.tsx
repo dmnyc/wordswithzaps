@@ -7,6 +7,7 @@ interface RackProps {
   selectedTile: number | null;
   onSelectTile: (index: number | null) => void;
   onReturnTile?: (x: number, y: number) => void;
+  onReorder?: (tiles: string[]) => void;
   disabled?: boolean;
 }
 
@@ -15,14 +16,18 @@ export function Rack({
   selectedTile,
   onSelectTile,
   onReturnTile,
+  onReorder,
   disabled = false,
 }: RackProps) {
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const handleDragStart = useCallback(
-    (index: number) => (_event: React.DragEvent<HTMLDivElement>) => {
+    (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
       setDraggingIndex(index);
       onSelectTile(index);
+      event.dataTransfer.setData("application/x-wwz-rack", String(index));
+      event.dataTransfer.effectAllowed = "move";
     },
     [onSelectTile],
   );
@@ -30,6 +35,7 @@ export function Rack({
   const handleDragEnd = useCallback(
     (_event: React.DragEvent<HTMLDivElement>) => {
       setDraggingIndex(null);
+      setDragOverIndex(null);
     },
     [],
   );
@@ -42,42 +48,100 @@ export function Rack({
     [disabled, selectedTile, onSelectTile],
   );
 
-  const handleDragOver = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      if (!onReturnTile || disabled) return;
+  const handleSlotDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>, index: number) => {
       event.preventDefault();
-    },
-    [onReturnTile, disabled],
-  );
-
-  const handleDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      if (!onReturnTile || disabled) return;
-      event.preventDefault();
-      const payload = event.dataTransfer.getData("application/x-wwz-placement");
-      if (!payload) return;
-      try {
-        const data = JSON.parse(payload) as { x: number; y: number };
-        onReturnTile(data.x, data.y);
-      } catch {
-        // Ignore malformed drops
+      // Check if it's a rack reorder or a board return
+      const rackData = event.dataTransfer.types.includes(
+        "application/x-wwz-rack",
+      );
+      if (rackData) {
+        setDragOverIndex(index);
       }
     },
-    [onReturnTile, disabled],
+    [],
+  );
+
+  const handleSlotDragLeave = useCallback(() => {
+    setDragOverIndex(null);
+  }, []);
+
+  const handleSlotDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>, targetIndex: number) => {
+      event.preventDefault();
+      setDragOverIndex(null);
+
+      // Check for rack reorder
+      const rackData = event.dataTransfer.getData("application/x-wwz-rack");
+      if (rackData && onReorder) {
+        const sourceIndex = parseInt(rackData, 10);
+        if (sourceIndex !== targetIndex && !isNaN(sourceIndex)) {
+          const newTiles = [...tiles];
+          const [removed] = newTiles.splice(sourceIndex, 1);
+          newTiles.splice(targetIndex, 0, removed);
+          onReorder(newTiles);
+          onSelectTile(null);
+        }
+        return;
+      }
+
+      // Check for board return
+      const placementData = event.dataTransfer.getData(
+        "application/x-wwz-placement",
+      );
+      if (placementData && onReturnTile) {
+        try {
+          const data = JSON.parse(placementData) as { x: number; y: number };
+          onReturnTile(data.x, data.y);
+        } catch {
+          // Ignore malformed drops
+        }
+      }
+    },
+    [tiles, onReorder, onReturnTile, onSelectTile],
+  );
+
+  const handleRackDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+    },
+    [],
+  );
+
+  const handleRackDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      // Only handle board returns at rack level (not slot level)
+      const placementData = event.dataTransfer.getData(
+        "application/x-wwz-placement",
+      );
+      if (placementData && onReturnTile) {
+        event.preventDefault();
+        try {
+          const data = JSON.parse(placementData) as { x: number; y: number };
+          onReturnTile(data.x, data.y);
+        } catch {
+          // Ignore malformed drops
+        }
+      }
+    },
+    [onReturnTile],
   );
 
   return (
     <div
       className={`rack ${disabled ? "disabled" : ""}`}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
+      onDragOver={handleRackDragOver}
+      onDrop={handleRackDrop}
     >
       <div className="rack-tiles">
         {tiles.map((letter, index) => (
           <div
             key={index}
-            className={`rack-slot ${selectedTile === index ? "selected" : ""}`}
+            className={`rack-slot ${selectedTile === index ? "selected" : ""} ${dragOverIndex === index ? "drag-over" : ""}`}
             onClick={() => handleClick(index)}
+            onDragOver={(e) => handleSlotDragOver(e, index)}
+            onDragLeave={handleSlotDragLeave}
+            onDrop={(e) => handleSlotDrop(e, index)}
           >
             <Tile
               letter={letter}

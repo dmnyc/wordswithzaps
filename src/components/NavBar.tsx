@@ -90,12 +90,14 @@ export function NavBar({
         <img
           src="/assets/wwz_logo_full_horiz.svg"
           alt="Words With Zaps"
-          className="nav-logo full"
+          className={`nav-logo full ${onBackToLobby ? "clickable" : ""}`}
+          onClick={onBackToLobby}
         />
         <img
           src="/assets/wwz_logo_abbr_horiz.svg"
           alt="Words With Zaps"
-          className="nav-logo abbr"
+          className={`nav-logo abbr ${onBackToLobby ? "clickable" : ""}`}
+          onClick={onBackToLobby}
         />
       </div>
 

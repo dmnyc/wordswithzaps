@@ -211,10 +211,11 @@ export function GameView({
         } catch (err) {
           // Move succeeded but zap failed - notify user
           console.warn("Zap failed:", err);
-          setZapError(
-            "Move played, but zap notification failed. You may want to notify your opponent manually.",
-          );
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          setZapError(`Move played, but zap failed: ${errorMsg}`);
         }
+      } else if (!walletState.connected) {
+        console.log("Wallet not connected, skipping zap");
       }
     }
   }, [
@@ -356,6 +357,7 @@ export function GameView({
         selectedTile={selectedTileIndex}
         onSelectTile={setSelectedTileIndex}
         onReturnTile={handleRemoveTile}
+        onReorder={setLocalRack}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
       />
 

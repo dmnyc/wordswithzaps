@@ -34,11 +34,34 @@ export function useGame(): UseGameReturn {
   const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const syncRef = useRef<NostrSync | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevIsMyTurnRef = useRef<boolean | null>(null);
 
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
 
   const isMyTurn = gameState?.turn.activePlayer === myPubkey;
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Send browser notification when it becomes your turn
+  useEffect(() => {
+    if (prevIsMyTurnRef.current === false && isMyTurn === true) {
+      // It just became our turn - always notify
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Words With Zaps", {
+          body: "It's your turn!",
+          icon: "/assets/wwz_logo_stack.svg",
+        });
+      }
+    }
+    prevIsMyTurnRef.current = isMyTurn;
+  }, [isMyTurn]);
 
   // Handle incoming game updates
   const handleGameUpdate = useCallback(
@@ -160,6 +183,29 @@ export function useGame(): UseGameReturn {
         syncRef.current.subscribeToGameUpdates(handleGameUpdate, (err) => {
           setError(err.message);
         });
+
+        // Set up polling as backup (every 15 seconds)
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+        }
+        pollIntervalRef.current = setInterval(async () => {
+          if (!syncRef.current) return;
+          try {
+            const latest = await syncRef.current.fetchLatestGameState();
+            if (latest && latest.event.id !== lastEventId) {
+              setGameState(latest.state);
+              setLastEventId(latest.event.id);
+
+              // Also refresh the rack
+              const rackData = await syncRef.current.fetchPlayerRack();
+              if (rackData?.rack) {
+                setPlayerRack(rackData.rack);
+              }
+            }
+          } catch (err) {
+            console.warn("Polling error:", err);
+          }
+        }, 15000);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to load game";
@@ -169,7 +215,7 @@ export function useGame(): UseGameReturn {
         setIsLoading(false);
       }
     },
-    [myPubkey, handleGameUpdate],
+    [myPubkey, handleGameUpdate, lastEventId],
   );
 
   // Validate a potential move
@@ -414,10 +460,14 @@ export function useGame(): UseGameReturn {
     }
   }, [gameState, myPubkey, lastEventId]);
 
-  // Cleanup subscription on unmount
+  // Cleanup subscription and polling on unmount
   useEffect(() => {
     return () => {
       syncRef.current?.stopSubscription();
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
     };
   }, []);
 

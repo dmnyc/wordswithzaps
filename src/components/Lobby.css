@@ -1,416 +1,359 @@
 .lobby {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 48px 24px;
-}
-
-.lobby-title {
-    text-align: center;
-    font-size: 36px;
-    color: #ffcc00;
-    margin-bottom: 24px;
-}
-
-.copy-btn {
-    padding: 4px 12px;
-    font-size: 12px;
-    background: rgba(255, 204, 0, 0.2);
-    color: #ffcc00;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.copy-btn:hover {
-    background: rgba(255, 204, 0, 0.3);
+    max-width: 480px;
+    margin: 24px auto;
+    padding: 24px;
+    background: rgba(30, 30, 30, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
 .lobby-error {
     background: rgba(255, 91, 91, 0.16);
-    border: none;
     color: #ff9b9b;
     padding: 12px 16px;
     border-radius: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     text-align: center;
+    font-size: 14px;
 }
 
-.lobby-sections {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+/* Games Section */
+.games-section {
+    margin-bottom: 32px;
 }
 
-.lobby-section {
-    background: linear-gradient(180deg, #1e1e1e, #151515);
-    padding: 24px;
-    border-radius: 12px;
-    border: none;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-}
-
-.lobby-section h2 {
-    font-size: 20px;
-    color: #fff;
-    margin-bottom: 8px;
-}
-
-.lobby-section-header {
+.games-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    margin-bottom: 16px;
 }
 
-.lobby-actions {
+.games-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.games-header-actions {
     display: flex;
     gap: 8px;
 }
 
-.section-desc {
-    font-size: 14px;
-    color: #9a9a9a;
-    margin-bottom: 20px;
-}
-
-.lobby-input {
-    width: 100%;
-    padding: 12px 16px;
-    font-size: 14px;
-    background: rgba(255, 255, 255, 0.04);
-    border: none;
+.text-btn {
+    padding: 6px 10px;
     border-radius: 6px;
-    color: #fff;
-    margin-bottom: 12px;
-    font-family: monospace;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    color: #888;
+    cursor: pointer;
+    font-size: 12px;
+    transition:
+        background 0.15s,
+        color 0.15s;
 }
 
-.lobby-input:focus {
-    outline: none;
-    box-shadow: inset 0 0 0 1px rgba(255, 204, 0, 0.6);
+.text-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
 }
 
-.lobby-input::placeholder {
-    color: #6f6f6f;
+.text-btn.active {
+    background: rgba(255, 204, 0, 0.12);
+    color: #ffcc00;
 }
 
-.opponent-selected {
+.text-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Game Cards */
+.games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.game-card {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: none;
-    background: rgba(255, 255, 255, 0.05);
-    margin-bottom: 12px;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.game-card:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.game-card.ended {
+    opacity: 0.5;
+}
+
+.game-card.my-turn {
+    background: rgba(255, 204, 0, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 204, 0, 0.2);
+}
+
+.game-card.my-turn:hover {
+    background: rgba(255, 204, 0, 0.12);
+}
+
+.opponent-avatar-wrapper {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
 }
 
 .opponent-avatar {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
 }
 
 .opponent-avatar.fallback {
-    display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 204, 0, 0.2);
-    color: #ffcc00;
+    background: rgba(255, 255, 255, 0.1);
+    color: #999;
     font-weight: 600;
+    font-size: 16px;
 }
 
-.opponent-info {
+.game-info {
     flex: 1;
     min-width: 0;
 }
 
+.game-top-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
 .opponent-name {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 2px;
 }
 
-.opponent-nip05 {
-    font-size: 12px;
-    color: #68d391;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
-}
-
-.opponent-pubkey {
-    font-size: 11px;
-    color: #8a8a8a;
-    font-family: monospace;
-}
-
-.opponent-clear {
-    padding: 6px 10px;
-    font-size: 12px;
-    border-radius: 6px;
-    border: none;
-    background: rgba(255, 255, 255, 0.06);
-    color: #ccc;
-    cursor: pointer;
-}
-
-.opponent-clear:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.lobby-btn {
-    width: 100%;
-    padding: 14px 24px;
-    font-size: 16px;
-    font-weight: bold;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition:
-        transform 0.1s,
-        box-shadow 0.1s;
-}
-
-.lobby-btn.tiny {
-    width: auto;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.lobby-btn.danger {
-    background: rgba(255, 91, 91, 0.2);
-    color: #ff8f8f;
-    border: none;
-}
-
-.lobby-btn.danger:hover {
-    background: rgba(255, 107, 107, 0.3);
-}
-
-.games-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.game-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 14px;
-    border-radius: 8px;
-    border: none;
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.game-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.game-id {
-    font-size: 13px;
-    color: #fff;
-    font-weight: 600;
-    word-break: break-all;
-}
-
-.game-id-sub {
-    font-size: 11px;
-    color: #8a8a8a;
-    font-family: monospace;
-}
-
-.game-opponent {
-    font-size: 12px;
-    color: #bbb;
-}
-
-.game-players {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.profile-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.profile-avatar.small {
-    width: 28px;
-    height: 28px;
-}
-
-.profile-avatar.fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 204, 0, 0.2);
-    color: #ffcc00;
-    font-weight: 700;
-    font-size: 12px;
-}
-
-.player-chip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-
-.player-chip .profile-avatar {
-    width: 28px;
-    height: 28px;
-    border: none;
-    box-shadow: 0 0 0 2px rgba(20, 20, 20, 0.9);
-}
-
-.player-chip .profile-avatar.fallback {
-    border: none;
-    box-shadow: 0 0 0 2px rgba(20, 20, 20, 0.9);
-}
-
-.player-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.player-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: #fff;
-    max-width: 180px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.player-role {
+.turn-badge {
     font-size: 10px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #7a7a7a;
-}
-
-.game-updated {
-    font-size: 11px;
-    color: #7a7a7a;
-}
-
-.game-status-row {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    font-size: 11px;
-    color: #9a9a9a;
-}
-
-.game-status-badge {
+    letter-spacing: 0.03em;
     padding: 2px 6px;
-    border-radius: 999px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 10px;
-}
-
-.status-active {
-    background: rgba(104, 211, 145, 0.18);
-    color: #68d391;
-}
-
-.status-completed {
-    background: rgba(255, 204, 0, 0.2);
-    color: #ffcc00;
-}
-
-.status-abandoned {
-    background: rgba(255, 91, 91, 0.18);
-    color: #ff8f8f;
-}
-
-.status-deleted {
-    background: rgba(255, 91, 91, 0.28);
-    color: #ff5b5b;
-}
-
-.status-unknown {
-    background: rgba(255, 255, 255, 0.1);
-    color: #bbb;
-}
-
-.game-actions {
-    display: flex;
-    gap: 8px;
+    border-radius: 4px;
     flex-shrink: 0;
 }
 
-.games-empty {
-    font-size: 13px;
-    color: #8a8a8a;
-    padding: 8px 0;
+.turn-badge.your-turn {
+    background: rgba(255, 204, 0, 0.2);
+    color: #ffcc00;
 }
 
-.lobby-btn:disabled {
+.turn-badge.their-turn {
+    background: rgba(255, 255, 255, 0.08);
+    color: #888;
+}
+
+.game-subtext {
+    font-size: 12px;
+    color: #666;
+}
+
+.game-subtext .game-name {
+    color: #888;
+}
+
+.game-status {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.game-status.active {
+    color: #68d391;
+}
+
+.game-status.completed {
+    color: #ffcc00;
+}
+
+.game-status.abandoned,
+.game-status.deleted {
+    color: #ff8f8f;
+}
+
+.games-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: #666;
+    font-size: 14px;
+}
+
+/* New Game Section */
+.new-game-section {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.new-game-section h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 16px 0;
+}
+
+.create-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: linear-gradient(180deg, #ffcc00, #f2b500);
+    color: #0b0b0b;
+    box-shadow: 0 8px 20px rgba(255, 204, 0, 0.15);
+    transition:
+        transform 0.1s,
+        box-shadow 0.1s;
+    margin-top: 12px;
+}
+
+.create-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(255, 204, 0, 0.25);
+}
+
+.create-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
-.lobby-btn:not(:disabled):hover {
-    transform: translateY(-2px);
-}
-
-.lobby-btn.primary {
-    background: linear-gradient(180deg, #ffcc00, #f2b500);
-    color: #0b0b0b;
-    box-shadow: 0 10px 20px rgba(255, 204, 0, 0.18);
-}
-
-.lobby-btn.primary:not(:disabled):hover {
-    box-shadow: 0 12px 24px rgba(255, 204, 0, 0.3);
-}
-
-.lobby-btn.secondary {
-    background: rgba(255, 255, 255, 0.08);
-    color: #e5e5e5;
-}
-
-.lobby-divider {
+/* Selected opponent preview */
+.selected-opponent {
     display: flex;
     align-items: center;
-    gap: 16px;
-    color: #6f6f6f;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-top: 12px;
 }
 
-.lobby-divider::before,
-.lobby-divider::after {
-    content: "";
+.selected-opponent .opponent-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+.selected-opponent-info {
     flex: 1;
-    height: 1px;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.15),
-        transparent
-    );
+    min-width: 0;
+}
+
+.selected-opponent-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.selected-opponent-nip05 {
+    font-size: 11px;
+    color: #68d391;
+}
+
+.clear-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #999;
+    cursor: pointer;
+}
+
+.clear-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+/* Join Game Toggle */
+.join-toggle {
+    margin-top: 16px;
+    text-align: center;
+}
+
+.join-toggle-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 8px 12px;
+}
+
+.join-toggle-btn:hover {
+    color: #999;
+}
+
+.join-form {
+    margin-top: 12px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.join-form input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.04);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    margin-bottom: 8px;
+    font-family: monospace;
+}
+
+.join-form input:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 204, 0, 0.4);
+}
+
+.join-form input::placeholder {
+    color: #555;
+}
+
+.join-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ccc;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.join-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
 }

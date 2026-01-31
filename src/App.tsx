@@ -212,6 +212,11 @@ function App() {
 
   const handleBackToLobby = () => {
     setGameSession(null);
+    setPrefillGameId(null); // Clear so we don't auto-rejoin
+    // Clear gameId from URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete("gameId");
+    window.history.replaceState({}, "", url.toString());
     setScreen("lobby");
   };
 

@@ -23,6 +23,15 @@
     display: block;
 }
 
+.nav-logo.clickable {
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.nav-logo.clickable:hover {
+    opacity: 0.8;
+}
+
 .nav-logo.abbr {
     display: none;
     height: 26px;

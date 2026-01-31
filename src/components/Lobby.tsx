@@ -3,11 +3,7 @@ import { useGame } from "../hooks/useGame";
 import { getCurrentUser, subscribeToEvents } from "../nostr/client";
 import { fetchProfile, normalizePubkey } from "../nostr/profiles";
 import { getGameLabel } from "../utils/gameLabel";
-import {
-  fetchUserGames,
-  deleteGameFromLobby,
-  type GameSummary,
-} from "../nostr/games";
+import { fetchUserGames, type GameSummary } from "../nostr/games";
 import { GAME_KIND } from "../types/nostr";
 import type { NostrProfile } from "../types/nostr";
 import OpponentSearch from "./OpponentSearch";
@@ -30,13 +26,12 @@ export function Lobby({
   );
   const [joinGameId, setJoinGameId] = useState("");
   const [joinOpponent, setJoinOpponent] = useState("");
+  const [showJoinForm, setShowJoinForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [games, setGames] = useState<GameSummary[]>([]);
   const [isLoadingGames, setIsLoadingGames] = useState(false);
-  const [gamesError, setGamesError] = useState<string | null>(null);
   const [showEndedGames, setShowEndedGames] = useState(false);
-  const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
     {},
   );
@@ -48,6 +43,7 @@ export function Lobby({
   useEffect(() => {
     if (prefillGameId && !joinGameId) {
       setJoinGameId(prefillGameId);
+      setShowJoinForm(true);
     }
     if (prefillError) {
       setError(prefillError);
@@ -57,14 +53,11 @@ export function Lobby({
   const loadGames = useCallback(async () => {
     if (!user?.pubkey) return;
     setIsLoadingGames(true);
-    setGamesError(null);
     try {
       const results = await fetchUserGames(user.pubkey);
       setGames(results);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load games";
-      setGamesError(message);
+      console.error("Failed to load games:", err);
     } finally {
       setIsLoadingGames(false);
     }
@@ -105,17 +98,13 @@ export function Lobby({
     loadGames();
   }, [user?.pubkey, loadGames]);
 
+  // Load profiles for opponents
   useEffect(() => {
     if (!user?.pubkey) return;
     const pubkeys = new Set<string>();
-    pubkeys.add(user.pubkey);
     for (const game of games) {
       if (game.opponentPubkey) {
         pubkeys.add(game.opponentPubkey);
-      } else {
-        for (const player of game.players) {
-          pubkeys.add(player);
-        }
       }
     }
 
@@ -155,28 +144,16 @@ export function Lobby({
     };
   }, [user?.pubkey, games, profiles]);
 
-  const handleOpponentInputChange = (value: string) => {
-    setOpponentInput(value);
-    if (selectedOpponent) {
-      setSelectedOpponent(null);
-    }
-    if (error) {
-      setError(null);
-    }
-  };
-
   const handleOpponentSelect = (profile: NostrProfile) => {
     setSelectedOpponent(profile);
-    if (error) {
-      setError(null);
-    }
+    setError(null);
   };
 
   const handleCreateGame = useCallback(async () => {
     const pubkey =
       selectedOpponent?.pubkey || normalizePubkey(opponentInput) || "";
     if (!pubkey) {
-      setError("Select an opponent or enter a valid npub/pubkey");
+      setError("Select an opponent or enter a valid npub");
       return;
     }
 
@@ -200,373 +177,259 @@ export function Lobby({
 
   const handleJoinGame = useCallback(() => {
     if (!joinGameId.trim() || !joinOpponent.trim()) {
-      setError("Please enter both game ID and opponent pubkey");
+      setError("Enter both game ID and opponent");
       return;
     }
 
     const pubkey = normalizePubkey(joinOpponent);
     if (!pubkey) {
-      setError("Invalid opponent pubkey format");
-      return;
-    }
-
-    if (pubkey === user?.pubkey) {
-      setError("Cannot play against yourself");
+      setError("Invalid opponent pubkey");
       return;
     }
 
     onGameStart(joinGameId.trim(), pubkey);
-  }, [joinGameId, joinOpponent, onGameStart, user?.pubkey]);
+  }, [joinGameId, joinOpponent, onGameStart]);
 
-  const getDisplayName = (profile: NostrProfile) =>
-    profile.displayName || profile.name || "Anonymous";
-
-  const getTruncatedPubkey = (pubkey: string) =>
-    `${pubkey.slice(0, 10)}...${pubkey.slice(-8)}`;
-
-  const getTruncatedGameId = (gameId: string) =>
-    `${gameId.slice(0, 8)}...${gameId.slice(-6)}`;
-
-  const getProfileName = (pubkey: string, fallback: string) => {
+  const getOpponentName = (pubkey: string) => {
     const profile = profiles[pubkey];
-    return profile?.displayName || profile?.name || fallback;
+    return profile?.displayName || profile?.name || pubkey.slice(0, 8) + "...";
   };
 
-  const getProfilePicture = (pubkey: string) => profiles[pubkey]?.picture;
+  const getOpponentPicture = (pubkey: string) => profiles[pubkey]?.picture;
 
-  const getInitial = (label: string) => label.charAt(0).toUpperCase();
-
-  const formatUpdatedAt = (timestamp: number) => {
-    if (!timestamp) return "Unknown";
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleString();
+  const getOpponentInitial = (pubkey: string) => {
+    const profile = profiles[pubkey];
+    const name = profile?.displayName || profile?.name;
+    return name ? name.charAt(0).toUpperCase() : pubkey.charAt(0).toUpperCase();
   };
 
-  const getTurnLabel = (game: GameSummary) => {
-    if (!game.turnIndex && game.turnIndex !== 0) return "Turn ?";
-    return `Turns played: ${game.turnIndex}`;
-  };
+  const isMyTurn = (game: GameSummary) => game.activePlayer === user?.pubkey;
 
-  const getActiveLabel = (game: GameSummary) => {
-    if (!game.activePlayer) return "Active player unknown";
-    if (game.activePlayer === user?.pubkey) return "Your turn";
-    return "Opponent's turn";
-  };
-
-  const getStatusLabel = (game: GameSummary) => {
-    if (!game.status) return "Status unknown";
-    if (game.status === "deleted") {
-      if (game.deletedBy === user?.pubkey) return "Deleted by you";
-      if (game.deletedBy) return "Deleted by opponent";
-      return "Deleted";
-    }
-    return game.status === "active"
-      ? "Active"
-      : game.status === "completed"
-        ? "Completed"
-        : "Abandoned";
-  };
-
-  const getStatusClass = (game: GameSummary) =>
-    game.status ? `status-${game.status}` : "status-unknown";
+  const isGameEnded = (game: GameSummary) =>
+    game.status === "completed" ||
+    game.status === "abandoned" ||
+    game.status === "deleted";
 
   const visibleGames = showEndedGames
     ? games
-    : games.filter(
-        (game) =>
-          game.status !== "abandoned" &&
-          game.status !== "completed" &&
-          game.status !== "deleted",
-      );
+    : games.filter((game) => !isGameEnded(game));
 
-  const handleDeleteFromLobby = useCallback(
-    async (game: GameSummary) => {
-      if (!user?.pubkey) return;
-      if (game.creatorPubkey && game.creatorPubkey !== user.pubkey) {
-        setGamesError("Only the game creator can delete this game.");
-        return;
-      }
-      const confirmed = window.confirm(
-        `Delete game ${game.gameId}? This will mark it as deleted for both players.`,
-      );
-      if (!confirmed) return;
-
-      setDeletingGameId(game.gameId);
-      setGamesError(null);
-      try {
-        await deleteGameFromLobby(game.gameId, user.pubkey);
-        await loadGames();
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to delete game";
-        setGamesError(message);
-      } finally {
-        setDeletingGameId(null);
-      }
-    },
-    [user?.pubkey, loadGames],
-  );
+  const handleGameClick = (game: GameSummary) => {
+    if (isGameEnded(game)) return;
+    const opponent =
+      game.opponentPubkey || game.players.find((p) => p !== user?.pubkey);
+    if (opponent) {
+      onGameStart(game.gameId, opponent);
+    }
+  };
 
   return (
     <div className="lobby">
       {error && <div className="lobby-error">{error}</div>}
 
-      <div className="lobby-sections">
-        <div className="lobby-section">
-          <div className="lobby-section-header">
-            <h2>Your Games</h2>
-            <div className="lobby-actions">
-              <button
-                className="lobby-btn tiny"
-                onClick={() => setShowEndedGames((prev) => !prev)}
-              >
-                {showEndedGames ? "Hide ended" : "Show ended"}
-              </button>
-              <button
-                className="lobby-btn tiny"
-                onClick={loadGames}
-                disabled={isLoadingGames}
-              >
-                {isLoadingGames ? "Refreshing..." : "Refresh"}
-              </button>
-            </div>
+      {/* Games List */}
+      <div className="games-section">
+        <div className="games-header">
+          <h2>Your Games</h2>
+          <div className="games-header-actions">
+            <button
+              className={`text-btn ${showEndedGames ? "active" : ""}`}
+              onClick={() => setShowEndedGames((prev) => !prev)}
+            >
+              {showEndedGames ? "Hide ended" : "Show ended"}
+            </button>
+            <button
+              className="text-btn"
+              onClick={loadGames}
+              disabled={isLoadingGames}
+            >
+              {isLoadingGames ? "..." : "Refresh"}
+            </button>
           </div>
-          <p className="section-desc">
-            Resume a game you are tagged in on relays
-          </p>
-
-          {gamesError && <div className="lobby-error">{gamesError}</div>}
-
-          {isLoadingGames ? (
-            <div className="games-empty">Loading games...</div>
-          ) : visibleGames.length === 0 ? (
-            <div className="games-empty">
-              {games.length === 0
-                ? "No games found yet."
-                : "No active games. Toggle to show ended games."}
-            </div>
-          ) : (
-            <div className="games-list">
-              {visibleGames.map((game) => (
-                <div key={game.gameId} className="game-row">
-                  <div className="game-meta">
-                    <div className="game-id">{getGameLabel(game.gameId)}</div>
-                    <div className="game-id-sub">
-                      ID: {getTruncatedGameId(game.gameId)}
-                    </div>
-                    <div className="game-players">
-                      <div className="player-chip">
-                        {user?.pubkey && getProfilePicture(user.pubkey) ? (
-                          <img
-                            src={getProfilePicture(user.pubkey)}
-                            alt={getProfileName(user.pubkey, "You")}
-                            className="profile-avatar small"
-                            onError={(event) => {
-                              (event.target as HTMLImageElement).src =
-                                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999999' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z'/%3E%3Cpath d='M4 20c0-4 3.6-6 8-6s8 2 8 6'/%3E%3C/svg%3E";
-                            }}
-                          />
-                        ) : (
-                          <div className="profile-avatar small fallback">
-                            {user?.pubkey
-                              ? getInitial(getProfileName(user.pubkey, "You"))
-                              : "Y"}
-                          </div>
-                        )}
-                        <div className="player-info">
-                          <div className="player-name">
-                            {user?.pubkey
-                              ? getProfileName(user.pubkey, "You")
-                              : "You"}
-                          </div>
-                          <div className="player-role">You</div>
-                        </div>
-                      </div>
-
-                      <div className="player-chip">
-                        {game.opponentPubkey &&
-                        getProfilePicture(game.opponentPubkey) ? (
-                          <img
-                            src={getProfilePicture(game.opponentPubkey)}
-                            alt={getProfileName(
-                              game.opponentPubkey,
-                              "Opponent",
-                            )}
-                            className="profile-avatar small"
-                            onError={(event) => {
-                              (event.target as HTMLImageElement).src =
-                                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999999' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z'/%3E%3Cpath d='M4 20c0-4 3.6-6 8-6s8 2 8 6'/%3E%3C/svg%3E";
-                            }}
-                          />
-                        ) : (
-                          <div className="profile-avatar small fallback">
-                            {game.opponentPubkey
-                              ? getInitial(
-                                  getProfileName(
-                                    game.opponentPubkey,
-                                    "Opponent",
-                                  ),
-                                )
-                              : "O"}
-                          </div>
-                        )}
-                        <div className="player-info">
-                          <div className="player-name">
-                            {game.opponentPubkey
-                              ? getProfileName(
-                                  game.opponentPubkey,
-                                  getTruncatedPubkey(game.opponentPubkey),
-                                )
-                              : "Opponent"}
-                          </div>
-                          <div className="player-role">Opponent</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="game-updated">
-                      Updated: {formatUpdatedAt(game.updatedAt)}
-                    </div>
-                    <div className="game-status-row">
-                      <span
-                        className={`game-status-badge ${getStatusClass(game)}`}
-                      >
-                        {getStatusLabel(game)}
-                      </span>
-                      <span>{getTurnLabel(game)}</span>
-                      <span>{getActiveLabel(game)}</span>
-                    </div>
-                  </div>
-                  <div className="game-actions">
-                    <button
-                      className="lobby-btn secondary tiny"
-                      onClick={() => {
-                        if (game.opponentPubkey) {
-                          onGameStart(game.gameId, game.opponentPubkey);
-                        } else if (game.players.length > 0) {
-                          const opponent =
-                            game.players.find((p) => p !== user?.pubkey) ||
-                            game.players[0];
-                          if (opponent) {
-                            onGameStart(game.gameId, opponent);
-                          }
-                        }
-                      }}
-                      disabled={
-                        (!game.opponentPubkey && game.players.length === 0) ||
-                        (game.status && game.status !== "active")
-                      }
-                    >
-                      {game.status && game.status !== "active"
-                        ? "Ended"
-                        : "Resume"}
-                    </button>
-                    {game.creatorPubkey === user?.pubkey && (
-                      <button
-                        className="lobby-btn danger tiny"
-                        onClick={() => handleDeleteFromLobby(game)}
-                        disabled={
-                          deletingGameId === game.gameId ||
-                          (game.status && game.status !== "active")
-                        }
-                      >
-                        {deletingGameId === game.gameId
-                          ? "Deleting..."
-                          : "Delete"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        <div className="lobby-section">
-          <h2>Create New Game</h2>
-          <p className="section-desc">Challenge someone to a game</p>
+        {visibleGames.length === 0 ? (
+          <div className="games-empty">
+            {isLoadingGames
+              ? "Loading..."
+              : games.length === 0
+                ? "No games yet"
+                : "No active games"}
+          </div>
+        ) : (
+          <div className="games-list">
+            {visibleGames.map((game) => {
+              const opponentPubkey =
+                game.opponentPubkey ||
+                game.players.find((p) => p !== user?.pubkey) ||
+                "";
+              const ended = isGameEnded(game);
+              const myTurn = isMyTurn(game);
 
-          <OpponentSearch
-            value={opponentInput}
-            onChange={handleOpponentInputChange}
-            onSelect={handleOpponentSelect}
-          />
+              return (
+                <div
+                  key={game.gameId}
+                  className={`game-card ${ended ? "ended" : ""} ${myTurn && !ended ? "my-turn" : ""}`}
+                  onClick={() => handleGameClick(game)}
+                >
+                  <div className="opponent-avatar-wrapper">
+                    {opponentPubkey && getOpponentPicture(opponentPubkey) ? (
+                      <img
+                        src={getOpponentPicture(opponentPubkey)}
+                        alt=""
+                        className="opponent-avatar"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                          const fallback = (e.target as HTMLImageElement)
+                            .nextElementSibling;
+                          if (fallback)
+                            (fallback as HTMLElement).style.display = "flex";
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="opponent-avatar fallback"
+                      style={{
+                        display:
+                          opponentPubkey && getOpponentPicture(opponentPubkey)
+                            ? "none"
+                            : "flex",
+                      }}
+                    >
+                      {opponentPubkey
+                        ? getOpponentInitial(opponentPubkey)
+                        : "?"}
+                    </div>
+                  </div>
 
-          {selectedOpponent && (
-            <div className="opponent-selected">
-              {selectedOpponent.picture ? (
-                <img
-                  src={selectedOpponent.picture}
-                  alt={getDisplayName(selectedOpponent)}
-                  className="opponent-avatar"
-                  onError={(event) => {
-                    (event.target as HTMLImageElement).src =
-                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999999' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z'/%3E%3Cpath d='M4 20c0-4 3.6-6 8-6s8 2 8 6'/%3E%3C/svg%3E";
-                  }}
-                />
-              ) : (
-                <div className="opponent-avatar fallback">
-                  {getDisplayName(selectedOpponent).charAt(0).toUpperCase()}
+                  <div className="game-info">
+                    <div className="game-top-row">
+                      <span className="opponent-name">
+                        {opponentPubkey
+                          ? getOpponentName(opponentPubkey)
+                          : "Unknown"}
+                      </span>
+                      {!ended && (
+                        <span
+                          className={`turn-badge ${myTurn ? "your-turn" : "their-turn"}`}
+                        >
+                          {myTurn ? "Your turn" : "Waiting"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="game-subtext">
+                      <span className="game-name">
+                        {getGameLabel(game.gameId)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {ended && (
+                    <span className={`game-status ${game.status}`}>
+                      {game.status === "completed"
+                        ? "Done"
+                        : game.status === "deleted"
+                          ? "Deleted"
+                          : "Ended"}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* New Game */}
+      <div className="new-game-section">
+        <h2>New Game</h2>
+
+        <OpponentSearch
+          value={opponentInput}
+          onChange={(val) => {
+            setOpponentInput(val);
+            if (selectedOpponent) setSelectedOpponent(null);
+            if (error) setError(null);
+          }}
+          onSelect={handleOpponentSelect}
+        />
+
+        {selectedOpponent && (
+          <div className="selected-opponent">
+            {selectedOpponent.picture ? (
+              <img
+                src={selectedOpponent.picture}
+                alt=""
+                className="opponent-avatar"
+              />
+            ) : (
+              <div className="opponent-avatar fallback">
+                {(selectedOpponent.displayName || selectedOpponent.name || "?")
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+            )}
+            <div className="selected-opponent-info">
+              <div className="selected-opponent-name">
+                {selectedOpponent.displayName ||
+                  selectedOpponent.name ||
+                  "Anonymous"}
+              </div>
+              {selectedOpponent.nip05 && (
+                <div className="selected-opponent-nip05">
+                  {selectedOpponent.nip05}
                 </div>
               )}
-              <div className="opponent-info">
-                <div className="opponent-name">
-                  {getDisplayName(selectedOpponent)}
-                </div>
-                {selectedOpponent.nip05 && (
-                  <div className="opponent-nip05">
-                    nip05: {selectedOpponent.nip05}
-                  </div>
-                )}
-                <div className="opponent-pubkey">
-                  {getTruncatedPubkey(selectedOpponent.pubkey)}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="opponent-clear"
-                onClick={() => {
-                  setSelectedOpponent(null);
-                  setOpponentInput("");
-                }}
-              >
-                Clear
-              </button>
             </div>
-          )}
+            <button
+              className="clear-btn"
+              onClick={() => {
+                setSelectedOpponent(null);
+                setOpponentInput("");
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
+        <button
+          className="create-btn"
+          onClick={handleCreateGame}
+          disabled={isCreating || (!selectedOpponent && !opponentInput.trim())}
+        >
+          {isCreating ? "Creating..." : "Create Game"}
+        </button>
+
+        {/* Join existing game - collapsed by default */}
+        <div className="join-toggle">
           <button
-            className="lobby-btn primary"
-            onClick={handleCreateGame}
-            disabled={isCreating}
+            className="join-toggle-btn"
+            onClick={() => setShowJoinForm((prev) => !prev)}
           >
-            {isCreating ? "Creating..." : "Create Game"}
+            {showJoinForm ? "Cancel" : "Join existing game →"}
           </button>
         </div>
 
-        <div className="lobby-section">
-          <h2>Join Existing Game</h2>
-          <p className="section-desc">Enter game details shared by opponent</p>
-
-          <input
-            type="text"
-            placeholder="Game ID (UUID)"
-            value={joinGameId}
-            onChange={(e) => setJoinGameId(e.target.value)}
-            className="lobby-input"
-          />
-
-          <input
-            type="text"
-            placeholder="Opponent pubkey or npub"
-            value={joinOpponent}
-            onChange={(e) => setJoinOpponent(e.target.value)}
-            className="lobby-input"
-          />
-
-          <button className="lobby-btn secondary" onClick={handleJoinGame}>
-            Join Game
-          </button>
-        </div>
+        {showJoinForm && (
+          <div className="join-form">
+            <input
+              type="text"
+              placeholder="Game ID"
+              value={joinGameId}
+              onChange={(e) => setJoinGameId(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Opponent npub or pubkey"
+              value={joinOpponent}
+              onChange={(e) => setJoinOpponent(e.target.value)}
+            />
+            <button className="join-btn" onClick={handleJoinGame}>
+              Join Game
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
