@@ -1,13 +1,13 @@
-import { LETTER_VALUES } from '../engine/constants';
-import './Tile.css';
+import { LETTER_VALUES } from "../engine/constants";
+import "./Tile.css";
 
 interface TileProps {
   letter: string;
   isBlank?: boolean;
   isDragging?: boolean;
   isPlaced?: boolean;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: (event: React.DragEvent<HTMLDivElement>) => void;
 }
 
 export function Tile({
@@ -18,12 +18,15 @@ export function Tile({
   onDragStart,
   onDragEnd,
 }: TileProps) {
-  const displayLetter = letter === 'BLANK' ? '' : letter;
-  const value = isBlank ? 0 : (LETTER_VALUES[letter] || 0);
+  // For unplayed blanks in rack: letter="BLANK", isBlank=true -> show empty
+  // For played blanks on board: letter="P" (chosen), isBlank=true -> show "P" but 0 points
+  const isUnplayedBlank = letter === "BLANK";
+  const displayLetter = isUnplayedBlank ? "" : letter;
+  const value = isBlank ? 0 : LETTER_VALUES[letter] || 0;
 
   return (
     <div
-      className={`tile ${isDragging ? 'dragging' : ''} ${isPlaced ? 'placed' : ''}`}
+      className={`tile ${isDragging ? "dragging" : ""} ${isPlaced ? "placed" : ""} ${isBlank ? "blank" : ""}`}
       draggable={!!onDragStart}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}

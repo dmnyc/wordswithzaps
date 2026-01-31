@@ -1,0 +1,187 @@
+.main-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: rgba(12, 12, 12, 0.85);
+    border-bottom: none;
+    backdrop-filter: blur(8px);
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-logo {
+    height: 28px;
+    display: block;
+}
+
+.nav-logo.abbr {
+    display: none;
+    height: 26px;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+}
+
+.wallet-status {
+    display: flex;
+    align-items: center;
+}
+
+.wallet-connected {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(255, 204, 0, 0.4);
+}
+
+.wallet-connected .bolt-icon {
+    height: 18px;
+    width: auto;
+}
+
+.wallet-connect-btn .bolt-icon {
+    height: 14px;
+    width: auto;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.wallet-connect-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #ffcc00, #e6b800);
+    color: #0b0b0b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.wallet-connect-btn:hover {
+    background: linear-gradient(180deg, #ffd633, #f2c200);
+}
+
+.user-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    color: #eee;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.user-button:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-avatar.fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 204, 0, 0.25);
+    color: #ffcc00;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.menu-caret {
+    font-size: 12px;
+    opacity: 0.7;
+    transition: transform 0.15s ease;
+}
+
+.menu-caret.open {
+    transform: rotate(180deg);
+}
+
+.user-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    min-width: 180px;
+    background: #1a1a1a;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.menu-item {
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #eee;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s ease;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.menu-item.danger {
+    color: #ff6b6b;
+}
+
+.menu-item.danger:hover {
+    background: rgba(255, 107, 107, 0.12);
+}
+
+@media (max-width: 720px) {
+    .nav-logo.full {
+        display: none;
+    }
+
+    .nav-logo.abbr {
+        display: block;
+    }
+
+    .user-name {
+        display: none;
+    }
+}

@@ -1,27 +1,39 @@
-import { useNostr } from "../hooks/useNostr";
 import "./LoginScreen.css";
+import type { NDKUser } from "@nostr-dev-kit/ndk";
 
 interface LoginScreenProps {
   onConnected: () => void;
+  user: NDKUser | null;
+  isConnecting: boolean;
+  error: string | null;
+  connect: () => Promise<void>;
 }
 
-export function LoginScreen({ onConnected }: LoginScreenProps) {
-  const { user, isConnecting, error, connect } = useNostr();
-
+export function LoginScreen({
+  onConnected,
+  user,
+  isConnecting,
+  error,
+  connect,
+}: LoginScreenProps) {
   const handleConnect = async () => {
     try {
       await connect();
       onConnected();
     } catch (err) {
-      // Error is handled by useNostr hook
+      // Error is displayed via the error prop.
     }
   };
 
   return (
     <div className="login-screen">
       <div className="login-card">
-        <h1 className="login-title">Words With Zaps</h1>
-        <p className="login-subtitle">P2P Scrabble on Nostr</p>
+        <img
+          src="/assets/wwz_logo_stack.svg"
+          alt="Words With Zaps"
+          className="login-logo"
+        />
+        <p className="login-subtitle">A P2P Crossword Game on Nostr</p>
 
         {error && <div className="login-error">{error}</div>}
 

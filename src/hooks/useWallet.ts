@@ -27,6 +27,16 @@ export function useWallet(): UseWalletReturn {
     return unsubscribe;
   }, [walletService]);
 
+  // Auto-connect WebLN on mount if available
+  useEffect(() => {
+    if (WebLNProvider.isAvailable() && !state.connected) {
+      const provider = new WebLNProvider();
+      walletService.connect(provider).catch(() => {
+        // Silently fail - user can manually connect
+      });
+    }
+  }, []);
+
   const connectWebLN = useCallback(async () => {
     if (!WebLNProvider.isAvailable()) {
       throw new Error(

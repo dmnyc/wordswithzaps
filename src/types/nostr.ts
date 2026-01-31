@@ -5,6 +5,7 @@ export interface NostrProfile {
   name?: string;
   displayName?: string;
   picture?: string;
+  nip05?: string;
   lud16?: string; // Lightning address
   lud06?: string; // LNURL
 }

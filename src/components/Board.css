@@ -1,85 +1,108 @@
 .board {
-  display: grid;
-  grid-template-columns: repeat(15, 44px);
-  grid-template-rows: repeat(15, 44px);
-  gap: 2px;
-  background: #1a4a1a;
-  padding: 8px;
-  border-radius: 8px;
-  border: 4px solid #2c5a2c;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+    display: grid;
+    grid-template-columns: repeat(15, 40px);
+    grid-template-rows: repeat(15, 40px);
+    gap: 2px;
+    background: var(--bg);
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+        inset 0 0 20px rgba(0, 0, 0, 0.4),
+        0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
 .board.disabled {
-  opacity: 0.7;
-  pointer-events: none;
+    opacity: 0.6;
+    pointer-events: none;
 }
 
 .board-cell {
-  width: 44px;
-  height: 44px;
-  background: #2d5a2d;
-  border: 1px solid #1a4a1a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.15s;
+    width: 40px;
+    height: 40px;
+    background: #1a1a1a;
+    border: none;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        box-shadow 0.15s;
 }
 
 .board-cell:hover {
-  background: #3a6a3a;
+    background: #2a2a2a;
+    box-shadow: inset 0 0 8px rgba(255, 204, 0, 0.15);
 }
 
 .board-cell.drag-over {
-  background: #4a7a4a;
-  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3);
+    background: #2a2a2a;
+    box-shadow: inset 0 0 12px rgba(255, 204, 0, 0.4);
 }
 
 .cell-label {
-  font-size: 10px;
-  font-weight: bold;
-  color: rgba(255, 255, 255, 0.7);
-  text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    text-align: center;
 }
 
-/* Triple Word Score - Red */
+/* Triple Word Score - Deep red/burgundy */
 .cell-tw {
-  background: linear-gradient(145deg, #c9302c, #a02520);
+    background: linear-gradient(145deg, #6b2020, #4a1515);
 }
 .cell-tw:hover {
-  background: linear-gradient(145deg, #d94440, #b03530);
+    background: linear-gradient(145deg, #7b3030, #5a2020);
+}
+.cell-tw .cell-label {
+    color: #ff9999;
 }
 
-/* Double Word Score - Pink/Salmon */
+/* Double Word Score - Muted rose */
 .cell-dw {
-  background: linear-gradient(145deg, #e8a0a0, #d88080);
+    background: linear-gradient(145deg, #5c3a3a, #4a2e2e);
 }
 .cell-dw:hover {
-  background: linear-gradient(145deg, #f0b0b0, #e89090);
+    background: linear-gradient(145deg, #6c4a4a, #5a3e3e);
+}
+.cell-dw .cell-label {
+    color: #e8a0a0;
 }
 
-/* Triple Letter Score - Blue */
+/* Triple Letter Score - Deep teal */
 .cell-tl {
-  background: linear-gradient(145deg, #428bca, #3071a9);
+    background: linear-gradient(145deg, #1a4a5c, #143a48);
 }
 .cell-tl:hover {
-  background: linear-gradient(145deg, #5299d0, #4081b9);
+    background: linear-gradient(145deg, #2a5a6c, #1a4a58);
+}
+.cell-tl .cell-label {
+    color: #7ec8e3;
 }
 
-/* Double Letter Score - Light Blue */
+/* Double Letter Score - Muted blue-grey */
 .cell-dl {
-  background: linear-gradient(145deg, #a0c4e8, #80b4d8);
+    background: linear-gradient(145deg, #3a4a5c, #2e3e4a);
 }
 .cell-dl:hover {
-  background: linear-gradient(145deg, #b0d4f0, #90c4e8);
+    background: linear-gradient(145deg, #4a5a6c, #3e4e5a);
+}
+.cell-dl .cell-label {
+    color: #a0c4e8;
 }
 
-/* Center Star */
+/* Center Star - Gold accent */
 .cell-star {
-  background: linear-gradient(145deg, #e8a0a0, #d88080);
+    background: linear-gradient(145deg, #4a3a10, #3a2a08);
+}
+.cell-star:hover {
+    background: linear-gradient(145deg, #5a4a20, #4a3a18);
 }
 .cell-star .cell-label {
-  font-size: 20px;
-  color: rgba(255, 255, 255, 0.9);
+    font-size: 18px;
+    color: var(--accent);
+    text-shadow: 0 0 8px rgba(255, 204, 0, 0.5);
 }

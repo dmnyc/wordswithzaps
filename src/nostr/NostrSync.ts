@@ -188,6 +188,33 @@ export class NostrSync {
   }
 
   /**
+   * Publish NIP-09 deletion events for this game (creator's events only)
+   */
+  async publishDeletionForGame(reason: string = "Game deleted"): Promise<void> {
+    const user = getCurrentUser();
+    if (!user?.pubkey) {
+      throw new Error("Must be logged in to delete game");
+    }
+
+    const dTag = this.getGameDTag();
+    const events = await fetchEvents({
+      kinds: [GAME_KIND],
+      authors: [user.pubkey],
+      "#d": [dTag],
+      limit: 50,
+    });
+
+    if (events.length === 0) return;
+
+    const tags: string[][] = events.map((event) => ["e", event.id]);
+    tags.push(["a", `${GAME_KIND}:${user.pubkey}:${dTag}`]);
+    tags.push(["k", GAME_KIND.toString()]);
+
+    const deletionEvent = createEvent(5, reason, tags);
+    await publishEvent(deletionEvent);
+  }
+
+  /**
    * Subscribe to game state updates
    */
   subscribeToGameUpdates(

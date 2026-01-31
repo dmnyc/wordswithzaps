@@ -44,7 +44,10 @@ npm run build
 
 ## Dictionary
 
-Place a SOWPODS or TWL06 word list at `public/dictionaries/sowpods.txt` for full word validation. A minimal fallback dictionary is included for testing.
+Place a word list in `public/dictionaries/` for full validation. The app will try these (in order):
+`sowpods.txt`, `csw21.txt`, `nwl2023.txt`, `twl06.txt`, `enable1.txt`.
+You can also set `VITE_DICTIONARY_URL` to load a custom file.
+A minimal fallback dictionary is included for testing when none are found.
 
 ## Configuration
 

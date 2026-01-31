@@ -421,6 +421,21 @@ export class GameEngine {
   }
 
   /**
+   * Delete a game (creator removes the game)
+   */
+  static deleteGame(state: GameState, deletedBy: string): GameState {
+    return {
+      ...state,
+      meta: {
+        ...state.meta,
+        status: "deleted",
+        deletedBy,
+        winner: undefined,
+      },
+    };
+  }
+
+  /**
    * Validate state chain integrity
    */
   static validateStateChain(

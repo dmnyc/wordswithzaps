@@ -115,6 +115,12 @@ Content: NIP-44 encrypted to self ({"rack": ["A", "B", ...]})
 | Variable | Description |
 |----------|-------------|
 | `VITE_BREEZ_SPARK_API_KEY` | Breez Spark SDK API key (optional) |
+| `VITE_DICTIONARY_URL` | Optional override for dictionary URL (e.g. `/dictionaries/enable1.txt`) |
+
+## Dictionary Notes
+
+- Added `public/dictionaries/enable1.txt` from the dolph/dictionary repo for fuller word coverage.
+- Loader tries: `sowpods.txt`, `csw21.txt`, `nwl2023.txt`, `twl06.txt`, `enable1.txt` (in that order) unless `VITE_DICTIONARY_URL` is set.
 
 ## Build Commands
 

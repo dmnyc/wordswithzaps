@@ -1,60 +1,140 @@
 .game-view {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24px;
-  padding: 24px;
-  max-width: 800px;
-  margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 .game-view.loading {
-  min-height: 400px;
-  justify-content: center;
-  color: #888;
+    min-height: 400px;
+    justify-content: center;
+    color: var(--text-muted);
 }
 
-.game-error {
-  background: rgba(220, 53, 69, 0.15);
-  border: 1px solid rgba(220, 53, 69, 0.5);
-  color: #ff6b6b;
-  padding: 12px 24px;
-  border-radius: 8px;
-  width: 100%;
-  text-align: center;
+.game-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.game-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
 .game-status {
-  font-size: 18px;
-  font-weight: bold;
-  padding: 8px 24px;
-  border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 16px;
 }
 
 .status-your-turn {
-  color: #4caf50;
-  background: rgba(76, 175, 80, 0.15);
+    color: #68d391;
+    background: rgba(104, 211, 145, 0.15);
 }
 
 .status-waiting {
-  color: #888;
-  background: rgba(136, 136, 136, 0.15);
+    color: var(--text-muted);
+    background: rgba(154, 154, 154, 0.12);
 }
 
 .status-completed {
-  color: #f9a825;
-  background: rgba(249, 168, 37, 0.15);
+    color: var(--accent);
+    background: rgba(255, 204, 0, 0.12);
 }
 
 .status-abandoned {
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.15);
+    color: #ff8f8f;
+    background: rgba(255, 91, 91, 0.12);
+}
+
+.status-deleted {
+    color: #ff5b5b;
+    background: rgba(255, 91, 91, 0.18);
+}
+
+.game-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.action-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        opacity 0.15s;
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.copy-link-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+}
+
+.copy-link-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.action-btn.zap-btn {
+    background: linear-gradient(180deg, #ffcc00, #e6b800);
+    color: #0b0b0b;
+}
+
+.action-btn.zap-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #ffd633, #f2c200);
+}
+
+.action-btn.delete-btn {
+    background: rgba(255, 91, 91, 0.15);
+    color: #ff8f8f;
+    padding: 6px 10px;
+}
+
+.action-btn.delete-btn:hover:not(:disabled) {
+    background: rgba(255, 91, 91, 0.25);
+}
+
+.game-error {
+    background: rgba(255, 91, 91, 0.12);
+    color: #ff9b9b;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.game-success {
+    background: rgba(104, 211, 145, 0.12);
+    color: #68d391;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: center;
 }
 
 .validation-error {
-  color: #ff6b6b;
-  font-size: 14px;
-  padding: 8px 16px;
-  background: rgba(255, 107, 107, 0.1);
-  border-radius: 6px;
+    color: #ff8f8f;
+    font-size: 13px;
+    padding: 6px 12px;
+    background: rgba(255, 91, 91, 0.1);
+    border-radius: 6px;
 }

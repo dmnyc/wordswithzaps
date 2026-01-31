@@ -1,0 +1,71 @@
+.blank-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.blank-picker-modal {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: var(--shadow-strong);
+}
+
+.blank-picker-title {
+  color: var(--accent);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.blank-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.blank-picker-letter {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 6px;
+  background: var(--panel-elevated);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.blank-picker-letter:hover {
+  background: var(--accent);
+  color: #0b0b0b;
+  transform: scale(1.08);
+}
+
+.blank-picker-letter:active {
+  transform: scale(0.95);
+}
+
+.blank-picker-cancel {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.blank-picker-cancel:hover {
+  color: var(--text);
+}

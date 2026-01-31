@@ -20,6 +20,7 @@ export interface UseGameReturn {
   pass: () => Promise<void>;
   exchange: (tiles: string[]) => Promise<void>;
   resign: () => Promise<void>;
+  deleteGame: () => Promise<void>;
 
   // Validation
   validateMove: (placements: TilePlacement[]) => ValidationResult;
@@ -133,9 +134,27 @@ export function useGame(): UseGameReturn {
         // Fetch player rack
         const rackData = await syncRef.current.fetchPlayerRack();
 
-        setGameState(latest.state);
+        let rack = rackData?.rack || [];
+        let updatedState = latest.state;
+
+        // If no rack exists, this player needs to draw their initial tiles
+        if (rack.length === 0 && updatedState.meta.status === "active") {
+          const [drawnRack, remainingBag] = GameEngine.drawInitialRack(
+            updatedState.tileBag,
+          );
+          rack = drawnRack;
+          updatedState = { ...updatedState, tileBag: remainingBag };
+
+          // Save the rack to relays
+          await syncRef.current.savePlayerRack({ rack });
+
+          // Publish updated state with reduced tile bag
+          await syncRef.current.publishGameState(updatedState, latest.event.id);
+        }
+
+        setGameState(updatedState);
         setLastEventId(latest.event.id);
-        setPlayerRack(rackData?.rack || []);
+        setPlayerRack(rack);
 
         // Subscribe to updates
         syncRef.current.subscribeToGameUpdates(handleGameUpdate, (err) => {
@@ -356,6 +375,45 @@ export function useGame(): UseGameReturn {
     }
   }, [gameState, myPubkey, lastEventId]);
 
+  // Delete game (creator only)
+  const deleteGame = useCallback(async () => {
+    if (!gameState || !syncRef.current || !myPubkey) {
+      throw new Error("Game not ready");
+    }
+
+    if (gameState.meta.playerOne !== myPubkey) {
+      throw new Error("Only the game creator can delete this game");
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const newState = GameEngine.deleteGame(gameState, myPubkey);
+      const eventId = await syncRef.current.publishGameState(
+        newState,
+        lastEventId || "",
+      );
+      // Best-effort deletion notice for creator's events
+      try {
+        await syncRef.current.publishDeletionForGame(
+          `Deleted Words With Zaps game ${gameState.meta.gameId}`,
+        );
+      } catch (err) {
+        console.warn("Failed to publish deletion event:", err);
+      }
+
+      setGameState(newState);
+      setLastEventId(eventId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [gameState, myPubkey, lastEventId]);
+
   // Cleanup subscription on unmount
   useEffect(() => {
     return () => {
@@ -376,6 +434,7 @@ export function useGame(): UseGameReturn {
     pass,
     exchange,
     resign,
+    deleteGame,
     validateMove: validateMoveAction,
   };
 }

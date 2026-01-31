@@ -1,44 +1,46 @@
 .rack {
-  background: linear-gradient(180deg, #8b4513, #654321);
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 3px solid #5c3a21;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  display: inline-block;
+    background: linear-gradient(180deg, #2a1b12, #1f140c);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
 }
 
 .rack.disabled {
-  opacity: 0.6;
-  pointer-events: none;
+    opacity: 0.6;
+    pointer-events: none;
 }
 
 .rack-tiles {
-  display: flex;
-  gap: 6px;
+    display: flex;
+    gap: 4px;
 }
 
 .rack-slot {
-  width: 44px;
-  height: 44px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
+    width: 38px;
+    height: 38px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition:
+        transform 0.1s,
+        box-shadow 0.1s;
 }
 
 .rack-slot:hover:not(.empty) {
-  transform: translateY(-4px);
+    transform: translateY(-3px);
 }
 
 .rack-slot.selected {
-  box-shadow: 0 0 0 3px #f9a825, 0 4px 8px rgba(249, 168, 37, 0.4);
-  transform: translateY(-4px);
+    box-shadow:
+        0 0 0 2px #ffcc00,
+        0 3px 6px rgba(255, 204, 0, 0.3);
+    transform: translateY(-3px);
 }
 
 .rack-slot.empty {
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  cursor: default;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    cursor: default;
 }

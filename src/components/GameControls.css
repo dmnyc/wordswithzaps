@@ -1,80 +1,86 @@
 .game-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  background: linear-gradient(180deg, #2a2a4a, #1a1a2e);
-  border-radius: 8px;
-  border: 2px solid #3a3a5a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .controls-left,
 .controls-right {
-  display: flex;
-  gap: 8px;
+    display: flex;
+    gap: 6px;
 }
 
 .controls-center {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .control-btn {
-  padding: 12px 24px;
-  font-size: 16px;
-  font-weight: bold;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition:
+        transform 0.1s,
+        background 0.15s;
 }
 
 .control-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .control-btn:not(:disabled):hover {
-  transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .control-btn:not(:disabled):active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 .control-btn.primary {
-  background: linear-gradient(180deg, #f9a825, #e89115);
-  color: #1a1a2e;
-  box-shadow: 0 4px 12px rgba(249, 168, 37, 0.3);
+    background: linear-gradient(180deg, #ffcc00, #e6b800);
+    color: #0b0b0b;
 }
 
 .control-btn.primary:not(:disabled):hover {
-  background: linear-gradient(180deg, #ffc107, #f9a825);
-  box-shadow: 0 6px 16px rgba(249, 168, 37, 0.4);
+    background: linear-gradient(180deg, #ffd633, #f2c200);
 }
 
 .control-btn.secondary {
-  background: linear-gradient(180deg, #4a4a6a, #3a3a5a);
-  color: #ddd;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
 }
 
 .control-btn.secondary:not(:disabled):hover {
-  background: linear-gradient(180deg, #5a5a7a, #4a4a6a);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .play-btn {
-  padding: 16px 48px;
-  font-size: 18px;
+    padding: 10px 32px;
+    font-size: 14px;
 }
 
 .pending-score {
-  font-size: 24px;
-  font-weight: bold;
-  color: #4caf50;
-  padding: 8px 16px;
-  background: rgba(76, 175, 80, 0.15);
-  border-radius: 6px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #68d391;
+    padding: 6px 12px;
+    background: rgba(104, 211, 145, 0.15);
+    border-radius: 6px;
+}
+
+.bolt-icon {
+    height: 14px;
+    width: auto;
+    vertical-align: middle;
+    margin: 0 2px;
 }

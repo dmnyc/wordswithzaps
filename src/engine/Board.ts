@@ -1,4 +1,4 @@
-import type { TilePlacement, ValidationResult } from '../types/game';
+import type { TilePlacement, ValidationResult } from "../types/game";
 import {
   BOARD_SIZE,
   CENTER_POSITION,
@@ -6,10 +6,10 @@ import {
   getMultiplier,
   BINGO_BONUS,
   RACK_SIZE,
-} from './constants';
-import { getDictionary } from './Dictionary';
+} from "./constants";
+import { getDictionary } from "./Dictionary";
 
-export type Direction = 'horizontal' | 'vertical';
+export type Direction = "horizontal" | "vertical";
 
 export interface WordFound {
   word: string;
@@ -28,32 +28,39 @@ export function isValidPosition(x: number, y: number): boolean {
  * Get letter at position from board
  */
 export function getLetterAt(
-  board: Record<string, string>,
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
   x: number,
-  y: number
+  y: number,
 ): string | null {
-  return board[`${x},${y}`] || null;
+  const tile = board[`${x},${y}`];
+  if (!tile) return null;
+  if (typeof tile === "string") return tile;
+  return tile.letter;
 }
 
 /**
  * Check if board is empty (first move)
  */
-export function isBoardEmpty(board: Record<string, string>): boolean {
+export function isBoardEmpty(
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
+): boolean {
   return Object.keys(board).length === 0;
 }
 
 /**
  * Determine the direction of a move based on tile placements
  */
-export function getMoveDirection(placements: TilePlacement[]): Direction | null {
+export function getMoveDirection(
+  placements: TilePlacement[],
+): Direction | null {
   if (placements.length === 0) return null;
   if (placements.length === 1) return null; // Could be either
 
-  const xs = new Set(placements.map(p => p.x));
-  const ys = new Set(placements.map(p => p.y));
+  const xs = new Set(placements.map((p) => p.x));
+  const ys = new Set(placements.map((p) => p.y));
 
-  if (xs.size === 1) return 'vertical';
-  if (ys.size === 1) return 'horizontal';
+  if (xs.size === 1) return "vertical";
+  if (ys.size === 1) return "horizontal";
 
   return null; // Invalid: tiles not in a line
 }
@@ -62,8 +69,8 @@ export function getMoveDirection(placements: TilePlacement[]): Direction | null 
  * Check if tiles are placed in a continuous line (with existing tiles)
  */
 export function areTilesContinuous(
-  board: Record<string, string>,
-  placements: TilePlacement[]
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
+  placements: TilePlacement[],
 ): boolean {
   if (placements.length === 0) return false;
   if (placements.length === 1) return true;
@@ -73,7 +80,7 @@ export function areTilesContinuous(
 
   // Sort placements by position
   const sorted = [...placements].sort((a, b) => {
-    if (direction === 'horizontal') return a.x - b.x;
+    if (direction === "horizontal") return a.x - b.x;
     return a.y - b.y;
   });
 
@@ -82,7 +89,7 @@ export function areTilesContinuous(
     const current = sorted[i];
     const next = sorted[i + 1];
 
-    if (direction === 'horizontal') {
+    if (direction === "horizontal") {
       for (let x = current.x + 1; x < next.x; x++) {
         if (!getLetterAt(board, x, current.y)) {
           return false; // Gap not filled
@@ -104,13 +111,13 @@ export function areTilesContinuous(
  * Check if the move connects to existing tiles (or is the first move)
  */
 export function connectsToExisting(
-  board: Record<string, string>,
-  placements: TilePlacement[]
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
+  placements: TilePlacement[],
 ): boolean {
   if (isBoardEmpty(board)) {
     // First move must cover center
     return placements.some(
-      p => p.x === CENTER_POSITION.x && p.y === CENTER_POSITION.y
+      (p) => p.x === CENTER_POSITION.x && p.y === CENTER_POSITION.y,
     );
   }
 
@@ -134,7 +141,7 @@ export function connectsToExisting(
   const direction = getMoveDirection(placements);
   if (direction && placements.length > 0) {
     const sorted = [...placements].sort((a, b) => {
-      if (direction === 'horizontal') return a.x - b.x;
+      if (direction === "horizontal") return a.x - b.x;
       return a.y - b.y;
     });
 
@@ -142,7 +149,7 @@ export function connectsToExisting(
       const current = sorted[i];
       const next = sorted[i + 1];
 
-      if (direction === 'horizontal') {
+      if (direction === "horizontal") {
         for (let x = current.x + 1; x < next.x; x++) {
           if (getLetterAt(board, x, current.y)) {
             return true;
@@ -165,23 +172,30 @@ export function connectsToExisting(
  * Extract a word in a given direction starting from a position
  */
 export function extractWord(
-  board: Record<string, string>,
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
   placements: TilePlacement[],
   startX: number,
   startY: number,
-  direction: Direction
+  direction: Direction,
 ): WordFound | null {
   // Create a temporary board with new placements
-  const tempBoard = { ...board };
+  const tempBoard: Record<
+    string,
+    string | { letter: string; isBlank?: boolean }
+  > = { ...board };
   for (const p of placements) {
-    tempBoard[`${p.x},${p.y}`] = p.letter;
+    if (p.isBlank) {
+      tempBoard[`${p.x},${p.y}`] = { letter: p.letter, isBlank: true };
+    } else {
+      tempBoard[`${p.x},${p.y}`] = p.letter;
+    }
   }
 
   // Find the start of the word
   let x = startX;
   let y = startY;
 
-  if (direction === 'horizontal') {
+  if (direction === "horizontal") {
     while (x > 0 && getLetterAt(tempBoard, x - 1, y)) {
       x--;
     }
@@ -204,7 +218,7 @@ export function extractWord(
     letters.push(letter);
     coords.push(`${currentX},${currentY}`);
 
-    if (direction === 'horizontal') {
+    if (direction === "horizontal") {
       currentX++;
     } else {
       currentY++;
@@ -215,7 +229,7 @@ export function extractWord(
     return null;
   }
 
-  const word = letters.join('');
+  const word = letters.join("");
   const score = calculateWordScore(board, placements, coords);
 
   return { word, coords, score };
@@ -225,8 +239,8 @@ export function extractWord(
  * Find all words formed by the placements
  */
 export function findAllWords(
-  board: Record<string, string>,
-  placements: TilePlacement[]
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
+  placements: TilePlacement[],
 ): WordFound[] {
   const words: WordFound[] = [];
   const processed = new Set<string>();
@@ -234,7 +248,7 @@ export function findAllWords(
   if (placements.length === 0) return words;
 
   // Determine primary direction
-  let primaryDirection: Direction = 'horizontal';
+  let primaryDirection: Direction = "horizontal";
   if (placements.length > 1) {
     const dir = getMoveDirection(placements);
     if (dir) primaryDirection = dir;
@@ -246,22 +260,22 @@ export function findAllWords(
     placements,
     placements[0].x,
     placements[0].y,
-    primaryDirection
+    primaryDirection,
   );
 
   if (mainWord) {
-    processed.add(mainWord.coords.join('|'));
+    processed.add(mainWord.coords.join("|"));
     words.push(mainWord);
   }
 
   // Get perpendicular words for each new tile
   const perpDirection: Direction =
-    primaryDirection === 'horizontal' ? 'vertical' : 'horizontal';
+    primaryDirection === "horizontal" ? "vertical" : "horizontal";
 
   for (const p of placements) {
     const perpWord = extractWord(board, placements, p.x, p.y, perpDirection);
     if (perpWord) {
-      const key = perpWord.coords.join('|');
+      const key = perpWord.coords.join("|");
       if (!processed.has(key)) {
         processed.add(key);
         words.push(perpWord);
@@ -276,47 +290,55 @@ export function findAllWords(
  * Calculate score for a single word
  */
 export function calculateWordScore(
-  board: Record<string, string>,
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
   placements: TilePlacement[],
-  wordCoords: string[]
+  wordCoords: string[],
 ): number {
   let wordScore = 0;
   let wordMultiplier = 1;
 
-  const newTileCoords = new Set(placements.map(p => `${p.x},${p.y}`));
+  const newTileCoords = new Set(placements.map((p) => `${p.x},${p.y}`));
 
   for (const coord of wordCoords) {
-    const [x, y] = coord.split(',').map(Number);
+    const [x, y] = coord.split(",").map(Number);
     const isNewTile = newTileCoords.has(coord);
 
-    // Get the letter (from placements or existing board)
+    // Get the letter and blank status (from placements or existing board)
     let letter: string;
+    let isBlank = false;
     if (isNewTile) {
-      const placement = placements.find(p => p.x === x && p.y === y);
+      const placement = placements.find((p) => p.x === x && p.y === y);
       letter = placement!.letter;
+      isBlank = placement!.isBlank || false;
     } else {
-      letter = board[coord];
+      const tile = board[coord];
+      if (typeof tile === "string") {
+        letter = tile;
+      } else {
+        letter = tile.letter;
+        isBlank = tile.isBlank || false;
+      }
     }
 
     // Base letter value (BLANK tiles are worth 0)
-    const letterValue = letter === 'BLANK' ? 0 : (LETTER_VALUES[letter] || 0);
+    const letterValue = isBlank ? 0 : LETTER_VALUES[letter] || 0;
     let tileScore = letterValue;
 
     // Apply multipliers only for newly placed tiles
     if (isNewTile) {
       const mult = getMultiplier(x, y);
       switch (mult) {
-        case 'DL':
+        case "DL":
           tileScore *= 2;
           break;
-        case 'TL':
+        case "TL":
           tileScore *= 3;
           break;
-        case 'DW':
-        case 'STAR':
+        case "DW":
+        case "STAR":
           wordMultiplier *= 2;
           break;
-        case 'TW':
+        case "TW":
           wordMultiplier *= 3;
           break;
       }
@@ -332,8 +354,8 @@ export function calculateWordScore(
  * Calculate total score for a move (all words + bingo bonus)
  */
 export function calculateMoveScore(
-  board: Record<string, string>,
-  placements: TilePlacement[]
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
+  placements: TilePlacement[],
 ): number {
   const words = findAllWords(board, placements);
   let total = words.reduce((sum, w) => sum + w.score, 0);
@@ -350,12 +372,12 @@ export function calculateMoveScore(
  * Validate a move and return all formed words
  */
 export function validateMove(
-  board: Record<string, string>,
-  placements: TilePlacement[]
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
+  placements: TilePlacement[],
 ): ValidationResult {
   // Check for empty move
   if (placements.length === 0) {
-    return { valid: false, error: 'No tiles placed' };
+    return { valid: false, error: "No tiles placed" };
   }
 
   // Check all positions are valid and empty
@@ -372,28 +394,28 @@ export function validateMove(
   if (placements.length > 1) {
     const direction = getMoveDirection(placements);
     if (!direction) {
-      return { valid: false, error: 'Tiles must be placed in a straight line' };
+      return { valid: false, error: "Tiles must be placed in a straight line" };
     }
   }
 
   // Check tiles are continuous
   if (!areTilesContinuous(board, placements)) {
-    return { valid: false, error: 'Tiles must form a continuous line' };
+    return { valid: false, error: "Tiles must form a continuous line" };
   }
 
   // Check connection to existing tiles
   if (!connectsToExisting(board, placements)) {
     if (isBoardEmpty(board)) {
-      return { valid: false, error: 'First move must cover center square' };
+      return { valid: false, error: "First move must cover center square" };
     }
-    return { valid: false, error: 'Move must connect to existing tiles' };
+    return { valid: false, error: "Move must connect to existing tiles" };
   }
 
   // Find all words formed
   const words = findAllWords(board, placements);
 
   if (words.length === 0) {
-    return { valid: false, error: 'No valid words formed' };
+    return { valid: false, error: "No valid words formed" };
   }
 
   // Validate all words against dictionary
@@ -407,12 +429,13 @@ export function validateMove(
   }
 
   // Calculate total score
-  const score = words.reduce((sum, w) => sum + w.score, 0) +
+  const score =
+    words.reduce((sum, w) => sum + w.score, 0) +
     (placements.length === RACK_SIZE ? BINGO_BONUS : 0);
 
   return {
     valid: true,
-    words: words.map(w => w.word),
+    words: words.map((w) => w.word),
     score,
   };
 }
@@ -421,12 +444,16 @@ export function validateMove(
  * Apply placements to board and return new board state
  */
 export function applyPlacements(
-  board: Record<string, string>,
-  placements: TilePlacement[]
-): Record<string, string> {
+  board: Record<string, string | { letter: string; isBlank?: boolean }>,
+  placements: TilePlacement[],
+): Record<string, string | { letter: string; isBlank?: boolean }> {
   const newBoard = { ...board };
   for (const p of placements) {
-    newBoard[`${p.x},${p.y}`] = p.isBlank ? 'BLANK' : p.letter;
+    if (p.isBlank) {
+      newBoard[`${p.x},${p.y}`] = { letter: p.letter, isBlank: true };
+    } else {
+      newBoard[`${p.x},${p.y}`] = p.letter;
+    }
   }
   return newBoard;
 }

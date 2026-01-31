@@ -1,20 +1,27 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import type { TilePlacement } from "../types/game";
 import { useGame } from "../hooks/useGame";
+import { useWallet } from "../hooks/useWallet";
 import { getCurrentUser } from "../nostr/client";
 import Board from "./Board";
 import Rack from "./Rack";
 import ScoreBoard from "./ScoreBoard";
 import GameControls from "./GameControls";
+import BlankTilePicker from "./BlankTilePicker";
 import { shuffleArray } from "../engine/constants";
 import "./GameView.css";
 
 interface GameViewProps {
   gameId: string;
   opponentPubkey: string;
+  onShareGame?: (copyFn: () => void) => void;
 }
 
-export function GameView({ gameId, opponentPubkey }: GameViewProps) {
+export function GameView({
+  gameId,
+  opponentPubkey,
+  onShareGame,
+}: GameViewProps) {
   const {
     gameState,
     playerRack,
@@ -25,6 +32,7 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
     makeMove,
     pass,
     validateMove,
+    deleteGame,
   } = useGame();
 
   const [pendingPlacements, setPendingPlacements] = useState<TilePlacement[]>(
@@ -34,9 +42,36 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
     null,
   );
   const [localRack, setLocalRack] = useState<string[]>([]);
+  const [zapAmount] = useState(1);
+  const [zapMessage, setZapMessage] = useState<string | null>(null);
+  const [zapError, setZapError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [pendingBlankPosition, setPendingBlankPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
+  const isCreator = gameState?.meta.playerOne === myPubkey;
+  const {
+    state: walletState,
+    connectWebLN,
+    zapUser,
+    isWebLNAvailable,
+  } = useWallet();
+
+  const gameLink = useMemo(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("gameId", gameId);
+    return url.toString();
+  }, [gameId]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("gameId", gameId);
+    window.history.replaceState({}, "", url.toString());
+  }, [gameId]);
 
   // Initialize local rack from playerRack
   useMemo(() => {
@@ -83,12 +118,17 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
 
       if (gameState?.board[`${x},${y}`]) return;
 
-      // Handle blank tiles - for now just use as-is, could show letter picker
+      // Handle blank tiles - show letter picker
+      if (letter === "BLANK") {
+        setPendingBlankPosition({ x, y });
+        return;
+      }
+
       const placement: TilePlacement = {
-        letter: letter === "BLANK" ? "A" : letter, // Default blank to 'A'
+        letter,
         x,
         y,
-        isBlank: letter === "BLANK",
+        isBlank: false,
       };
 
       setPendingPlacements((prev) => [...prev, placement]);
@@ -103,9 +143,52 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
     ],
   );
 
+  const handleBlankLetterSelect = useCallback(
+    (letter: string) => {
+      if (!pendingBlankPosition) return;
+
+      const placement: TilePlacement = {
+        letter,
+        x: pendingBlankPosition.x,
+        y: pendingBlankPosition.y,
+        isBlank: true,
+      };
+
+      setPendingPlacements((prev) => [...prev, placement]);
+      setPendingBlankPosition(null);
+      setSelectedTileIndex(null);
+    },
+    [pendingBlankPosition],
+  );
+
+  const handleBlankPickerCancel = useCallback(() => {
+    setPendingBlankPosition(null);
+  }, []);
+
   const handleRemoveTile = useCallback((x: number, y: number) => {
     setPendingPlacements((prev) => prev.filter((p) => p.x !== x || p.y !== y));
   }, []);
+
+  const handleMoveTile = useCallback(
+    (fromX: number, fromY: number, toX: number, toY: number) => {
+      if (!isMyTurn) return;
+      if (fromX === toX && fromY === toY) return;
+      if (gameState?.board[`${toX},${toY}`]) return;
+
+      setPendingPlacements((prev) => {
+        const movingIndex = prev.findIndex(
+          (p) => p.x === fromX && p.y === fromY,
+        );
+        if (movingIndex === -1) return prev;
+        if (prev.some((p) => p.x === toX && p.y === toY)) return prev;
+
+        const next = [...prev];
+        next[movingIndex] = { ...next[movingIndex], x: toX, y: toY };
+        return next;
+      });
+    },
+    [gameState?.board, isMyTurn],
+  );
 
   const handlePlay = useCallback(async () => {
     if (!validation?.valid) return;
@@ -114,8 +197,38 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
     if (result.valid) {
       setPendingPlacements([]);
       setLocalRack(playerRack);
+
+      // Zap opponent if wallet connected
+      if (walletState.connected && opponentPubkey) {
+        try {
+          const message = `Words With Zaps: your turn -> ${gameLink}`;
+          await zapUser({
+            recipientPubkey: opponentPubkey,
+            amountSats: zapAmount,
+            gameId,
+            moveDescription: message,
+          });
+        } catch (err) {
+          // Move succeeded but zap failed - notify user
+          console.warn("Zap failed:", err);
+          setZapError(
+            "Move played, but zap notification failed. You may want to notify your opponent manually.",
+          );
+        }
+      }
     }
-  }, [validation, makeMove, pendingPlacements, playerRack]);
+  }, [
+    validation,
+    makeMove,
+    pendingPlacements,
+    playerRack,
+    walletState.connected,
+    opponentPubkey,
+    gameLink,
+    zapUser,
+    zapAmount,
+    gameId,
+  ]);
 
   const handlePass = useCallback(async () => {
     await pass();
@@ -136,6 +249,41 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
     alert("Exchange not yet implemented. Select tiles to exchange.");
   }, []);
 
+  const handleCopyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(gameLink);
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 1500);
+    } catch (err) {
+      setZapError(
+        err instanceof Error ? err.message : "Failed to copy game link",
+      );
+    }
+  }, [gameLink]);
+
+  const handleConnectWallet = useCallback(async () => {
+    try {
+      await connectWebLN();
+    } catch (err) {
+      setZapError(
+        err instanceof Error ? err.message : "Failed to connect wallet",
+      );
+    }
+  }, [connectWebLN]);
+
+  const handleDeleteGame = useCallback(async () => {
+    if (!isCreator) return;
+    const confirmed = window.confirm(
+      "Delete this game? This will mark it as deleted for both players.",
+    );
+    if (!confirmed) return;
+    try {
+      await deleteGame();
+    } catch (err) {
+      setZapError(err instanceof Error ? err.message : "Failed to delete game");
+    }
+  }, [isCreator, deleteGame]);
+
   if (!gameState) {
     return (
       <div className="game-view loading">
@@ -150,42 +298,56 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
 
   return (
     <div className="game-view">
-      <ScoreBoard
-        player1={{
-          pubkey: gameState.meta.playerOne,
-          score: gameState.scoring.p1Score,
-          isActive: gameState.turn.activePlayer === gameState.meta.playerOne,
-        }}
-        player2={{
-          pubkey: gameState.meta.playerTwo,
-          score: gameState.scoring.p2Score,
-          isActive: gameState.turn.activePlayer === gameState.meta.playerTwo,
-        }}
-        tilesRemaining={gameState.tileBag.length}
-      />
+      <div className="game-header">
+        <ScoreBoard
+          player1={{
+            pubkey: gameState.meta.playerOne,
+            score: gameState.scoring.p1Score,
+            isActive: gameState.turn.activePlayer === gameState.meta.playerOne,
+          }}
+          player2={{
+            pubkey: gameState.meta.playerTwo,
+            score: gameState.scoring.p2Score,
+            isActive: gameState.turn.activePlayer === gameState.meta.playerTwo,
+          }}
+          tilesRemaining={gameState.tileBag.length}
+          currentUserPubkey={myPubkey}
+          onShare={handleCopyLink}
+        />
 
-      {error && <div className="game-error">{error}</div>}
-
-      <div className="game-status">
-        {gameState.meta.status === "completed" ? (
-          <span className="status-completed">
-            Game Over! Winner:{" "}
-            {gameState.meta.winner === myPubkey ? "You!" : "Opponent"}
-          </span>
-        ) : gameState.meta.status === "abandoned" ? (
-          <span className="status-abandoned">Game Abandoned</span>
-        ) : isMyTurn ? (
-          <span className="status-your-turn">Your Turn</span>
-        ) : (
-          <span className="status-waiting">Waiting for opponent...</span>
+        {gameState.meta.status !== "active" && (
+          <div className="game-status">
+            {gameState.meta.status === "completed" ? (
+              <span className="status-completed">
+                Game Over! Winner:{" "}
+                {gameState.meta.winner === myPubkey ? "You!" : "Opponent"}
+              </span>
+            ) : gameState.meta.status === "abandoned" ? (
+              <span className="status-abandoned">Game Abandoned</span>
+            ) : gameState.meta.status === "deleted" ? (
+              <span className="status-deleted">
+                Game Deleted{" "}
+                {gameState.meta.deletedBy
+                  ? gameState.meta.deletedBy === myPubkey
+                    ? "(by you)"
+                    : "(by opponent)"
+                  : ""}
+              </span>
+            ) : null}
+          </div>
         )}
       </div>
+
+      {error && <div className="game-error">{error}</div>}
+      {zapMessage && <div className="game-success">{zapMessage}</div>}
+      {zapError && <div className="game-error">{zapError}</div>}
 
       <Board
         board={gameState.board}
         pendingPlacements={pendingPlacements}
         onPlaceTile={handlePlaceTile}
         onRemoveTile={handleRemoveTile}
+        onMoveTile={handleMoveTile}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
       />
 
@@ -193,6 +355,7 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
         tiles={availableRack}
         selectedTile={selectedTileIndex}
         onSelectTile={setSelectedTileIndex}
+        onReturnTile={handleRemoveTile}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
       />
 
@@ -210,12 +373,21 @@ export function GameView({ gameId, opponentPubkey }: GameViewProps) {
         }
         isLoading={isLoading}
         pendingScore={validation?.score}
+        walletConnected={walletState.connected}
+        zapAmount={zapAmount}
         onPlay={handlePlay}
         onPass={handlePass}
         onExchange={handleExchange}
         onClear={handleClear}
         onShuffle={handleShuffle}
       />
+
+      {pendingBlankPosition && (
+        <BlankTilePicker
+          onSelect={handleBlankLetterSelect}
+          onCancel={handleBlankPickerCancel}
+        />
+      )}
     </div>
   );
 }
