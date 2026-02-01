@@ -52,9 +52,10 @@ export function ScoreBoard({
     return profile?.displayName || profile?.name || truncatePubkey(pubkey);
   };
 
-  const isMyTurn =
+  const _isMyTurn =
     (player1.isActive && player1.pubkey === currentUserPubkey) ||
     (player2.isActive && player2.pubkey === currentUserPubkey);
+  void _isMyTurn; // Reserved for turn indicator UI
 
   return (
     <div className="scoreboard">

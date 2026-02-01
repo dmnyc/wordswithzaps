@@ -44,48 +44,120 @@
     position: relative;
 }
 
-.wallet-status {
-    display: flex;
-    align-items: center;
+.wallet-menu-wrap {
+    position: relative;
 }
 
-.wallet-connected {
+.wallet-status-btn {
     display: flex;
     align-items: center;
+    gap: 8px;
+    height: 42px;
+    min-width: 86px;
+    padding: 0 12px;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 8px rgba(255, 204, 0, 0.4);
-}
-
-.wallet-connected .bolt-icon {
-    height: 18px;
-    width: auto;
-}
-
-.wallet-connect-btn .bolt-icon {
-    height: 14px;
-    width: auto;
-    vertical-align: middle;
-    margin-right: 4px;
-}
-
-.wallet-connect-btn {
-    padding: 5px 10px;
     border: none;
-    border-radius: 6px;
-    background: linear-gradient(180deg, #ffcc00, #e6b800);
-    color: #0b0b0b;
-    font-size: 12px;
-    font-weight: 600;
+    border-radius: 999px;
+    background: transparent;
+    color: #cfcfcf;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     transition: background 0.15s;
+    box-shadow: none;
 }
 
-.wallet-connect-btn:hover {
-    background: linear-gradient(180deg, #ffd633, #f2c200);
+.wallet-status-btn.balance-hidden {
+    width: 42px;
+    min-width: 42px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+}
+
+.wallet-status-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.wallet-type-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
+    flex-shrink: 0;
+    opacity: 0.55;
+}
+
+.wallet-type-icon.spark,
+.wallet-type-icon.bitcoin-connect {
+    color: #e6e6e6;
+}
+
+.wallet-status-btn .bolt-icon {
+    height: 16px;
+    width: auto;
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(255, 204, 0, 0.35));
+}
+
+.wallet-status-btn .bolt-icon.connected {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(255, 204, 0, 0.5));
+}
+
+.wallet-balance-text {
+    color: #ffcc00;
+    font-weight: 700;
+    font-size: 16px;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    display: inline;
+}
+
+.wallet-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    min-width: 190px;
+    background: #1a1a1a;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 950;
+}
+
+.wallet-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px 6px;
+    color: #cfcfcf;
+    font-size: 12px;
+}
+
+.wallet-menu-title {
+    font-weight: 600;
+}
+
+.menu-item.icon-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-icon {
+    width: 16px;
+    height: 16px;
+    color: #cfcfcf;
+    opacity: 0.8;
+}
+
+.wallet-label {
+    color: #7a7a7a;
 }
 
 .user-button {
@@ -155,6 +227,42 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+.menu-section {
+    padding: 6px 6px 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.menu-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9a9a9a;
+    padding: 4px 6px 0;
+}
+
+.menu-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #eee;
+    font-size: 13px;
+    padding: 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.menu-toggle input {
+    accent-color: #ffcc00;
 }
 
 .menu-item {

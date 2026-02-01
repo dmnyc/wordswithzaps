@@ -176,7 +176,7 @@ async function searchPrimalCache(query: string, limit: number): Promise<any[]> {
       },
     ];
 
-    primalWs.send(JSON.stringify(searchQuery));
+    primalWs!.send(JSON.stringify(searchQuery));
   });
 }
 

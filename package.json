@@ -31,6 +31,11 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "@nostr-dev-kit/ndk": "^2.10.0",
+    "@breeztech/breez-sdk-spark": "^0.1.0",
+    "@getalby/bitcoin-connect": "^3.8.1",
+    "@noble/hashes": "^1.7.1",
+    "bip39": "^3.1.0",
+    "buffer": "^6.0.3",
     "nostr-tools": "^2.10.0",
     "uuid": "^10.0.0"
   },

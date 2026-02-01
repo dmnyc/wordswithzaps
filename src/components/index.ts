@@ -8,3 +8,4 @@ export { LoginScreen } from "./LoginScreen";
 export { Lobby } from "./Lobby";
 export { NavBar } from "./NavBar";
 export { BlankTilePicker } from "./BlankTilePicker";
+export { WalletSettings } from "./WalletSettings";

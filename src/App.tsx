@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNostr } from "./hooks/useNostr";
 import { useWallet } from "./hooks/useWallet";
+import { WalletKind } from "./types/wallet";
 import { getDictionary } from "./engine/Dictionary";
 import { fetchGamePlayers } from "./nostr/games";
 import { getCurrentUser } from "./nostr/client";
@@ -8,6 +9,7 @@ import LoginScreen from "./components/LoginScreen";
 import Lobby from "./components/Lobby";
 import GameView from "./components/GameView";
 import NavBar from "./components/NavBar";
+import WalletSettings from "./components/WalletSettings";
 import "./index.css";
 
 type Screen = "login" | "lobby" | "game";
@@ -27,15 +29,28 @@ function App() {
 
   const { isConnected, user, disconnect, connect, isConnecting, error } =
     useNostr();
-  const { state: walletState, connectWebLN, isWebLNAvailable } = useWallet();
+  const {
+    state: walletState,
+    isReady: walletReady,
+    activeWallet,
+    bitcoinConnectEnabled,
+  } = useWallet();
+  const [showWalletSettings, setShowWalletSettings] = useState(false);
+  const walletType = activeWallet
+    ? activeWallet.kind === WalletKind.SPARK
+      ? "spark"
+      : "nwc"
+    : bitcoinConnectEnabled
+      ? "bitcoin-connect"
+      : "none";
 
-  const handleConnectWallet = useCallback(async () => {
-    try {
-      await connectWebLN();
-    } catch (err) {
-      console.warn("Failed to connect wallet:", err);
-    }
-  }, [connectWebLN]);
+  const handleOpenWalletSettings = useCallback(() => {
+    setShowWalletSettings(true);
+  }, []);
+
+  const handleCloseWalletSettings = useCallback(() => {
+    setShowWalletSettings(false);
+  }, []);
 
   // Load dictionary on mount
   useEffect(() => {
@@ -247,9 +262,11 @@ function App() {
           <NavBar
             user={user}
             onDisconnect={handleDisconnect}
-            walletState={walletState}
-            isWebLNAvailable={isWebLNAvailable}
-            onConnectWallet={handleConnectWallet}
+            walletConnected={walletReady}
+            walletBalance={walletState.balance}
+            walletLoading={walletState.loading}
+            walletType={walletType}
+            onOpenWalletSettings={handleOpenWalletSettings}
           />
           <Lobby
             onGameStart={handleGameStart}
@@ -265,15 +282,21 @@ function App() {
             user={user}
             onDisconnect={handleDisconnect}
             onBackToLobby={handleBackToLobby}
-            walletState={walletState}
-            isWebLNAvailable={isWebLNAvailable}
-            onConnectWallet={handleConnectWallet}
+            walletConnected={walletReady}
+            walletBalance={walletState.balance}
+            walletLoading={walletState.loading}
+            walletType={walletType}
+            onOpenWalletSettings={handleOpenWalletSettings}
           />
           <GameView
             gameId={gameSession.gameId}
             opponentPubkey={gameSession.opponentPubkey}
           />
         </>
+      )}
+
+      {showWalletSettings && (
+        <WalletSettings onClose={handleCloseWalletSettings} />
       )}
     </div>
   );

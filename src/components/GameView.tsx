@@ -9,6 +9,10 @@ import ScoreBoard from "./ScoreBoard";
 import GameControls from "./GameControls";
 import BlankTilePicker from "./BlankTilePicker";
 import { shuffleArray } from "../engine/constants";
+import {
+  getDisableGameplayZaps,
+  subscribeAppSettings,
+} from "../settings/appSettings";
 import "./GameView.css";
 
 interface GameViewProps {
@@ -20,8 +24,9 @@ interface GameViewProps {
 export function GameView({
   gameId,
   opponentPubkey,
-  onShareGame,
+  onShareGame: _onShareGame,
 }: GameViewProps) {
+  void _onShareGame; // Reserved for share UI
   const {
     gameState,
     playerRack,
@@ -45,21 +50,26 @@ export function GameView({
   const [zapAmount] = useState(1);
   const [zapMessage, setZapMessage] = useState<string | null>(null);
   const [zapError, setZapError] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [, setLinkCopied] = useState(false);
   const [pendingBlankPosition, setPendingBlankPosition] = useState<{
     x: number;
     y: number;
   } | null>(null);
+  const [zapsDisabled, setZapsDisabled] = useState(() =>
+    getDisableGameplayZaps(),
+  );
 
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
   const isCreator = gameState?.meta.playerOne === myPubkey;
-  const {
-    state: walletState,
-    connectWebLN,
-    zapUser,
-    isWebLNAvailable,
-  } = useWallet();
+  const { zapUser, isReady: walletReady } = useWallet();
+
+  useEffect(() => {
+    const unsubscribe = subscribeAppSettings(() => {
+      setZapsDisabled(getDisableGameplayZaps());
+    });
+    return unsubscribe;
+  }, []);
 
   const gameLink = useMemo(() => {
     const url = new URL(window.location.href);
@@ -198,8 +208,8 @@ export function GameView({
       setPendingPlacements([]);
       setLocalRack(playerRack);
 
-      // Zap opponent if wallet connected
-      if (walletState.connected && opponentPubkey) {
+      // Zap opponent if wallet ready and zaps enabled
+      if (!zapsDisabled && walletReady && opponentPubkey) {
         try {
           const message = `Words With Zaps: your turn -> ${gameLink}`;
           await zapUser({
@@ -208,14 +218,18 @@ export function GameView({
             gameId,
             moveDescription: message,
           });
+          setZapMessage(`Zapped ${zapAmount} sat${zapAmount > 1 ? "s" : ""}!`);
+          setTimeout(() => setZapMessage(null), 3000);
         } catch (err) {
           // Move succeeded but zap failed - notify user
           console.warn("Zap failed:", err);
           const errorMsg = err instanceof Error ? err.message : String(err);
           setZapError(`Move played, but zap failed: ${errorMsg}`);
         }
-      } else if (!walletState.connected) {
-        console.log("Wallet not connected, skipping zap");
+      } else if (zapsDisabled) {
+        console.log("[Zap] Gameplay zaps disabled");
+      } else if (!walletReady) {
+        console.log("Wallet not ready, skipping zap");
       }
     }
   }, [
@@ -223,12 +237,13 @@ export function GameView({
     makeMove,
     pendingPlacements,
     playerRack,
-    walletState.connected,
+    walletReady,
     opponentPubkey,
     gameLink,
     zapUser,
     zapAmount,
     gameId,
+    zapsDisabled,
   ]);
 
   const handlePass = useCallback(async () => {
@@ -262,16 +277,6 @@ export function GameView({
     }
   }, [gameLink]);
 
-  const handleConnectWallet = useCallback(async () => {
-    try {
-      await connectWebLN();
-    } catch (err) {
-      setZapError(
-        err instanceof Error ? err.message : "Failed to connect wallet",
-      );
-    }
-  }, [connectWebLN]);
-
   const handleDeleteGame = useCallback(async () => {
     if (!isCreator) return;
     const confirmed = window.confirm(
@@ -284,6 +289,7 @@ export function GameView({
       setZapError(err instanceof Error ? err.message : "Failed to delete game");
     }
   }, [isCreator, deleteGame]);
+  void handleDeleteGame; // Reserved for delete button UI
 
   if (!gameState) {
     return (
@@ -375,8 +381,9 @@ export function GameView({
         }
         isLoading={isLoading}
         pendingScore={validation?.score}
-        walletConnected={walletState.connected}
+        walletConnected={walletReady}
         zapAmount={zapAmount}
+        zapsDisabled={zapsDisabled}
         onPlay={handlePlay}
         onPass={handlePass}
         onExchange={handleExchange}
