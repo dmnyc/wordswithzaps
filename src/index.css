@@ -14,6 +14,12 @@
     --danger: #ff5b5b;
     --shadow-strong: 0 24px 60px rgba(0, 0, 0, 0.45);
     --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+    /* Bitcoin Connect theme overrides */
+    --bc-color-brand: #ffcc00;
+    --bc-color-brand-dark: #f2b500;
+    --bc-color-brand-button-text: #0b0b0b;
+    --bc-color-brand-button-text-dark: #0b0b0b;
 }
 
 * {

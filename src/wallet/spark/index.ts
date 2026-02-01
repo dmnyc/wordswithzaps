@@ -202,21 +202,49 @@ async function refreshBalanceInternal(): Promise<void> {
  * Map SDK payment to our SparkPayment type
  */
 function mapPayment(p: any): SparkPayment {
+  // SDK uses paymentType with values like "received", "receive", "send", "sent"
+  const paymentType = p.paymentType || p.payment_type || p.type || "";
+  const isIncoming =
+    paymentType === "received" ||
+    paymentType === "RECEIVED" ||
+    paymentType === "receive" ||
+    paymentType === "incoming";
+
+  // Handle amount - SDK may return msat or sat
+  const amountMsat = p.amountMsat || p.amount_msat || p.amountMSat || 0;
+  const amountSats =
+    p.amountSat ||
+    p.amount_sat ||
+    p.amountSats ||
+    p.amount ||
+    Math.floor(Number(amountMsat) / 1000);
+
+  // Handle fees
+  const feesMsat = p.feesMsat || p.fees_msat || p.feesMSat || 0;
+  const feesSats =
+    p.feesSat ||
+    p.fees_sat ||
+    p.feesSats ||
+    (feesMsat ? Math.floor(Number(feesMsat) / 1000) : undefined);
+
+  // Handle timestamp - SDK may return in ms or s
+  let timestamp = p.createdAt || p.created_at || p.timestamp || Date.now();
+  if (timestamp > 4102444800) timestamp = Math.floor(timestamp / 1000); // Convert ms to s if needed
+
   return {
-    id: p.id || p.paymentHash || String(Date.now()),
-    type:
-      p.type === "incoming" || p.direction === "incoming"
-        ? "incoming"
-        : "outgoing",
-    amountSats: Number(p.amountSats || p.amount_sats || p.amount || 0),
-    feesSats: p.feesSats !== undefined ? Number(p.feesSats) : undefined,
+    id: p.id || p.paymentHash || p.payment_hash || String(Date.now()),
+    type: isIncoming ? "incoming" : "outgoing",
+    amountSats: Number(amountSats),
+    feesSats: feesSats !== undefined ? Number(feesSats) : undefined,
     description: p.description || p.bolt11Description,
     preimage: p.preimage,
     paymentHash: p.paymentHash || p.payment_hash,
-    createdAt: p.createdAt || p.created_at || Date.now(),
+    createdAt: timestamp,
     settledAt: p.settledAt || p.settled_at,
     status:
-      p.status === "succeeded" || p.status === "complete"
+      p.status === "succeeded" ||
+      p.status === "complete" ||
+      p.status === "completed"
         ? "succeeded"
         : p.status === "failed"
           ? "failed"
@@ -479,9 +507,21 @@ export function isSparkInitialized(): boolean {
 
 /**
  * Get current balance
+ * @param forceSync If true, waits for wallet sync before returning balance
  */
-export async function getSparkBalance(): Promise<number> {
+export async function getSparkBalance(forceSync = false): Promise<number> {
   if (!_sdkInstance) throw new Error("Spark SDK not initialized");
+
+  if (forceSync) {
+    try {
+      console.log("[Spark] Force syncing wallet...");
+      await _sdkInstance.syncWallet({});
+      console.log("[Spark] Sync complete");
+    } catch (e) {
+      console.warn("[Spark] Force sync failed:", e);
+    }
+  }
+
   await refreshBalanceInternal();
   return _walletBalance ?? 0;
 }
@@ -606,6 +646,103 @@ export function getSparkLightningAddress(): string | null {
 }
 
 /**
+ * Fetch lightning address from SDK (force refresh)
+ * Returns the address or null if not registered
+ */
+export async function refreshSparkLightningAddress(): Promise<string | null> {
+  if (!_sdkInstance) return null;
+
+  try {
+    const addr = await _sdkInstance.getLightningAddress();
+    const address = extractLightningAddressString(addr);
+    _lightningAddress = address;
+    notifyListeners();
+    return address;
+  } catch (error) {
+    console.debug("[Spark] No lightning address available:", error);
+    _lightningAddress = null;
+    notifyListeners();
+    return null;
+  }
+}
+
+/**
+ * Check if a @breez.tips username is available
+ */
+export async function checkLightningAddressAvailable(
+  username: string,
+): Promise<boolean> {
+  if (!_sdkInstance) throw new Error("Spark SDK not initialized");
+
+  try {
+    return await _sdkInstance.checkLightningAddressAvailable({ username });
+  } catch (error) {
+    console.error(
+      "[Spark] Failed to check lightning address availability:",
+      error,
+    );
+    throw error;
+  }
+}
+
+/**
+ * Register a @breez.tips lightning address
+ */
+export async function registerLightningAddress(
+  username: string,
+  description?: string,
+): Promise<string> {
+  if (!_sdkInstance) throw new Error("Spark SDK not initialized");
+
+  try {
+    _sparkLoading = true;
+    notifyListeners();
+
+    const result = await _sdkInstance.registerLightningAddress({
+      username,
+      description: description || "Words With Zaps wallet",
+    });
+
+    const address = extractLightningAddressString(result);
+    if (address) {
+      _lightningAddress = address;
+      notifyListeners();
+    }
+
+    return address || `${username}@breez.tips`;
+  } catch (error) {
+    console.error("[Spark] Failed to register lightning address:", error);
+    throw error;
+  } finally {
+    _sparkLoading = false;
+    notifyListeners();
+  }
+}
+
+/**
+ * Delete the registered @breez.tips lightning address
+ */
+export async function deleteLightningAddress(): Promise<void> {
+  if (!_sdkInstance) throw new Error("Spark SDK not initialized");
+
+  try {
+    _sparkLoading = true;
+    notifyListeners();
+
+    await _sdkInstance.deleteLightningAddress();
+    _lightningAddress = null;
+    notifyListeners();
+    console.log("[Spark] Lightning address deleted");
+  } catch (error) {
+    console.error("[Spark] Failed to delete lightning address:", error);
+    throw error;
+  } finally {
+    _sparkLoading = false;
+    notifyListeners();
+  }
+}
+
+/**
  * List recent payments
  */
 export async function listSparkPayments(
@@ -652,6 +789,9 @@ export default {
   sendSparkPayment,
   createSparkInvoice,
   getSparkLightningAddress,
+  checkLightningAddressAvailable,
+  registerLightningAddress,
+  deleteLightningAddress,
   listSparkPayments,
   hasSparkMnemonic,
   deleteSparkMnemonic,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { WalletState, ZapParams, Wallet } from "../types/wallet";
 import { WalletKind } from "../types/wallet";
 import {
@@ -14,8 +14,8 @@ import {
   hasSparkMnemonic,
 } from "../wallet/walletManager";
 import {
-  enableBitcoinConnect,
   disableBitcoinConnect,
+  connectBitcoinConnect,
   getBitcoinConnectState,
   subscribeToBitcoinConnectState,
 } from "../wallet/bitcoinConnect";
@@ -42,13 +42,15 @@ export interface UseWalletReturn {
 
   // Bitcoin Connect
   bitcoinConnectEnabled: boolean;
-  toggleBitcoinConnect: () => void;
+  bitcoinConnectConnected: boolean;
+  connectBitcoinConnect: () => Promise<void>;
+  disconnectBitcoinConnect: () => Promise<void>;
 
   // General
   disconnect: (walletId?: string) => Promise<void>;
   setActiveWallet: (walletId: string) => Promise<void>;
   zapUser: (params: ZapParams) => Promise<string>;
-  refreshBalance: () => Promise<void>;
+  refreshBalance: (forceSync?: boolean) => Promise<void>;
   isReady: boolean;
 }
 
@@ -157,13 +159,13 @@ export function useWallet(): UseWalletReturn {
     }
   }, []);
 
-  const handleToggleBitcoinConnect = useCallback(() => {
-    if (bcState.enabled) {
-      disableBitcoinConnect();
-    } else {
-      enableBitcoinConnect();
-    }
-  }, [bcState.enabled]);
+  const handleConnectBitcoinConnect = useCallback(async () => {
+    await connectBitcoinConnect();
+  }, []);
+
+  const handleDisconnectBitcoinConnect = useCallback(async () => {
+    await disableBitcoinConnect();
+  }, []);
 
   const handleDisconnect = useCallback(async (walletId?: string) => {
     await disconnectWallet(walletId);
@@ -182,15 +184,18 @@ export function useWallet(): UseWalletReturn {
     [],
   );
 
-  const handleRefreshBalance = useCallback(async () => {
-    await refreshBalance();
+  const handleRefreshBalance = useCallback(async (forceSync = false) => {
+    await refreshBalance(forceSync);
   }, []);
 
   // Check if user has a Spark wallet mnemonic stored
+  // Re-check whenever wallet store state changes (e.g., after disconnect)
   const currentUser = getCurrentUser();
-  const hasSparkWallet = currentUser?.pubkey
-    ? hasSparkMnemonic(currentUser.pubkey)
-    : false;
+  const hasSparkWallet = React.useMemo(() => {
+    // This dependency on walletStoreState ensures re-check after wallet changes
+    void walletStoreState;
+    return currentUser?.pubkey ? hasSparkMnemonic(currentUser.pubkey) : false;
+  }, [currentUser?.pubkey, walletStoreState]);
 
   return {
     state: mapToWalletState(walletStoreState),
@@ -204,7 +209,9 @@ export function useWallet(): UseWalletReturn {
     hasSparkWallet,
 
     bitcoinConnectEnabled: bcState.enabled,
-    toggleBitcoinConnect: handleToggleBitcoinConnect,
+    bitcoinConnectConnected: bcState.connected,
+    connectBitcoinConnect: handleConnectBitcoinConnect,
+    disconnectBitcoinConnect: handleDisconnectBitcoinConnect,
 
     disconnect: handleDisconnect,
     setActiveWallet: handleSetActiveWallet,

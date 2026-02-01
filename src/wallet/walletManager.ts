@@ -5,7 +5,12 @@
  * Routes operations to the appropriate wallet implementation.
  */
 
-import { WalletKind, type Wallet, type ZapParams } from "../types/wallet";
+import {
+  WalletKind,
+  type Wallet,
+  type ZapParams,
+  type Transaction,
+} from "../types/wallet";
 import {
   getWalletStoreState,
   subscribeToWalletStore,
@@ -29,6 +34,7 @@ import {
   isNwcConnectedTo,
   getNwcDisplayName,
   getNwcInfo,
+  listNwcTransactions,
 } from "./providers/nwc";
 import {
   connectWallet as connectSparkWallet,
@@ -39,7 +45,9 @@ import {
   isSparkInitialized,
   getSparkLightningAddress,
   hasSparkMnemonic,
+  deleteSparkMnemonic,
   getSparkState,
+  listSparkPayments,
 } from "./spark";
 import {
   isBitcoinConnectEnabled,
@@ -147,6 +155,11 @@ export async function disconnectWallet(walletId?: string): Promise<void> {
 
       case WalletKind.SPARK:
         await disconnectSparkWallet();
+        // Delete the mnemonic from storage so wallet can be re-added
+        const currentUser = getCurrentUser();
+        if (currentUser?.pubkey) {
+          deleteSparkMnemonic(currentUser.pubkey);
+        }
         break;
     }
 
@@ -155,6 +168,13 @@ export async function disconnectWallet(walletId?: string): Promise<void> {
     console.error("[WalletManager] Disconnect error:", e);
     // Still remove from store even if disconnect fails
     removeWallet(wallet.id);
+    // Also delete mnemonic on error for Spark wallets
+    if (wallet.kind === WalletKind.SPARK) {
+      const currentUser = getCurrentUser();
+      if (currentUser?.pubkey) {
+        deleteSparkMnemonic(currentUser.pubkey);
+      }
+    }
   }
 }
 
@@ -204,8 +224,11 @@ async function ensureWalletConnected(wallet: Wallet): Promise<boolean> {
 
 /**
  * Refresh wallet balance
+ * @param forceSync If true, forces a sync before getting balance (slower but more accurate)
  */
-export async function refreshBalance(): Promise<number | null> {
+export async function refreshBalance(
+  forceSync = false,
+): Promise<number | null> {
   const wallet = getActiveWallet();
 
   if (!wallet) {
@@ -236,7 +259,7 @@ export async function refreshBalance(): Promise<number | null> {
 
       case WalletKind.SPARK:
         try {
-          balance = await getSparkBalance();
+          balance = await getSparkBalance(forceSync);
         } catch (e) {
           console.warn("[WalletManager] Spark balance fetch failed:", e);
           const sparkState = getSparkState();
@@ -477,6 +500,74 @@ export async function zapUser(params: ZapParams): Promise<string> {
   }
 
   return result.preimage || "";
+}
+
+/**
+ * Get transaction history from the active wallet
+ */
+export async function getTransactionHistory(
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<{ transactions: Transaction[]; hasMore: boolean }> {
+  const wallet = getActiveWallet();
+
+  if (!wallet) {
+    return { transactions: [], hasMore: false };
+  }
+
+  const limit = options.limit || 30;
+  const offset = options.offset || 0;
+
+  try {
+    const connected = await ensureWalletConnected(wallet);
+    if (!connected) {
+      return { transactions: [], hasMore: false };
+    }
+
+    switch (wallet.kind) {
+      case WalletKind.NWC: {
+        const result = await listNwcTransactions({ limit, offset });
+        const transactions: Transaction[] = result.transactions.map((tx) => ({
+          id: tx.payment_hash,
+          type: tx.type,
+          amountSats: Math.floor(tx.amount / 1000), // Convert msats to sats
+          feesSats: tx.fees_paid ? Math.floor(tx.fees_paid / 1000) : undefined,
+          description: tx.description,
+          timestamp: tx.settled_at || tx.created_at,
+          status:
+            tx.settled_at && tx.settled_at > 0
+              ? "succeeded"
+              : tx.expires_at && tx.expires_at < Date.now() / 1000
+                ? "failed"
+                : "pending",
+        }));
+        return { transactions, hasMore: result.hasMore };
+      }
+
+      case WalletKind.SPARK: {
+        const payments = await listSparkPayments({ limit, offset });
+        const transactions: Transaction[] = payments.map((p) => ({
+          id: p.id,
+          type: p.type,
+          amountSats: p.amountSats,
+          feesSats: p.feesSats,
+          description: p.description,
+          timestamp: p.settledAt || p.createdAt,
+          status: p.status,
+        }));
+        // Spark doesn't have a hasMore flag, estimate based on result count
+        return { transactions, hasMore: payments.length === limit };
+      }
+
+      default:
+        return { transactions: [], hasMore: false };
+    }
+  } catch (e) {
+    console.error("[WalletManager] Failed to get transaction history:", e);
+    return { transactions: [], hasMore: false };
+  }
 }
 
 /**

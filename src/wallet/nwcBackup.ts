@@ -9,7 +9,12 @@ import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { getNDK } from "../nostr/client";
 
 const NWC_BACKUP_EVENT_KIND = 30078;
-const NWC_BACKUP_D_TAG = "wordswithzaps-nwc-backup";
+// Support multiple d-tags for cross-app compatibility
+const NWC_BACKUP_D_TAGS = [
+  "zapcooking-nwc-backup", // zapcooking format (primary)
+  "wordswithzaps-nwc-backup", // legacy wordswithzaps format
+];
+const NWC_BACKUP_D_TAG = NWC_BACKUP_D_TAGS[0]; // Use zapcooking format for new backups
 
 type EncryptionMethod = "nip44" | "nip04";
 
@@ -229,25 +234,34 @@ export async function restoreNwcFromNostr(
 
   const ndk = getNDK();
 
-  // Query for the backup event
-  const filter = {
-    kinds: [NWC_BACKUP_EVENT_KIND],
-    authors: [pubkey],
-    "#d": [NWC_BACKUP_D_TAG],
-  };
-  console.log("[NWC Restore] Fetching with filter:", JSON.stringify(filter));
+  // Query for backup events with any supported d-tag
+  console.log(
+    "[NWC Restore] Searching for backups with d-tags:",
+    NWC_BACKUP_D_TAGS,
+  );
 
-  const events = await ndk.fetchEvents(filter, { closeOnEose: true });
-  console.log("[NWC Restore] Found", events?.size || 0, "events");
+  let allEvents: NDKEvent[] = [];
+  for (const dTag of NWC_BACKUP_D_TAGS) {
+    const filter = {
+      kinds: [NWC_BACKUP_EVENT_KIND],
+      authors: [pubkey],
+      "#d": [dTag],
+    };
+    const events = await ndk.fetchEvents(filter, { closeOnEose: true });
+    if (events) {
+      allEvents.push(...Array.from(events));
+    }
+  }
+  console.log("[NWC Restore] Found", allEvents.length, "events");
 
-  if (!events || events.size === 0) {
+  if (allEvents.length === 0) {
     console.log("[NWC Restore] No backup found on Nostr relays");
     return null;
   }
 
   // Get the most recent backup
   let latestEvent: NDKEvent | null = null;
-  for (const event of events) {
+  for (const event of allEvents) {
     if (
       !latestEvent ||
       (event.created_at || 0) > (latestEvent.created_at || 0)
@@ -315,19 +329,22 @@ export async function hasNwcBackupOnNostr(pubkey: string): Promise<boolean> {
   try {
     const ndk = getNDK();
 
-    const filter = {
-      kinds: [NWC_BACKUP_EVENT_KIND],
-      authors: [pubkey],
-      "#d": [NWC_BACKUP_D_TAG],
-    };
+    // Check all supported d-tags for cross-app compatibility
+    for (const dTag of NWC_BACKUP_D_TAGS) {
+      const filter = {
+        kinds: [NWC_BACKUP_EVENT_KIND],
+        authors: [pubkey],
+        "#d": [dTag],
+      };
 
-    const events = await ndk.fetchEvents(filter, { closeOnEose: true });
+      const events = await ndk.fetchEvents(filter, { closeOnEose: true });
 
-    // Check if any event has actual content (not deleted)
-    if (events && events.size > 0) {
-      for (const event of events) {
-        if (event.content && !event.tags?.some((t) => t[0] === "deleted")) {
-          return true;
+      // Check if any event has actual content (not deleted)
+      if (events && events.size > 0) {
+        for (const event of events) {
+          if (event.content && !event.tags?.some((t) => t[0] === "deleted")) {
+            return true;
+          }
         }
       }
     }

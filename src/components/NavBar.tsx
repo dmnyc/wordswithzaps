@@ -7,6 +7,12 @@ import {
   getShareToNostrDefault,
   setShareToNostrDefault,
 } from "../settings/appSettings";
+import {
+  SparkLogo,
+  NwcLogo,
+  BitcoinConnectLogo,
+  EyeIcon,
+} from "./icons/WalletIcons";
 import "./NavBar.css";
 
 const BALANCE_HIDDEN_KEY = "wordswithzaps_wallet_balance_hidden";
@@ -24,89 +30,6 @@ interface NavBarProps {
   onShareGame?: () => void;
   connectionMethod?: "NIP-07" | "NIP-46" | null;
   relayCount?: number;
-}
-
-function SparkLogo({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 52 49"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      preserveAspectRatio="xMidYMid meet"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M30.968.273l-.494 18.251 17.358-5.994 3.205 9.905-17.625 5.17 11.172 14.64-8.63 5.891-10.33-14.95-10.488 14.97-8.471-6.12 11.206-14.48-17.59-5.284 3.266-9.884 17.322 6.105-.377-18.24 10.476.02z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function NwcLogo({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="-1 -1 34 34"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        fill="currentColor"
-        d="M13.826 3.884a3.279 3.279 0 0 0-4.632.018L.948 12.178a3.234 3.234 0 0 0 .02 4.594l13.521 13.522a3.274 3.274 0 0 0 4.627-.016l4.02-4.019c-1.173 1.172-2.137.33-3.28-.809l-2.242-2.241c-1.702.673-3.69.339-5.07-1.037l-1.708-1.709a.575.575 0 0 1-.18-.427c0-.08.016-.16.047-.235a.603.603 0 0 1 .137-.195l.966-.967-2.104-2.104c-.33-.33-.383-.86-.089-1.219a.888.888 0 0 1 1.317-.065l2.133 2.131 1.445-1.444-2.11-2.104c-.33-.33-.383-.86-.086-1.221a.89.89 0 0 1 1.317-.065l2.141 2.127.908-.908a.584.584 0 0 1 .188-.14.614.614 0 0 1 .67.134l1.712 1.707a4.733 4.733 0 0 1 1.08 5.026l2.243 2.242c1.143 1.138 2.1 1.988 3.272.816l5.071-5.072c-1.219 1.22-2.22.28-3.425-.923L13.826 3.884z"
-      />
-      <path
-        fill="currentColor"
-        d="m23.413 1.628-4.311 4.308 9.578 9.578c.917.913 1.714 1.64 2.598 1.288.511-.204.862-.758.666-1.272C27.361 3.503 27.36 3.503 26.751 2.188c-.608-1.314-2.318-1.593-3.338-.56z"
-      />
-    </svg>
-  );
-}
-
-function BitcoinConnectLogo({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 14 18"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M10.8082 3.33331C12.7772 4.09075 14.1685 5.19706 13.8505 7.14204C13.6732 8.23791 13.173 8.91251 12.4821 9.28731C12.2214 9.42871 12.1638 9.86701 12.3954 10.0523C13.3878 10.8459 13.784 11.9703 13.1599 13.6777C12.2504 16.1677 10.2082 16.4309 7.49683 15.9236C7.33053 15.8924 7.16703 15.9935 7.12393 16.1571L6.80103 17.3548C6.67903 17.8172 6.20523 18.0931 5.74283 17.9712C5.28014 17.8492 5.00405 17.3751 5.12622 16.9125L5.43563 15.766C5.48013 15.5978 5.37963 15.4254 5.21149 15.3805C4.97471 15.3171 4.73492 15.2515 4.49152 15.1833C4.32119 15.1356 4.14437 15.2361 4.09925 15.4071L3.78846 16.5606C3.66655 17.0227 3.19303 17.2985 2.73089 17.1765C2.26895 17.0546 1.99324 16.5813 2.11499 16.1194L2.43461 14.9309C2.47931 14.7612 2.37872 14.5872 2.20954 14.5408C2.15476 14.5257 2.09985 14.5106 2.04481 14.4954L2.04301 14.4949C1.80513 14.4294 1.56474 14.3633 1.3214 14.2988L0.765997 14.1458C0.152117 13.9838 -0.169513 13.3095 0.0909769 12.7306C0.299607 12.2669 0.815767 12.0273 1.30712 12.1582C1.31605 12.1606 1.32489 12.1629 1.33364 12.1652C1.45133 12.1965 1.44567 12.1738 1.56431 12.1463C1.80585 12.0905 1.93366 11.8912 1.99528 11.744L3.15425 7.35251L3.15727 7.34061L3.97649 4.2346C3.98156 4.21538 3.98494 4.19575 3.98589 4.17589C4.0002 3.87546 4.1343 3.57267 3.69639 3.36569C3.60155 3.32086 3.50827 3.27823 3.4069 3.25127C3.39012 3.24681 3.37281 3.24224 3.35505 3.23758C2.85917 3.10732 2.55671 2.60323 2.68736 2.10747C2.81635 1.61802 3.31783 1.32593 3.80721 1.45521L4.78141 1.72839C5.03107 1.79403 5.28619 1.85753 5.54533 1.92082C5.71283 1.96175 5.88223 1.86072 5.92623 1.69397L6.21153 0.644928C6.33363 0.182708 6.80723 -0.0931022 7.26943 0.0288578C7.73183 0.150838 8.00773 0.624528 7.88573 1.08685L7.61623 2.07686C7.57203 2.24432 7.67393 2.41536 7.84223 2.45639C8.08913 2.5166 8.33583 2.57745 8.58003 2.63979C8.74473 2.68186 8.91313 2.58379 8.95653 2.41938L9.22303 1.43999C9.34503 0.977478 9.81883 0.701418 10.2813 0.823388C10.7439 0.945358 11.02 1.41924 10.898 1.8818L10.6084 2.94852C10.5662 3.10852 10.6538 3.2739 10.8082 3.33331ZM6.59263 5.93441L6.82163 5.06512C6.92833 4.66035 7.34293 4.41868 7.74773 4.52533C8.15243 4.63198 8.39413 5.04657 8.28753 5.45134L8.05843 6.32063L8.92763 6.54966C9.33243 6.65631 9.57413 7.0709 9.46743 7.47571C9.36083 7.88041 8.94623 8.12211 8.54143 8.01541L7.67223 7.78641L7.44313 8.65571C7.33653 9.06051 6.92193 9.30221 6.51713 9.19551C6.11233 9.08891 5.87063 8.67431 5.97733 8.26951L6.20643 7.40021L5.33698 7.17113C4.9322 7.06447 4.69052 6.64989 4.79718 6.24512C4.90383 5.84035 5.31843 5.59868 5.72323 5.70533L6.59263 5.93441ZM8.63743 9.95401L8.40833 10.8232L7.53893 10.5942C7.13423 10.4875 6.71963 10.7292 6.61293 11.134C6.50623 11.5387 6.74793 11.9533 7.15273 12.06L8.02213 12.289L7.79313 13.1584C7.68643 13.5631 7.92813 13.9777 8.33293 14.0844C8.73763 14.191 9.15223 13.9493 9.25893 13.5446L9.48793 12.6753L10.3572 12.9043C10.7619 13.0109 11.1765 12.7693 11.2832 12.3645C11.3898 11.9597 11.1482 11.5451 10.7434 11.4385L9.87423 11.2095L10.1032 10.3402C10.2099 9.93541 9.96823 9.52081 9.56343 9.41421C9.15863 9.30751 8.74413 9.54921 8.63743 9.95401Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function EyeIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="12" r="3.2" fill="currentColor" />
-    </svg>
-  );
 }
 
 function WalletTypeIcon({ walletType }: { walletType?: WalletProviderType }) {
@@ -129,7 +52,7 @@ export function NavBar({
   onOpenSupportZap,
   walletConnected,
   walletBalance,
-  walletLoading,
+  walletLoading: _walletLoading,
   walletType,
   onOpenWalletSettings,
   onShareGame,
@@ -226,7 +149,16 @@ export function NavBar({
     profile?.displayName || profile?.display_name || profile?.name || "You";
   const picture = profile?.picture || profile?.image;
   const balanceKnown = walletBalance !== undefined && walletBalance !== null;
-  const balanceText = balanceKnown ? walletBalance.toLocaleString() : "...";
+  const hasWallet = walletConnected || walletType !== "none";
+  const isExternalWallet = walletType === "bitcoin-connect";
+  // External wallets don't show balance text, just the bolt icon
+  const balanceText = isExternalWallet
+    ? null
+    : balanceKnown
+      ? walletBalance.toLocaleString()
+      : hasWallet
+        ? "..."
+        : "Set up";
   const walletTypeLabel =
     walletType === "spark"
       ? "Spark Wallet"
@@ -257,7 +189,7 @@ export function NavBar({
         {onOpenWalletSettings && (
           <div className="wallet-menu-wrap">
             <button
-              className={`wallet-status-btn ${hideBalance ? "balance-hidden" : ""}`}
+              className={`wallet-status-btn ${hideBalance ? "balance-hidden" : ""} ${isExternalWallet ? "external-wallet" : ""}`}
               onClick={() => {
                 setWalletMenuOpen((prev) => !prev);
                 setMenuOpen(false);
@@ -269,7 +201,7 @@ export function NavBar({
                 alt=""
                 className={`bolt-icon ${walletConnected ? "connected" : ""}`}
               />
-              {!hideBalance && (
+              {!hideBalance && balanceText && (
                 <span className="wallet-balance-text">{balanceText}</span>
               )}
             </button>
@@ -281,15 +213,17 @@ export function NavBar({
                   )}
                   <span className="wallet-menu-title">{walletTypeLabel}</span>
                 </div>
-                <button
-                  className="menu-item icon-row"
-                  onClick={() => {
-                    setHideBalance((prev) => !prev);
-                  }}
-                >
-                  <EyeIcon className="menu-icon" />
-                  {hideBalance ? "Show balance" : "Hide balance"}
-                </button>
+                {!isExternalWallet && walletType !== "none" && (
+                  <button
+                    className="menu-item icon-row"
+                    onClick={() => {
+                      setHideBalance((prev) => !prev);
+                    }}
+                  >
+                    <EyeIcon className="menu-icon" />
+                    {hideBalance ? "Show balance" : "Hide balance"}
+                  </button>
+                )}
                 <button
                   className="menu-item"
                   onClick={() => {

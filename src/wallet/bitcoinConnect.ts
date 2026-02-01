@@ -5,9 +5,9 @@
  * When enabled and no embedded wallet is active, payments use Bitcoin Connect modal.
  */
 
-import type { BitcoinConnectInfo } from '../types/wallet';
+import type { BitcoinConnectInfo } from "../types/wallet";
 
-const STORAGE_KEY = 'wordswithzaps_bitcoin_connect_enabled';
+const STORAGE_KEY = "wordswithzaps_bitcoin_connect_enabled";
 
 // WebLN provider interface
 interface WebLNProvider {
@@ -29,8 +29,12 @@ type StateListener = () => void;
 const stateListeners: Set<StateListener> = new Set();
 
 function notifyListeners() {
-  stateListeners.forEach(listener => {
-    try { listener(); } catch { /* ignore */ }
+  stateListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      /* ignore */
+    }
   });
 }
 
@@ -40,7 +44,7 @@ function notifyListeners() {
 function loadEnabled(): boolean {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'true';
+    return stored === "true";
   } catch {
     return false;
   }
@@ -58,7 +62,7 @@ function saveEnabled(enabled: boolean): void {
 }
 
 // Initialize from localStorage
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   _enabled = loadEnabled();
 }
 
@@ -70,11 +74,13 @@ export function getBitcoinConnectState() {
     connected: _walletInfo.connected,
     walletInfo: _walletInfo,
     balance: _balance,
-    balanceLoading: _balanceLoading
+    balanceLoading: _balanceLoading,
   };
 }
 
-export function subscribeToBitcoinConnectState(listener: StateListener): () => void {
+export function subscribeToBitcoinConnectState(
+  listener: StateListener,
+): () => void {
   stateListeners.add(listener);
   return () => stateListeners.delete(listener);
 }
@@ -84,11 +90,13 @@ export function subscribeToBitcoinConnectState(listener: StateListener): () => v
 /**
  * Set the WebLN provider reference (called when connected via Bitcoin Connect modal)
  */
-export function setBitcoinConnectProvider(provider: WebLNProvider | null): void {
+export function setBitcoinConnectProvider(
+  provider: WebLNProvider | null,
+): void {
   _provider = provider;
 
   if (provider) {
-    _walletInfo = { ...(_walletInfo), connected: true };
+    _walletInfo = { ..._walletInfo, connected: true };
     notifyListeners();
 
     // Fetch info and balance when provider is set
@@ -115,17 +123,17 @@ export async function fetchBitcoinConnectInfo(): Promise<void> {
   if (!_provider) return;
 
   try {
-    if (typeof _provider.getInfo === 'function') {
+    if (typeof _provider.getInfo === "function") {
       const info = await _provider.getInfo();
       _walletInfo = {
         alias: info.node?.alias,
         pubkey: info.node?.pubkey,
-        connected: true
+        connected: true,
       };
       notifyListeners();
     }
   } catch (e) {
-    console.warn('[BitcoinConnect] Failed to fetch wallet info:', e);
+    console.warn("[BitcoinConnect] Failed to fetch wallet info:", e);
   }
 }
 
@@ -143,7 +151,7 @@ export async function fetchBitcoinConnectBalance(): Promise<number | null> {
   notifyListeners();
 
   try {
-    if (typeof _provider.getBalance === 'function') {
+    if (typeof _provider.getBalance === "function") {
       const response = await _provider.getBalance();
       _balance = response.balance;
       notifyListeners();
@@ -153,7 +161,7 @@ export async function fetchBitcoinConnectBalance(): Promise<number | null> {
     notifyListeners();
     return null;
   } catch (e) {
-    console.warn('[BitcoinConnect] Failed to fetch balance:', e);
+    console.warn("[BitcoinConnect] Failed to fetch balance:", e);
     _balance = null;
     notifyListeners();
     return null;
@@ -175,6 +183,33 @@ export function enableBitcoinConnect(): void {
 }
 
 /**
+ * Connect to Bitcoin Connect wallet (opens modal)
+ */
+export async function connectBitcoinConnect(): Promise<void> {
+  try {
+    const { init, requestProvider } = await import("@getalby/bitcoin-connect");
+
+    // Initialize (safe to call multiple times)
+    init({
+      appName: "Words With Zaps",
+    });
+
+    // Enable if not already
+    if (!_enabled) {
+      _enabled = true;
+      saveEnabled(true);
+    }
+
+    // Request provider - this opens the Bitcoin Connect modal
+    const provider = await requestProvider();
+    setBitcoinConnectProvider(provider);
+  } catch (error) {
+    console.error("[BitcoinConnect] Connection failed:", error);
+    throw error;
+  }
+}
+
+/**
  * Disable Bitcoin Connect and clear all state
  */
 export async function disableBitcoinConnect(): Promise<void> {
@@ -187,7 +222,7 @@ export async function disableBitcoinConnect(): Promise<void> {
 
   // Disconnect any active BC session
   try {
-    const { disconnect } = await import('@getalby/bitcoin-connect');
+    const { disconnect } = await import("@getalby/bitcoin-connect");
     disconnect();
   } catch {
     // Ignore disconnect errors
@@ -219,14 +254,16 @@ export function getBitcoinConnectBalance(): number | null {
  * Pay an invoice using Bitcoin Connect
  * This triggers the Bitcoin Connect modal if not already connected
  */
-export async function payWithBitcoinConnect(invoice: string): Promise<{ preimage: string }> {
+export async function payWithBitcoinConnect(
+  invoice: string,
+): Promise<{ preimage: string }> {
   if (!_enabled) {
-    throw new Error('Bitcoin Connect is not enabled');
+    throw new Error("Bitcoin Connect is not enabled");
   }
 
   try {
     // Dynamic import to avoid loading BC unless needed
-    const { requestProvider } = await import('@getalby/bitcoin-connect');
+    const { requestProvider } = await import("@getalby/bitcoin-connect");
 
     // Get or connect provider
     const provider = await requestProvider();
@@ -240,7 +277,7 @@ export async function payWithBitcoinConnect(invoice: string): Promise<{ preimage
 
     return { preimage: result.preimage };
   } catch (error) {
-    console.error('[BitcoinConnect] Payment failed:', error);
+    console.error("[BitcoinConnect] Payment failed:", error);
     throw error;
   }
 }
@@ -253,25 +290,26 @@ export async function initBitcoinConnect(): Promise<void> {
   if (!_enabled) return;
 
   try {
-    const { init, onConnected, onDisconnected } = await import('@getalby/bitcoin-connect');
+    const { init, onConnected, onDisconnected } =
+      await import("@getalby/bitcoin-connect");
 
     // Initialize with app name
     init({
-      appName: 'Words With Zaps'
+      appName: "Words With Zaps",
     });
 
     // Set up connection listeners
     onConnected((provider) => {
-      console.log('[BitcoinConnect] Wallet connected');
+      console.log("[BitcoinConnect] Wallet connected");
       setBitcoinConnectProvider(provider);
     });
 
     onDisconnected(() => {
-      console.log('[BitcoinConnect] Wallet disconnected');
+      console.log("[BitcoinConnect] Wallet disconnected");
       setBitcoinConnectProvider(null);
     });
   } catch (error) {
-    console.warn('[BitcoinConnect] Failed to initialize:', error);
+    console.warn("[BitcoinConnect] Failed to initialize:", error);
   }
 }
 
@@ -288,5 +326,5 @@ export default {
   isBitcoinConnectConnected,
   getBitcoinConnectBalance,
   payWithBitcoinConnect,
-  initBitcoinConnect
+  initBitcoinConnect,
 };

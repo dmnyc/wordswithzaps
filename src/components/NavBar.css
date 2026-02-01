@@ -67,7 +67,8 @@
     box-shadow: none;
 }
 
-.wallet-status-btn.balance-hidden {
+.wallet-status-btn.balance-hidden,
+.wallet-status-btn.external-wallet {
     width: 42px;
     min-width: 42px;
     padding: 0;
@@ -88,6 +89,7 @@
 }
 
 .wallet-type-icon.spark,
+.wallet-type-icon.webln,
 .wallet-type-icon.bitcoin-connect {
     color: #e6e6e6;
 }

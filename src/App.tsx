@@ -48,7 +48,7 @@ function App() {
     state: walletState,
     isReady: walletReady,
     activeWallet,
-    bitcoinConnectEnabled,
+    bitcoinConnectConnected,
     refreshBalance,
   } = useWallet();
   const [showWalletSettings, setShowWalletSettings] = useState(false);
@@ -57,7 +57,7 @@ function App() {
     ? activeWallet.kind === WalletKind.SPARK
       ? "spark"
       : "nwc"
-    : bitcoinConnectEnabled
+    : bitcoinConnectConnected
       ? "bitcoin-connect"
       : "none";
 

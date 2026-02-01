@@ -107,3 +107,14 @@ export interface BitcoinConnectInfo {
   connected: boolean;
   balance?: number;
 }
+
+// Unified transaction type for display
+export interface Transaction {
+  id: string;
+  type: "incoming" | "outgoing";
+  amountSats: number;
+  feesSats?: number;
+  description?: string;
+  timestamp: number; // Unix timestamp (seconds)
+  status: "pending" | "succeeded" | "failed";
+}
