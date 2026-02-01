@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { TilePlacement } from "../types/game";
 import { useGame } from "../hooks/useGame";
 import { useWallet } from "../hooks/useWallet";
@@ -22,12 +22,14 @@ interface GameViewProps {
   gameId: string;
   opponentPubkey: string;
   onShareGame?: (copyFn: () => void) => void;
+  onToast?: (message: string, tone?: "success" | "error" | "info") => void;
 }
 
 export function GameView({
   gameId,
   opponentPubkey,
   onShareGame: _onShareGame,
+  onToast,
 }: GameViewProps) {
   void _onShareGame; // Reserved for share UI
   const {
@@ -40,6 +42,7 @@ export function GameView({
     makeMove,
     pass,
     validateMove,
+    resign,
     deleteGame,
   } = useGame();
 
@@ -50,9 +53,6 @@ export function GameView({
     null,
   );
   const [localRack, setLocalRack] = useState<string[]>([]);
-  const [zapMessage, setZapMessage] = useState<string | null>(null);
-  const [zapError, setZapError] = useState<string | null>(null);
-  const [, setLinkCopied] = useState(false);
   const [pendingBlankPosition, setPendingBlankPosition] = useState<{
     x: number;
     y: number;
@@ -70,6 +70,7 @@ export function GameView({
   const [opponentDisplayName, setOpponentDisplayName] = useState<string | null>(
     null,
   );
+  const lastValidationErrorRef = useRef<string | null>(null);
 
   const opponentLabel = opponentDisplayName || "Opponent";
   const opponentNpub = useMemo(() => {
@@ -126,12 +127,20 @@ export function GameView({
     window.history.replaceState({}, "", url.toString());
   }, [gameId]);
 
-  // Initialize local rack from playerRack
-  useMemo(() => {
-    if (playerRack.length > 0 && localRack.length === 0) {
+  // Sync local rack with latest playerRack.
+  // Only refresh when it's our turn, except for initial load.
+  useEffect(() => {
+    if (playerRack.length === 0) return;
+    const isInitialLoad = localRack.length === 0;
+    if (!isInitialLoad && !isMyTurn) return;
+    const sameLength = playerRack.length === localRack.length;
+    const sameTiles =
+      sameLength &&
+      playerRack.every((tile, index) => tile === localRack[index]);
+    if (!sameTiles) {
       setLocalRack(playerRack);
     }
-  }, [playerRack, localRack.length]);
+  }, [playerRack, localRack, isMyTurn]);
 
   // Load game on mount
   useMemo(() => {
@@ -260,8 +269,6 @@ export function GameView({
       myScore,
       opponentScore,
     });
-    setZapError(null);
-    setZapMessage(null);
     setShowZapModal(true);
   }, [gameState?.scoring.p1Score, gameState?.scoring.p2Score, validation]);
 
@@ -271,8 +278,9 @@ export function GameView({
 
       const result = await makeMove(pendingPlacements);
       if (result.valid) {
+        const remainingTiles = availableRack;
         setPendingPlacements([]);
-        setLocalRack(playerRack);
+        setLocalRack(remainingTiles);
         setShowZapModal(false);
 
         const word =
@@ -289,16 +297,16 @@ export function GameView({
                 gameId,
                 moveDescription: message,
               });
-              setZapMessage(
+              onToast?.(
                 `Sent ${options.zapAmount} sat${
                   options.zapAmount === 1 ? "" : "s"
                 }!`,
+                "success",
               );
-              setTimeout(() => setZapMessage(null), 3000);
             } catch (err) {
               console.warn("Zap failed:", err);
               const errorMsg = err instanceof Error ? err.message : String(err);
-              setZapError(`Move played, but zap failed: ${errorMsg}`);
+              onToast?.(`Move played, but zap failed: ${errorMsg}`, "error");
             }
           } else if (!walletState.connected) {
             console.log("Wallet not ready, skipping zap");
@@ -328,14 +336,16 @@ export function GameView({
             await publishEvent(event);
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
-            setZapError(
+            onToast?.(
               `Move played, but sharing to Nostr failed: ${errorMsg}`,
+              "error",
             );
           }
         }
       }
     },
     [
+      availableRack,
       gameId,
       gameLink,
       makeMove,
@@ -382,14 +392,28 @@ export function GameView({
   const handleCopyLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(gameLink);
-      setLinkCopied(true);
-      window.setTimeout(() => setLinkCopied(false), 1500);
+      onToast?.("Link copied!", "success");
     } catch (err) {
-      setZapError(
-        err instanceof Error ? err.message : "Failed to copy game link",
-      );
+      const message =
+        err instanceof Error ? err.message : "Failed to copy game link";
+      onToast?.(message, "error");
     }
-  }, [gameLink]);
+  }, [gameLink, onToast]);
+
+  const handleForfeit = useCallback(async () => {
+    const confirmed = window.confirm(
+      "Forfeit this game? You will lose and the game will end.",
+    );
+    if (!confirmed) return;
+    try {
+      await resign();
+      onToast?.("Game forfeited.", "info");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to forfeit game";
+      onToast?.(message, "error");
+    }
+  }, [onToast, resign]);
 
   const handleDeleteGame = useCallback(async () => {
     if (!isCreator) return;
@@ -400,9 +424,31 @@ export function GameView({
     try {
       await deleteGame();
     } catch (err) {
-      setZapError(err instanceof Error ? err.message : "Failed to delete game");
+      const message =
+        err instanceof Error ? err.message : "Failed to delete game";
+      onToast?.(message, "error");
     }
-  }, [isCreator, deleteGame]);
+  }, [isCreator, deleteGame, onToast]);
+
+  useEffect(() => {
+    if (!error) return;
+    onToast?.(error, "error");
+  }, [error, onToast]);
+
+  useEffect(() => {
+    const shouldShow =
+      isMyTurn &&
+      pendingPlacements.length > 0 &&
+      validation &&
+      !validation.valid;
+    const currentError = shouldShow ? validation?.error || "Invalid move" : "";
+    if (currentError && currentError !== lastValidationErrorRef.current) {
+      onToast?.(currentError, "error");
+      lastValidationErrorRef.current = currentError;
+    } else if (!currentError) {
+      lastValidationErrorRef.current = null;
+    }
+  }, [isMyTurn, pendingPlacements.length, validation, onToast]);
   void handleDeleteGame; // Reserved for delete button UI
 
   if (!gameState) {
@@ -434,6 +480,10 @@ export function GameView({
           tilesRemaining={gameState.tileBag.length}
           currentUserPubkey={myPubkey}
           onShare={handleCopyLink}
+          onForfeit={
+            gameState.meta.status === "active" ? handleForfeit : undefined
+          }
+          forfeitDisabled={isLoading}
         />
 
         {gameState.meta.status !== "active" && (
@@ -459,10 +509,6 @@ export function GameView({
         )}
       </div>
 
-      {error && <div className="game-error">{error}</div>}
-      {zapMessage && <div className="game-success">{zapMessage}</div>}
-      {zapError && <div className="game-error">{zapError}</div>}
-
       <Board
         board={gameState.board}
         pendingPlacements={pendingPlacements}
@@ -480,10 +526,6 @@ export function GameView({
         onReorder={setLocalRack}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
       />
-
-      {validation && !validation.valid && pendingPlacements.length > 0 && (
-        <div className="validation-error">{validation.error}</div>
-      )}
 
       <GameControls
         canPlay={validation?.valid || false}

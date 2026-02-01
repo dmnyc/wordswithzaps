@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TbDoorExit } from "react-icons/tb";
 import { fetchProfile } from "../nostr/profiles";
 import type { NostrProfile } from "../types/nostr";
 import "./ScoreBoard.css";
@@ -15,6 +16,8 @@ interface ScoreBoardProps {
   tilesRemaining: number;
   currentUserPubkey: string;
   onShare?: () => void;
+  onForfeit?: () => void;
+  forfeitDisabled?: boolean;
 }
 
 function truncatePubkey(pubkey: string): string {
@@ -28,6 +31,8 @@ export function ScoreBoard({
   tilesRemaining,
   currentUserPubkey,
   onShare,
+  onForfeit,
+  forfeitDisabled = false,
 }: ScoreBoardProps) {
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
     {},
@@ -91,21 +96,37 @@ export function ScoreBoard({
         )}
       </div>
 
-      {onShare && (
-        <button className="share-btn" onClick={onShare} title="Copy game link">
-          <svg
-            className="share-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+      <div className="scoreboard-actions">
+        {onShare && (
+          <button
+            className="share-btn"
+            onClick={onShare}
+            title="Copy game link"
           >
-            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-            <polyline points="16 6 12 2 8 6" />
-            <line x1="12" y1="2" x2="12" y2="15" />
-          </svg>
-        </button>
-      )}
+            <svg
+              className="share-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+          </button>
+        )}
+        {onForfeit && (
+          <button
+            className="forfeit-btn"
+            onClick={onForfeit}
+            disabled={forfeitDisabled}
+            title="Forfeit game"
+          >
+            <TbDoorExit className="forfeit-icon" aria-hidden="true" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

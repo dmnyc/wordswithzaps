@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNostr } from "./hooks/useNostr";
 import { useWallet } from "./hooks/useWallet";
 import { WalletKind } from "./types/wallet";
@@ -26,6 +26,11 @@ function App() {
   const [dictionaryError, setDictionaryError] = useState<string | null>(null);
   const [prefillGameId, setPrefillGameId] = useState<string | null>(null);
   const [prefillError, setPrefillError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    tone?: "success" | "error" | "info";
+  } | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
 
   const { isConnected, user, disconnect, connect, isConnecting, error } =
     useNostr();
@@ -52,6 +57,29 @@ function App() {
   const handleCloseWalletSettings = useCallback(() => {
     setShowWalletSettings(false);
   }, []);
+
+  const showToast = useCallback(
+    (message: string, tone: "success" | "error" | "info" = "success") => {
+      setToast({ message, tone });
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+      toastTimeoutRef.current = window.setTimeout(() => {
+        setToast(null);
+        toastTimeoutRef.current = null;
+      }, 1800);
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   // Load dictionary on mount
   useEffect(() => {
@@ -310,8 +338,15 @@ function App() {
           <GameView
             gameId={gameSession.gameId}
             opponentPubkey={gameSession.opponentPubkey}
+            onToast={showToast}
           />
         </>
+      )}
+
+      {toast && (
+        <div className={`app-toast ${toast.tone || "success"}`}>
+          {toast.message}
+        </div>
       )}
 
       {showWalletSettings && (
