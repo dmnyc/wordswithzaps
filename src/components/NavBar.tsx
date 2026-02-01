@@ -4,6 +4,8 @@ import type { WalletProviderType } from "../types/wallet";
 import {
   getDisableGameplayZaps,
   setDisableGameplayZaps,
+  getShareToNostrDefault,
+  setShareToNostrDefault,
 } from "../settings/appSettings";
 import "./NavBar.css";
 
@@ -13,12 +15,15 @@ interface NavBarProps {
   user: NDKUser | null;
   onDisconnect: () => void;
   onBackToLobby?: () => void;
+  onOpenSupportZap?: () => void;
   walletConnected?: boolean;
   walletBalance?: number;
   walletLoading?: boolean;
   walletType?: WalletProviderType;
   onOpenWalletSettings?: () => void;
   onShareGame?: () => void;
+  connectionMethod?: "NIP-07" | "NIP-46" | null;
+  relayCount?: number;
 }
 
 function SparkLogo({ className }: { className?: string }) {
@@ -121,12 +126,15 @@ export function NavBar({
   user,
   onDisconnect,
   onBackToLobby,
+  onOpenSupportZap,
   walletConnected,
   walletBalance,
   walletLoading,
   walletType,
   onOpenWalletSettings,
   onShareGame,
+  connectionMethod,
+  relayCount,
 }: NavBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
@@ -140,6 +148,9 @@ export function NavBar({
   });
   const [zapsDisabled, setZapsDisabled] = useState(() =>
     getDisableGameplayZaps(),
+  );
+  const [shareToNostr, setShareToNostr] = useState(() =>
+    getShareToNostrDefault(),
   );
   const [profileSnapshot, setProfileSnapshot] = useState<Record<
     string,
@@ -170,6 +181,10 @@ export function NavBar({
   useEffect(() => {
     setDisableGameplayZaps(zapsDisabled);
   }, [zapsDisabled]);
+
+  useEffect(() => {
+    setShareToNostrDefault(shareToNostr);
+  }, [shareToNostr]);
 
   useEffect(() => {
     if (!user) {
@@ -339,6 +354,17 @@ export function NavBar({
                 Back to Lobby
               </button>
             )}
+            {onOpenSupportZap && (
+              <button
+                className="menu-item support"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenSupportZap();
+                }}
+              >
+                Zap to support!
+              </button>
+            )}
             <div className="menu-section">
               <div className="menu-section-title">App Settings</div>
               <label className="menu-toggle">
@@ -349,6 +375,25 @@ export function NavBar({
                 />
                 <span>Disable gameplay zaps</span>
               </label>
+              <label className="menu-toggle">
+                <input
+                  type="checkbox"
+                  checked={shareToNostr}
+                  onChange={() => setShareToNostr((prev) => !prev)}
+                />
+                <span>Share turns to Nostr</span>
+              </label>
+            </div>
+            <div className="menu-section">
+              <div className="menu-section-title">Connection</div>
+              <div className="menu-info-row">
+                <span>Connect method</span>
+                <span>{connectionMethod || "—"}</span>
+              </div>
+              <div className="menu-info-row">
+                <span>Relays connected</span>
+                <span>{relayCount ?? 0}</span>
+              </div>
             </div>
             <button
               className="menu-item danger"

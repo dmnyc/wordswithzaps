@@ -170,12 +170,20 @@
 }
 
 .game-subtext {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-size: 12px;
     color: #666;
 }
 
 .game-subtext .game-name {
     color: #888;
+}
+
+.game-score {
+    font-weight: 600;
+    color: #bfbfbf;
 }
 
 .game-status {

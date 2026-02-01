@@ -10,6 +10,8 @@ import Lobby from "./components/Lobby";
 import GameView from "./components/GameView";
 import NavBar from "./components/NavBar";
 import WalletSettings from "./components/WalletSettings";
+import CreatorZapModal from "./components/CreatorZapModal";
+import { sendPayment } from "./wallet/walletManager";
 import "./index.css";
 
 type Screen = "login" | "lobby" | "game";
@@ -32,8 +34,16 @@ function App() {
   } | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
 
-  const { isConnected, user, disconnect, connect, isConnecting, error } =
-    useNostr();
+  const {
+    isConnected,
+    user,
+    disconnect,
+    connect,
+    isConnecting,
+    error,
+    connectionMethod,
+    relayCount,
+  } = useNostr();
   const {
     state: walletState,
     isReady: walletReady,
@@ -42,6 +52,7 @@ function App() {
     refreshBalance,
   } = useWallet();
   const [showWalletSettings, setShowWalletSettings] = useState(false);
+  const [showCreatorZapModal, setShowCreatorZapModal] = useState(false);
   const walletType = activeWallet
     ? activeWallet.kind === WalletKind.SPARK
       ? "spark"
@@ -58,6 +69,14 @@ function App() {
     setShowWalletSettings(false);
   }, []);
 
+  const handleOpenCreatorZap = useCallback(() => {
+    setShowCreatorZapModal(true);
+  }, []);
+
+  const handleCloseCreatorZap = useCallback(() => {
+    setShowCreatorZapModal(false);
+  }, []);
+
   const showToast = useCallback(
     (message: string, tone: "success" | "error" | "info" = "success") => {
       setToast({ message, tone });
@@ -70,6 +89,22 @@ function App() {
       }, 1800);
     },
     [],
+  );
+
+  const handleZapCreator = useCallback(
+    async (amount: number) => {
+      const result = await sendPayment("thedaniel@breez.tips", {
+        amount,
+        comment: "Words With Zaps - thanks for the game!",
+      });
+      if (!result.success) {
+        const message = result.error || "Zap failed";
+        showToast(message, "error");
+        throw new Error(message);
+      }
+      showToast(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
+    },
+    [showToast],
   );
 
   useEffect(
@@ -309,11 +344,14 @@ function App() {
           <NavBar
             user={user}
             onDisconnect={handleDisconnect}
+            onOpenSupportZap={handleOpenCreatorZap}
             walletConnected={walletReady}
             walletBalance={walletState.balance}
             walletLoading={walletState.loading}
             walletType={walletType}
             onOpenWalletSettings={handleOpenWalletSettings}
+            connectionMethod={connectionMethod}
+            relayCount={relayCount}
           />
           <Lobby
             onGameStart={handleGameStart}
@@ -329,16 +367,20 @@ function App() {
             user={user}
             onDisconnect={handleDisconnect}
             onBackToLobby={handleBackToLobby}
+            onOpenSupportZap={handleOpenCreatorZap}
             walletConnected={walletReady}
             walletBalance={walletState.balance}
             walletLoading={walletState.loading}
             walletType={walletType}
             onOpenWalletSettings={handleOpenWalletSettings}
+            connectionMethod={connectionMethod}
+            relayCount={relayCount}
           />
           <GameView
             gameId={gameSession.gameId}
             opponentPubkey={gameSession.opponentPubkey}
             onToast={showToast}
+            onOpenCreatorZap={handleOpenCreatorZap}
           />
         </>
       )}
@@ -352,6 +394,13 @@ function App() {
       {showWalletSettings && (
         <WalletSettings onClose={handleCloseWalletSettings} />
       )}
+
+      <CreatorZapModal
+        open={showCreatorZapModal}
+        walletConnected={walletReady}
+        onClose={handleCloseCreatorZap}
+        onSendZap={handleZapCreator}
+      />
     </div>
   );
 }
