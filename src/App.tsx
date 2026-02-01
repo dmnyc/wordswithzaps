@@ -34,6 +34,7 @@ function App() {
     isReady: walletReady,
     activeWallet,
     bitcoinConnectEnabled,
+    refreshBalance,
   } = useWallet();
   const [showWalletSettings, setShowWalletSettings] = useState(false);
   const walletType = activeWallet
@@ -157,6 +158,12 @@ function App() {
     }
   }, [isConnected, screen, prefillGameId]);
 
+  useEffect(() => {
+    if (isConnected && user?.pubkey) {
+      refreshBalance().catch(() => {});
+    }
+  }, [isConnected, refreshBalance, user?.pubkey]);
+
   // Read gameId from URL on first load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -183,6 +190,18 @@ function App() {
         if (!meta || meta.players.length === 0) {
           if (!cancelled) {
             setPrefillError("Game not found on relays yet.");
+          }
+          return;
+        }
+
+        if (!meta.players.includes(user.pubkey)) {
+          if (!cancelled) {
+            setPrefillGameId(null);
+            setPrefillError(null);
+            const url = new URL(window.location.href);
+            url.searchParams.delete("gameId");
+            window.history.replaceState({}, "", url.toString());
+            setScreen("lobby");
           }
           return;
         }

@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import type { TilePlacement } from "../types/game";
 import { useGame } from "../hooks/useGame";
 import { useWallet } from "../hooks/useWallet";
-import { getCurrentUser } from "../nostr/client";
+import { getCurrentUser, createEvent, publishEvent } from "../nostr/client";
 import Board from "./Board";
 import Rack from "./Rack";
 import ScoreBoard from "./ScoreBoard";
@@ -13,6 +13,9 @@ import {
   getDisableGameplayZaps,
   subscribeAppSettings,
 } from "../settings/appSettings";
+import ZapNudgeModal from "./ZapNudgeModal";
+import { nip19 } from "nostr-tools";
+import { fetchProfile } from "../nostr/profiles";
 import "./GameView.css";
 
 interface GameViewProps {
@@ -47,7 +50,6 @@ export function GameView({
     null,
   );
   const [localRack, setLocalRack] = useState<string[]>([]);
-  const [zapAmount] = useState(1);
   const [zapMessage, setZapMessage] = useState<string | null>(null);
   const [zapError, setZapError] = useState<string | null>(null);
   const [, setLinkCopied] = useState(false);
@@ -58,11 +60,31 @@ export function GameView({
   const [zapsDisabled, setZapsDisabled] = useState(() =>
     getDisableGameplayZaps(),
   );
+  const [showZapModal, setShowZapModal] = useState(false);
+  const [pendingMoveSummary, setPendingMoveSummary] = useState<{
+    word: string;
+    points: number;
+    myScore: number;
+    opponentScore: number;
+  } | null>(null);
+  const [opponentDisplayName, setOpponentDisplayName] = useState<string | null>(
+    null,
+  );
+
+  const opponentLabel = opponentDisplayName || "Opponent";
+  const opponentNpub = useMemo(() => {
+    if (!opponentPubkey) return "";
+    try {
+      return nip19.npubEncode(opponentPubkey);
+    } catch {
+      return opponentPubkey;
+    }
+  }, [opponentPubkey]);
 
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
   const isCreator = gameState?.meta.playerOne === myPubkey;
-  const { zapUser, isReady: walletReady } = useWallet();
+  const { zapUser, state: walletState } = useWallet();
 
   useEffect(() => {
     const unsubscribe = subscribeAppSettings(() => {
@@ -70,6 +92,27 @@ export function GameView({
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!opponentPubkey) {
+      setOpponentDisplayName(null);
+      return;
+    }
+    fetchProfile(opponentPubkey)
+      .then((profile) => {
+        if (cancelled) return;
+        setOpponentDisplayName(profile?.displayName || profile?.name || null);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOpponentDisplayName(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [opponentPubkey]);
 
   const gameLink = useMemo(() => {
     const url = new URL(window.location.href);
@@ -203,48 +246,111 @@ export function GameView({
   const handlePlay = useCallback(async () => {
     if (!validation?.valid) return;
 
-    const result = await makeMove(pendingPlacements);
-    if (result.valid) {
-      setPendingPlacements([]);
-      setLocalRack(playerRack);
+    const mainWord = validation.words?.[0] || "Your move";
+    const points = validation.score ?? 0;
+    const p1Score = gameState?.scoring.p1Score || 0;
+    const p2Score = gameState?.scoring.p2Score || 0;
+    const isPlayerOne = gameState?.meta.playerOne === myPubkey;
+    const myScore = isPlayerOne ? p1Score + points : p2Score + points;
+    const opponentScore = isPlayerOne ? p2Score : p1Score;
 
-      // Zap opponent if wallet ready and zaps enabled
-      if (!zapsDisabled && walletReady && opponentPubkey) {
-        try {
-          const message = `Words With Zaps: your turn -> ${gameLink}`;
-          await zapUser({
-            recipientPubkey: opponentPubkey,
-            amountSats: zapAmount,
-            gameId,
-            moveDescription: message,
-          });
-          setZapMessage(`Zapped ${zapAmount} sat${zapAmount > 1 ? "s" : ""}!`);
-          setTimeout(() => setZapMessage(null), 3000);
-        } catch (err) {
-          // Move succeeded but zap failed - notify user
-          console.warn("Zap failed:", err);
-          const errorMsg = err instanceof Error ? err.message : String(err);
-          setZapError(`Move played, but zap failed: ${errorMsg}`);
+    setPendingMoveSummary({
+      word: mainWord,
+      points,
+      myScore,
+      opponentScore,
+    });
+    setZapError(null);
+    setZapMessage(null);
+    setShowZapModal(true);
+  }, [gameState?.scoring.p1Score, gameState?.scoring.p2Score, validation]);
+
+  const handleConfirmPlay = useCallback(
+    async (options: { zapAmount: number; shareToNostr: boolean }) => {
+      if (!validation?.valid) return;
+
+      const result = await makeMove(pendingPlacements);
+      if (result.valid) {
+        setPendingPlacements([]);
+        setLocalRack(playerRack);
+        setShowZapModal(false);
+
+        const word =
+          pendingMoveSummary?.word || validation.words?.[0] || "Your move";
+        const points = pendingMoveSummary?.points ?? validation.score ?? 0;
+
+        if (!zapsDisabled && options.zapAmount > 0) {
+          if (walletState.connected && opponentPubkey) {
+            try {
+              const message = `Words With Zaps: your turn -> ${gameLink}`;
+              await zapUser({
+                recipientPubkey: opponentPubkey,
+                amountSats: options.zapAmount,
+                gameId,
+                moveDescription: message,
+              });
+              setZapMessage(
+                `Sent ${options.zapAmount} sat${
+                  options.zapAmount === 1 ? "" : "s"
+                }!`,
+              );
+              setTimeout(() => setZapMessage(null), 3000);
+            } catch (err) {
+              console.warn("Zap failed:", err);
+              const errorMsg = err instanceof Error ? err.message : String(err);
+              setZapError(`Move played, but zap failed: ${errorMsg}`);
+            }
+          } else if (!walletState.connected) {
+            console.log("Wallet not ready, skipping zap");
+          }
+        } else if (zapsDisabled) {
+          console.log("[Zap] Gameplay zaps disabled");
         }
-      } else if (zapsDisabled) {
-        console.log("[Zap] Gameplay zaps disabled");
-      } else if (!walletReady) {
-        console.log("Wallet not ready, skipping zap");
+
+        if (options.shareToNostr) {
+          try {
+            let opponentRef = "";
+            if (opponentPubkey) {
+              try {
+                opponentRef = `nostr:${opponentNpub}`;
+              } catch {
+                opponentRef = opponentPubkey;
+              }
+            }
+            const turnLine = opponentRef
+              ? `It's your turn, ${opponentRef}!`
+              : "It's your turn!";
+            const shareText = `I just played ${word} for ${points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+            const event = createEvent(1, shareText, [
+              ["t", "wordswithzaps"],
+              ...(opponentPubkey ? [["p", opponentPubkey]] : []),
+            ]);
+            await publishEvent(event);
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            setZapError(
+              `Move played, but sharing to Nostr failed: ${errorMsg}`,
+            );
+          }
+        }
       }
-    }
-  }, [
-    validation,
-    makeMove,
-    pendingPlacements,
-    playerRack,
-    walletReady,
-    opponentPubkey,
-    gameLink,
-    zapUser,
-    zapAmount,
-    gameId,
-    zapsDisabled,
-  ]);
+    },
+    [
+      gameId,
+      gameLink,
+      makeMove,
+      opponentNpub,
+      opponentPubkey,
+      pendingMoveSummary?.points,
+      pendingMoveSummary?.word,
+      pendingPlacements,
+      playerRack,
+      validation,
+      walletState.connected,
+      zapUser,
+      zapsDisabled,
+    ],
+  );
 
   const handlePass = useCallback(async () => {
     await pass();
@@ -259,6 +365,14 @@ export function GameView({
   const handleShuffle = useCallback(() => {
     setLocalRack((prev) => shuffleArray(prev));
   }, []);
+
+  const sharePreviewText = useMemo(() => {
+    if (!pendingMoveSummary) return "";
+    const turnLine = opponentLabel
+      ? `It's your turn, ${opponentLabel}!`
+      : "It's your turn!";
+    return `I just played ${pendingMoveSummary.word} for ${pendingMoveSummary.points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+  }, [gameLink, opponentLabel, pendingMoveSummary]);
 
   const handleExchange = useCallback(() => {
     // TODO: Implement exchange UI
@@ -381,9 +495,7 @@ export function GameView({
         }
         isLoading={isLoading}
         pendingScore={validation?.score}
-        walletConnected={walletReady}
-        zapAmount={zapAmount}
-        zapsDisabled={zapsDisabled}
+        walletConnected={walletState.connected}
         onPlay={handlePlay}
         onPass={handlePass}
         onExchange={handleExchange}
@@ -395,6 +507,26 @@ export function GameView({
         <BlankTilePicker
           onSelect={handleBlankLetterSelect}
           onCancel={handleBlankPickerCancel}
+        />
+      )}
+
+      {pendingMoveSummary && (
+        <ZapNudgeModal
+          open={showZapModal}
+          word={pendingMoveSummary.word}
+          points={pendingMoveSummary.points}
+          myScore={pendingMoveSummary.myScore}
+          opponentScore={pendingMoveSummary.opponentScore}
+          opponentLabel={opponentLabel}
+          walletConnected={walletState.connected}
+          walletConnected={walletState.connected}
+          zapsDisabled={zapsDisabled}
+          sharePreviewText={sharePreviewText}
+          onConfirm={handleConfirmPlay}
+          onClose={() => {
+            setShowZapModal(false);
+            setPendingMoveSummary(null);
+          }}
         />
       )}
     </div>
