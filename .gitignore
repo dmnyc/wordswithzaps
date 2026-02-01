@@ -24,6 +24,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Local temp notes
+temp/
+
 # Test coverage
 coverage/
 

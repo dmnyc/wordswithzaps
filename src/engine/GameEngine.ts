@@ -282,16 +282,14 @@ export class GameEngine {
     p1Rack: string[],
     p2Rack: string[],
   ): boolean {
-    // Game over if bag is empty AND one player has no tiles
-    if (state.tileBag.length === 0) {
-      if (p1Rack.length === 0 || p2Rack.length === 0) {
-        return true;
-      }
+    // Game over if one player has no tiles
+    if (p1Rack.length === 0 || p2Rack.length === 0) {
+      return true;
     }
 
-    // Game over if last 6 moves were passes (3 passes each)
-    const recentHistory = state.scoring.history.slice(-6);
-    if (recentHistory.length === 6) {
+    // Game over if both players pass consecutively
+    const recentHistory = state.scoring.history.slice(-2);
+    if (recentHistory.length === 2) {
       const allPasses = recentHistory.every((h) => h.word === "(PASS)");
       if (allPasses) {
         return true;

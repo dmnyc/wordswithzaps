@@ -23,12 +23,16 @@ export function Tile({
   const isUnplayedBlank = letter === "BLANK";
   const displayLetter = isUnplayedBlank ? "" : letter;
   const value = isBlank ? 0 : LETTER_VALUES[letter] || 0;
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.setDragImage(event.currentTarget, 18, 18);
+    onDragStart?.(event);
+  };
 
   return (
     <div
       className={`tile ${isDragging ? "dragging" : ""} ${isPlaced ? "placed" : ""} ${isBlank ? "blank" : ""}`}
       draggable={!!onDragStart}
-      onDragStart={onDragStart}
+      onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
     >
       <span className="tile-letter">{displayLetter}</span>

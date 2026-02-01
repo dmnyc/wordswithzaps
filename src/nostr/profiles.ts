@@ -1,6 +1,11 @@
 import { nip19 } from "nostr-tools";
 import type { NostrProfile } from "../types/nostr";
-import { fetchEvents } from "./client";
+import {
+  fetchEvents,
+  getCurrentUser,
+  createEvent,
+  publishEvent,
+} from "./client";
 
 const PROFILE_KIND = 0;
 const PROFILE_FETCH_LIMIT = 1000;
@@ -176,7 +181,7 @@ async function searchPrimalCache(query: string, limit: number): Promise<any[]> {
       },
     ];
 
-    primalWs.send(JSON.stringify(searchQuery));
+    primalWs!.send(JSON.stringify(searchQuery));
   });
 }
 
@@ -272,6 +277,62 @@ async function fetchProfileIndex(): Promise<NostrProfile[]> {
   } finally {
     cachePromise = null;
   }
+}
+
+/**
+ * Update the current user's profile lightning address (lud16)
+ * This fetches the existing profile, updates only the lud16 field, and publishes
+ */
+export async function updateProfileLightningAddress(
+  newLud16: string,
+): Promise<void> {
+  const currentUser = getCurrentUser();
+  if (!currentUser?.pubkey) {
+    throw new Error("Must be logged in to update profile");
+  }
+
+  // Fetch the existing profile to preserve all other fields
+  const events = await fetchEvents({
+    kinds: [PROFILE_KIND],
+    authors: [currentUser.pubkey],
+    limit: 5,
+  });
+
+  let existingMetadata: Record<string, unknown> = {};
+
+  if (events.length > 0) {
+    const sorted = events.sort(
+      (a, b) => (b.created_at || 0) - (a.created_at || 0),
+    );
+    const latest = sorted[0];
+    try {
+      existingMetadata = JSON.parse(latest.content) as Record<string, unknown>;
+    } catch {
+      // If we can't parse existing profile, we'll create a minimal one
+      console.warn(
+        "[Profiles] Could not parse existing profile, creating minimal update",
+      );
+    }
+  }
+
+  // Ensure we have at least the essential fields from NDK user if no existing profile
+  if (Object.keys(existingMetadata).length === 0) {
+    // Don't create an empty profile - require existing profile data
+    throw new Error(
+      "No existing profile found. Please set up your profile first.",
+    );
+  }
+
+  // Update only the lud16 field
+  existingMetadata.lud16 = newLud16;
+
+  // Create and publish the updated profile event
+  const event = createEvent(PROFILE_KIND, JSON.stringify(existingMetadata), []);
+  await publishEvent(event);
+
+  // Invalidate cache
+  cachedProfiles = null;
+  cachedAt = 0;
 }
 
 // Search profiles by query string (name, display_name, nip05)

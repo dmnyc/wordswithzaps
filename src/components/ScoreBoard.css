@@ -80,7 +80,15 @@
     margin-left: 8px;
 }
 
-.share-btn {
+.scoreboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+}
+
+.share-btn,
+.forfeit-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -91,10 +99,10 @@
     background: rgba(255, 255, 255, 0.08);
     cursor: pointer;
     transition: background 0.15s;
-    margin-left: 8px;
 }
 
-.share-btn:hover {
+.share-btn:hover,
+.forfeit-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.14);
 }
 
@@ -102,4 +110,19 @@
     width: 16px;
     height: 16px;
     color: var(--text-muted);
+}
+
+.forfeit-btn {
+    background: rgba(255, 91, 91, 0.15);
+}
+
+.forfeit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.forfeit-icon {
+    width: 16px;
+    height: 16px;
+    color: #ff9b9b;
 }

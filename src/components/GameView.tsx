@@ -1,27 +1,41 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { TilePlacement } from "../types/game";
 import { useGame } from "../hooks/useGame";
 import { useWallet } from "../hooks/useWallet";
-import { getCurrentUser } from "../nostr/client";
+import { getCurrentUser, createEvent, publishEvent } from "../nostr/client";
 import Board from "./Board";
 import Rack from "./Rack";
 import ScoreBoard from "./ScoreBoard";
 import GameControls from "./GameControls";
 import BlankTilePicker from "./BlankTilePicker";
 import { shuffleArray } from "../engine/constants";
+import {
+  getDisableGameplayZaps,
+  subscribeAppSettings,
+} from "../settings/appSettings";
+import ZapNudgeModal from "./ZapNudgeModal";
+import GameOverModal from "./GameOverModal";
+import Modal from "./Modal";
+import { nip19 } from "nostr-tools";
+import { fetchProfile } from "../nostr/profiles";
 import "./GameView.css";
 
 interface GameViewProps {
   gameId: string;
   opponentPubkey: string;
   onShareGame?: (copyFn: () => void) => void;
+  onToast?: (message: string, tone?: "success" | "error" | "info") => void;
+  onOpenCreatorZap?: () => void;
 }
 
 export function GameView({
   gameId,
   opponentPubkey,
-  onShareGame,
+  onShareGame: _onShareGame,
+  onToast,
+  onOpenCreatorZap,
 }: GameViewProps) {
+  void _onShareGame; // Reserved for share UI
   const {
     gameState,
     playerRack,
@@ -32,6 +46,7 @@ export function GameView({
     makeMove,
     pass,
     validateMove,
+    resign,
     deleteGame,
   } = useGame();
 
@@ -42,24 +57,72 @@ export function GameView({
     null,
   );
   const [localRack, setLocalRack] = useState<string[]>([]);
-  const [zapAmount] = useState(1);
-  const [zapMessage, setZapMessage] = useState<string | null>(null);
-  const [zapError, setZapError] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [pendingBlankPosition, setPendingBlankPosition] = useState<{
     x: number;
     y: number;
   } | null>(null);
+  const [zapsDisabled, setZapsDisabled] = useState(() =>
+    getDisableGameplayZaps(),
+  );
+  const [showZapModal, setShowZapModal] = useState(false);
+  const [pendingMoveSummary, setPendingMoveSummary] = useState<{
+    word: string;
+    points: number;
+    myScore: number;
+    opponentScore: number;
+  } | null>(null);
+  const [opponentDisplayName, setOpponentDisplayName] = useState<string | null>(
+    null,
+  );
+  const [confirmAction, setConfirmAction] = useState<
+    "forfeit" | "delete" | "exchange" | null
+  >(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const lastValidationErrorRef = useRef<string | null>(null);
+
+  const opponentLabel = opponentDisplayName || "Opponent";
+  const opponentNpub = useMemo(() => {
+    if (!opponentPubkey) return "";
+    try {
+      return nip19.npubEncode(opponentPubkey);
+    } catch {
+      return opponentPubkey;
+    }
+  }, [opponentPubkey]);
 
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
   const isCreator = gameState?.meta.playerOne === myPubkey;
-  const {
-    state: walletState,
-    connectWebLN,
-    zapUser,
-    isWebLNAvailable,
-  } = useWallet();
+  const { zapUser, state: walletState } = useWallet();
+
+  useEffect(() => {
+    const unsubscribe = subscribeAppSettings(() => {
+      setZapsDisabled(getDisableGameplayZaps());
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!opponentPubkey) {
+      setOpponentDisplayName(null);
+      return;
+    }
+    fetchProfile(opponentPubkey)
+      .then((profile) => {
+        if (cancelled) return;
+        setOpponentDisplayName(profile?.displayName || profile?.name || null);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOpponentDisplayName(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [opponentPubkey]);
 
   const gameLink = useMemo(() => {
     const url = new URL(window.location.href);
@@ -73,12 +136,30 @@ export function GameView({
     window.history.replaceState({}, "", url.toString());
   }, [gameId]);
 
-  // Initialize local rack from playerRack
-  useMemo(() => {
-    if (playerRack.length > 0 && localRack.length === 0) {
+  useEffect(() => {
+    if (!gameState) return;
+    const ended =
+      gameState.meta.status === "completed" ||
+      gameState.meta.status === "abandoned";
+    if (ended) {
+      setShowGameOverModal(true);
+    }
+  }, [gameState?.meta.status, gameId]);
+
+  // Sync local rack with latest playerRack.
+  // Only refresh when it's our turn, except for initial load.
+  useEffect(() => {
+    if (playerRack.length === 0) return;
+    const isInitialLoad = localRack.length === 0;
+    if (!isInitialLoad && !isMyTurn) return;
+    const sameLength = playerRack.length === localRack.length;
+    const sameTiles =
+      sameLength &&
+      playerRack.every((tile, index) => tile === localRack[index]);
+    if (!sameTiles) {
       setLocalRack(playerRack);
     }
-  }, [playerRack, localRack.length]);
+  }, [playerRack, localRack, isMyTurn]);
 
   // Load game on mount
   useMemo(() => {
@@ -193,43 +274,112 @@ export function GameView({
   const handlePlay = useCallback(async () => {
     if (!validation?.valid) return;
 
-    const result = await makeMove(pendingPlacements);
-    if (result.valid) {
-      setPendingPlacements([]);
-      setLocalRack(playerRack);
+    const mainWord = validation.words?.[0] || "Your move";
+    const points = validation.score ?? 0;
+    const p1Score = gameState?.scoring.p1Score || 0;
+    const p2Score = gameState?.scoring.p2Score || 0;
+    const isPlayerOne = gameState?.meta.playerOne === myPubkey;
+    const myScore = isPlayerOne ? p1Score + points : p2Score + points;
+    const opponentScore = isPlayerOne ? p2Score : p1Score;
 
-      // Zap opponent if wallet connected
-      if (walletState.connected && opponentPubkey) {
-        try {
-          const message = `Words With Zaps: your turn -> ${gameLink}`;
-          await zapUser({
-            recipientPubkey: opponentPubkey,
-            amountSats: zapAmount,
-            gameId,
-            moveDescription: message,
-          });
-        } catch (err) {
-          // Move succeeded but zap failed - notify user
-          console.warn("Zap failed:", err);
-          const errorMsg = err instanceof Error ? err.message : String(err);
-          setZapError(`Move played, but zap failed: ${errorMsg}`);
+    setPendingMoveSummary({
+      word: mainWord,
+      points,
+      myScore,
+      opponentScore,
+    });
+    setShowZapModal(true);
+  }, [gameState?.scoring.p1Score, gameState?.scoring.p2Score, validation]);
+
+  const handleConfirmPlay = useCallback(
+    async (options: { zapAmount: number; shareToNostr: boolean }) => {
+      if (!validation?.valid) return;
+
+      const result = await makeMove(pendingPlacements);
+      if (result.valid) {
+        const remainingTiles = availableRack;
+        setPendingPlacements([]);
+        setLocalRack(remainingTiles);
+        setShowZapModal(false);
+
+        const word =
+          pendingMoveSummary?.word || validation.words?.[0] || "Your move";
+        const points = pendingMoveSummary?.points ?? validation.score ?? 0;
+
+        if (!zapsDisabled && options.zapAmount > 0) {
+          if (walletState.connected && opponentPubkey) {
+            try {
+              const message = `Words With Zaps: your turn -> ${gameLink}`;
+              await zapUser({
+                recipientPubkey: opponentPubkey,
+                amountSats: options.zapAmount,
+                gameId,
+                moveDescription: message,
+              });
+              onToast?.(
+                `Sent ${options.zapAmount} sat${
+                  options.zapAmount === 1 ? "" : "s"
+                }!`,
+                "success",
+              );
+            } catch (err) {
+              console.warn("Zap failed:", err);
+              const errorMsg = err instanceof Error ? err.message : String(err);
+              onToast?.(`Move played, but zap failed: ${errorMsg}`, "error");
+            }
+          } else if (!walletState.connected) {
+            console.log("Wallet not ready, skipping zap");
+          }
+        } else if (zapsDisabled) {
+          console.log("[Zap] Gameplay zaps disabled");
         }
-      } else if (!walletState.connected) {
-        console.log("Wallet not connected, skipping zap");
+
+        if (options.shareToNostr) {
+          try {
+            let opponentRef = "";
+            if (opponentPubkey) {
+              try {
+                opponentRef = `nostr:${opponentNpub}`;
+              } catch {
+                opponentRef = opponentPubkey;
+              }
+            }
+            const turnLine = opponentRef
+              ? `It's your turn, ${opponentRef}!`
+              : "It's your turn!";
+            const shareText = `I just played ${word} for ${points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+            const event = createEvent(1, shareText, [
+              ["t", "wordswithzaps"],
+              ...(opponentPubkey ? [["p", opponentPubkey]] : []),
+            ]);
+            await publishEvent(event);
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            onToast?.(
+              `Move played, but sharing to Nostr failed: ${errorMsg}`,
+              "error",
+            );
+          }
+        }
       }
-    }
-  }, [
-    validation,
-    makeMove,
-    pendingPlacements,
-    playerRack,
-    walletState.connected,
-    opponentPubkey,
-    gameLink,
-    zapUser,
-    zapAmount,
-    gameId,
-  ]);
+    },
+    [
+      availableRack,
+      gameId,
+      gameLink,
+      makeMove,
+      opponentNpub,
+      opponentPubkey,
+      pendingMoveSummary?.points,
+      pendingMoveSummary?.word,
+      pendingPlacements,
+      playerRack,
+      validation,
+      walletState.connected,
+      zapUser,
+      zapsDisabled,
+    ],
+  );
 
   const handlePass = useCallback(async () => {
     await pass();
@@ -245,45 +395,140 @@ export function GameView({
     setLocalRack((prev) => shuffleArray(prev));
   }, []);
 
+  const sharePreviewText = useMemo(() => {
+    if (!pendingMoveSummary) return "";
+    const turnLine = opponentLabel
+      ? `It's your turn, ${opponentLabel}!`
+      : "It's your turn!";
+    return `I just played ${pendingMoveSummary.word} for ${pendingMoveSummary.points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+  }, [gameLink, opponentLabel, pendingMoveSummary]);
+
   const handleExchange = useCallback(() => {
-    // TODO: Implement exchange UI
-    alert("Exchange not yet implemented. Select tiles to exchange.");
+    setConfirmAction("exchange");
   }, []);
 
   const handleCopyLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(gameLink);
-      setLinkCopied(true);
-      window.setTimeout(() => setLinkCopied(false), 1500);
+      onToast?.("Link copied!", "success");
     } catch (err) {
-      setZapError(
-        err instanceof Error ? err.message : "Failed to copy game link",
-      );
+      const message =
+        err instanceof Error ? err.message : "Failed to copy game link";
+      onToast?.(message, "error");
     }
-  }, [gameLink]);
+  }, [gameLink, onToast]);
 
-  const handleConnectWallet = useCallback(async () => {
-    try {
-      await connectWebLN();
-    } catch (err) {
-      setZapError(
-        err instanceof Error ? err.message : "Failed to connect wallet",
-      );
-    }
-  }, [connectWebLN]);
+  const handleSendGgZap = useCallback(
+    async (amount: number) => {
+      if (!walletState.connected || !opponentPubkey) return;
+      try {
+        const message = `Words With Zaps: GG! ${gameLink}`;
+        await zapUser({
+          recipientPubkey: opponentPubkey,
+          amountSats: amount,
+          gameId,
+          moveDescription: message,
+        });
+        onToast?.(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Zap failed";
+        onToast?.(`GG zap failed: ${message}`, "error");
+        throw err;
+      }
+    },
+    [gameId, gameLink, onToast, opponentPubkey, walletState.connected, zapUser],
+  );
 
-  const handleDeleteGame = useCallback(async () => {
+  const handleForfeit = useCallback(() => {
+    setConfirmAction("forfeit");
+  }, []);
+
+  const handleDeleteGame = useCallback(() => {
     if (!isCreator) return;
-    const confirmed = window.confirm(
-      "Delete this game? This will mark it as deleted for both players.",
-    );
-    if (!confirmed) return;
-    try {
-      await deleteGame();
-    } catch (err) {
-      setZapError(err instanceof Error ? err.message : "Failed to delete game");
+    setConfirmAction("delete");
+  }, [isCreator]);
+
+  const confirmConfig = useMemo(() => {
+    if (confirmAction === "forfeit") {
+      return {
+        title: "Forfeit game?",
+        message: "You will lose and the game will end.",
+        confirmLabel: "Forfeit game",
+        tone: "danger",
+        showCancel: true,
+      };
     }
-  }, [isCreator, deleteGame]);
+    if (confirmAction === "delete") {
+      return {
+        title: "Delete game?",
+        message: "This will mark the game as deleted for both players.",
+        confirmLabel: "Delete game",
+        tone: "danger",
+        showCancel: true,
+      };
+    }
+    if (confirmAction === "exchange") {
+      return {
+        title: "Exchange tiles",
+        message: "Exchange is not implemented yet. Select tiles to exchange.",
+        confirmLabel: "Got it",
+        tone: "primary",
+        showCancel: false,
+      };
+    }
+    return null;
+  }, [confirmAction]);
+
+  const handleConfirmAction = useCallback(async () => {
+    if (!confirmAction) return;
+    if (confirmAction === "exchange") {
+      setConfirmAction(null);
+      return;
+    }
+    setConfirmBusy(true);
+    try {
+      if (confirmAction === "forfeit") {
+        await resign();
+        onToast?.("Game forfeited.", "info");
+      }
+      if (confirmAction === "delete") {
+        await deleteGame();
+      }
+      setConfirmAction(null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Action failed. Try again.";
+      onToast?.(message, "error");
+    } finally {
+      setConfirmBusy(false);
+    }
+  }, [confirmAction, deleteGame, onToast, resign]);
+
+  const handleCloseConfirm = useCallback(() => {
+    if (confirmBusy) return;
+    setConfirmAction(null);
+  }, [confirmBusy]);
+
+  useEffect(() => {
+    if (!error) return;
+    onToast?.(error, "error");
+  }, [error, onToast]);
+
+  useEffect(() => {
+    const shouldShow =
+      isMyTurn &&
+      pendingPlacements.length > 0 &&
+      validation &&
+      !validation.valid;
+    const currentError = shouldShow ? validation?.error || "Invalid move" : "";
+    if (currentError && currentError !== lastValidationErrorRef.current) {
+      onToast?.(currentError, "error");
+      lastValidationErrorRef.current = currentError;
+    } else if (!currentError) {
+      lastValidationErrorRef.current = null;
+    }
+  }, [isMyTurn, pendingPlacements.length, validation, onToast]);
+  void handleDeleteGame; // Reserved for delete button UI
 
   if (!gameState) {
     return (
@@ -314,6 +559,10 @@ export function GameView({
           tilesRemaining={gameState.tileBag.length}
           currentUserPubkey={myPubkey}
           onShare={handleCopyLink}
+          onForfeit={
+            gameState.meta.status === "active" ? handleForfeit : undefined
+          }
+          forfeitDisabled={isLoading}
         />
 
         {gameState.meta.status !== "active" && (
@@ -339,10 +588,6 @@ export function GameView({
         )}
       </div>
 
-      {error && <div className="game-error">{error}</div>}
-      {zapMessage && <div className="game-success">{zapMessage}</div>}
-      {zapError && <div className="game-error">{zapError}</div>}
-
       <Board
         board={gameState.board}
         pendingPlacements={pendingPlacements}
@@ -361,10 +606,6 @@ export function GameView({
         disabled={!isMyTurn || gameState.meta.status !== "active"}
       />
 
-      {validation && !validation.valid && pendingPlacements.length > 0 && (
-        <div className="validation-error">{validation.error}</div>
-      )}
-
       <GameControls
         canPlay={validation?.valid || false}
         canPass={isMyTurn && gameState.meta.status === "active"}
@@ -376,7 +617,6 @@ export function GameView({
         isLoading={isLoading}
         pendingScore={validation?.score}
         walletConnected={walletState.connected}
-        zapAmount={zapAmount}
         onPlay={handlePlay}
         onPass={handlePass}
         onExchange={handleExchange}
@@ -388,6 +628,71 @@ export function GameView({
         <BlankTilePicker
           onSelect={handleBlankLetterSelect}
           onCancel={handleBlankPickerCancel}
+        />
+      )}
+
+      {pendingMoveSummary && (
+        <ZapNudgeModal
+          open={showZapModal}
+          word={pendingMoveSummary.word}
+          points={pendingMoveSummary.points}
+          myScore={pendingMoveSummary.myScore}
+          opponentScore={pendingMoveSummary.opponentScore}
+          opponentLabel={opponentLabel}
+          walletConnected={walletState.connected}
+          zapsDisabled={zapsDisabled}
+          sharePreviewText={sharePreviewText}
+          onConfirm={handleConfirmPlay}
+          onClose={() => {
+            setShowZapModal(false);
+            setPendingMoveSummary(null);
+          }}
+        />
+      )}
+
+      {confirmConfig && (
+        <Modal
+          open={Boolean(confirmConfig)}
+          title={confirmConfig.title}
+          onClose={handleCloseConfirm}
+          footer={
+            <div className="wwz-modal-actions">
+              {confirmConfig.showCancel && (
+                <button
+                  className="wwz-modal-btn"
+                  type="button"
+                  onClick={handleCloseConfirm}
+                  disabled={confirmBusy}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                className={`wwz-modal-btn ${confirmConfig.tone}`}
+                type="button"
+                onClick={handleConfirmAction}
+                disabled={confirmBusy}
+              >
+                {confirmBusy ? "Working..." : confirmConfig.confirmLabel}
+              </button>
+            </div>
+          }
+        >
+          <p>{confirmConfig.message}</p>
+        </Modal>
+      )}
+
+      {gameState.meta.status !== "active" && (
+        <GameOverModal
+          open={showGameOverModal}
+          opponentLabel={opponentLabel}
+          walletConnected={walletState.connected}
+          onClose={() => setShowGameOverModal(false)}
+          onSendZap={handleSendGgZap}
+          onOpenCreatorZap={() => {
+            setShowGameOverModal(false);
+            onOpenCreatorZap?.();
+          }}
         />
       )}
     </div>

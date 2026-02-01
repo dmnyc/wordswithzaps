@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNostr } from "./hooks/useNostr";
 import { useWallet } from "./hooks/useWallet";
+import { WalletKind } from "./types/wallet";
 import { getDictionary } from "./engine/Dictionary";
 import { fetchGamePlayers } from "./nostr/games";
 import { getCurrentUser } from "./nostr/client";
@@ -8,6 +9,9 @@ import LoginScreen from "./components/LoginScreen";
 import Lobby from "./components/Lobby";
 import GameView from "./components/GameView";
 import NavBar from "./components/NavBar";
+import WalletSettings from "./components/WalletSettings";
+import CreatorZapModal from "./components/CreatorZapModal";
+import { sendPayment } from "./wallet/walletManager";
 import "./index.css";
 
 type Screen = "login" | "lobby" | "game";
@@ -24,18 +28,93 @@ function App() {
   const [dictionaryError, setDictionaryError] = useState<string | null>(null);
   const [prefillGameId, setPrefillGameId] = useState<string | null>(null);
   const [prefillError, setPrefillError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    tone?: "success" | "error" | "info";
+  } | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
 
-  const { isConnected, user, disconnect, connect, isConnecting, error } =
-    useNostr();
-  const { state: walletState, connectWebLN, isWebLNAvailable } = useWallet();
+  const {
+    isConnected,
+    user,
+    disconnect,
+    connect,
+    isConnecting,
+    error,
+    connectionMethod,
+    relayCount,
+  } = useNostr();
+  const {
+    state: walletState,
+    isReady: walletReady,
+    activeWallet,
+    bitcoinConnectConnected,
+    refreshBalance,
+  } = useWallet();
+  const [showWalletSettings, setShowWalletSettings] = useState(false);
+  const [showCreatorZapModal, setShowCreatorZapModal] = useState(false);
+  const walletType = activeWallet
+    ? activeWallet.kind === WalletKind.SPARK
+      ? "spark"
+      : "nwc"
+    : bitcoinConnectConnected
+      ? "bitcoin-connect"
+      : "none";
 
-  const handleConnectWallet = useCallback(async () => {
-    try {
-      await connectWebLN();
-    } catch (err) {
-      console.warn("Failed to connect wallet:", err);
-    }
-  }, [connectWebLN]);
+  const handleOpenWalletSettings = useCallback(() => {
+    setShowWalletSettings(true);
+  }, []);
+
+  const handleCloseWalletSettings = useCallback(() => {
+    setShowWalletSettings(false);
+  }, []);
+
+  const handleOpenCreatorZap = useCallback(() => {
+    setShowCreatorZapModal(true);
+  }, []);
+
+  const handleCloseCreatorZap = useCallback(() => {
+    setShowCreatorZapModal(false);
+  }, []);
+
+  const showToast = useCallback(
+    (message: string, tone: "success" | "error" | "info" = "success") => {
+      setToast({ message, tone });
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+      toastTimeoutRef.current = window.setTimeout(() => {
+        setToast(null);
+        toastTimeoutRef.current = null;
+      }, 1800);
+    },
+    [],
+  );
+
+  const handleZapCreator = useCallback(
+    async (amount: number) => {
+      const result = await sendPayment("thedaniel@breez.tips", {
+        amount,
+        comment: "Words With Zaps - thanks for the game!",
+      });
+      if (!result.success) {
+        const message = result.error || "Zap failed";
+        showToast(message, "error");
+        throw new Error(message);
+      }
+      showToast(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
+    },
+    [showToast],
+  );
+
+  useEffect(
+    () => () => {
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   // Load dictionary on mount
   useEffect(() => {
@@ -142,6 +221,12 @@ function App() {
     }
   }, [isConnected, screen, prefillGameId]);
 
+  useEffect(() => {
+    if (isConnected && user?.pubkey) {
+      refreshBalance().catch(() => {});
+    }
+  }, [isConnected, refreshBalance, user?.pubkey]);
+
   // Read gameId from URL on first load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -168,6 +253,18 @@ function App() {
         if (!meta || meta.players.length === 0) {
           if (!cancelled) {
             setPrefillError("Game not found on relays yet.");
+          }
+          return;
+        }
+
+        if (!meta.players.includes(user.pubkey)) {
+          if (!cancelled) {
+            setPrefillGameId(null);
+            setPrefillError(null);
+            const url = new URL(window.location.href);
+            url.searchParams.delete("gameId");
+            window.history.replaceState({}, "", url.toString());
+            setScreen("lobby");
           }
           return;
         }
@@ -247,9 +344,14 @@ function App() {
           <NavBar
             user={user}
             onDisconnect={handleDisconnect}
-            walletState={walletState}
-            isWebLNAvailable={isWebLNAvailable}
-            onConnectWallet={handleConnectWallet}
+            onOpenSupportZap={handleOpenCreatorZap}
+            walletConnected={walletReady}
+            walletBalance={walletState.balance}
+            walletLoading={walletState.loading}
+            walletType={walletType}
+            onOpenWalletSettings={handleOpenWalletSettings}
+            connectionMethod={connectionMethod}
+            relayCount={relayCount}
           />
           <Lobby
             onGameStart={handleGameStart}
@@ -265,16 +367,40 @@ function App() {
             user={user}
             onDisconnect={handleDisconnect}
             onBackToLobby={handleBackToLobby}
-            walletState={walletState}
-            isWebLNAvailable={isWebLNAvailable}
-            onConnectWallet={handleConnectWallet}
+            onOpenSupportZap={handleOpenCreatorZap}
+            walletConnected={walletReady}
+            walletBalance={walletState.balance}
+            walletLoading={walletState.loading}
+            walletType={walletType}
+            onOpenWalletSettings={handleOpenWalletSettings}
+            connectionMethod={connectionMethod}
+            relayCount={relayCount}
           />
           <GameView
             gameId={gameSession.gameId}
             opponentPubkey={gameSession.opponentPubkey}
+            onToast={showToast}
+            onOpenCreatorZap={handleOpenCreatorZap}
           />
         </>
       )}
+
+      {toast && (
+        <div className={`app-toast ${toast.tone || "success"}`}>
+          {toast.message}
+        </div>
+      )}
+
+      {showWalletSettings && (
+        <WalletSettings onClose={handleCloseWalletSettings} />
+      )}
+
+      <CreatorZapModal
+        open={showCreatorZapModal}
+        walletConnected={walletReady}
+        onClose={handleCloseCreatorZap}
+        onSendZap={handleZapCreator}
+      />
     </div>
   );
 }

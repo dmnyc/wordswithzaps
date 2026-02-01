@@ -78,6 +78,18 @@ export function isConnected(): boolean {
 }
 
 /**
+ * Get count of connected relays
+ */
+export function getConnectedRelayCount(): number {
+  if (!ndkInstance) return 0;
+  try {
+    return ndkInstance.pool.connectedRelays().length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Disconnect from relays
  */
 export function disconnect(): void {

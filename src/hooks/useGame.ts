@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { GameState, TilePlacement, ValidationResult } from "../types/game";
 import type { DecryptedGameEvent } from "../types/nostr";
 import { GameEngine } from "../engine/GameEngine";
+import { TILE_DISTRIBUTION } from "../engine/constants";
 import { NostrSync } from "../nostr/NostrSync";
 import { getCurrentUser } from "../nostr/client";
 
@@ -41,6 +42,43 @@ export function useGame(): UseGameReturn {
   const myPubkey = user?.pubkey || "";
 
   const isMyTurn = gameState?.turn.activePlayer === myPubkey;
+
+  const deriveOpponentRack = useCallback(
+    (state: GameState, myRack: string[]): string[] => {
+      const counts: Record<string, number> = { ...TILE_DISTRIBUTION };
+      const consume = (tile: string) => {
+        const key = tile.toUpperCase();
+        if (counts[key] === undefined) return;
+        counts[key] = Math.max(0, counts[key] - 1);
+      };
+
+      for (const tile of state.tileBag) {
+        consume(tile);
+      }
+
+      for (const tile of myRack) {
+        consume(tile);
+      }
+
+      for (const value of Object.values(state.board)) {
+        if (!value) continue;
+        if (typeof value === "string") {
+          consume(value === "BLANK" ? "BLANK" : value);
+        } else {
+          consume(value.isBlank ? "BLANK" : value.letter);
+        }
+      }
+
+      const opponentRack: string[] = [];
+      for (const [letter, count] of Object.entries(counts)) {
+        for (let i = 0; i < count; i += 1) {
+          opponentRack.push(letter);
+        }
+      }
+      return opponentRack;
+    },
+    [],
+  );
 
   // Request notification permission on mount
   useEffect(() => {
@@ -273,9 +311,18 @@ export function useGame(): UseGameReturn {
         }
         newRack.push(...tilesDrawn);
 
+        const opponentRack = deriveOpponentRack(newState, newRack);
+        const p1Rack =
+          myPubkey === newState.meta.playerOne ? newRack : opponentRack;
+        const p2Rack =
+          myPubkey === newState.meta.playerTwo ? newRack : opponentRack;
+        const finalState = GameEngine.isGameOver(newState, p1Rack, p2Rack)
+          ? GameEngine.endGame(newState, p1Rack, p2Rack)
+          : newState;
+
         // Publish to Nostr
         const eventId = await syncRef.current.publishGameState(
-          newState,
+          finalState,
           lastEventId || "",
         );
 
@@ -283,7 +330,7 @@ export function useGame(): UseGameReturn {
         await syncRef.current.savePlayerRack({ rack: newRack });
 
         // Update local state
-        setGameState(newState);
+        setGameState(finalState);
         setPlayerRack(newRack);
         setLastEventId(eventId);
 
@@ -307,6 +354,7 @@ export function useGame(): UseGameReturn {
       isMyTurn,
       lastEventId,
       playerRack,
+      deriveOpponentRack,
       validateMoveAction,
     ],
   );
@@ -330,12 +378,20 @@ export function useGame(): UseGameReturn {
         myPubkey,
         lastEventId || "",
       );
+      const opponentRack = deriveOpponentRack(newState, playerRack);
+      const p1Rack =
+        myPubkey === newState.meta.playerOne ? playerRack : opponentRack;
+      const p2Rack =
+        myPubkey === newState.meta.playerTwo ? playerRack : opponentRack;
+      const finalState = GameEngine.isGameOver(newState, p1Rack, p2Rack)
+        ? GameEngine.endGame(newState, p1Rack, p2Rack)
+        : newState;
       const eventId = await syncRef.current.publishGameState(
-        newState,
+        finalState,
         lastEventId || "",
       );
 
-      setGameState(newState);
+      setGameState(finalState);
       setLastEventId(eventId);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to pass";
@@ -344,7 +400,14 @@ export function useGame(): UseGameReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [gameState, myPubkey, isMyTurn, lastEventId]);
+  }, [
+    gameState,
+    myPubkey,
+    isMyTurn,
+    lastEventId,
+    playerRack,
+    deriveOpponentRack,
+  ]);
 
   // Exchange tiles
   const exchange = useCallback(

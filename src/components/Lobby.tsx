@@ -215,12 +215,19 @@ export function Lobby({
     : games.filter((game) => !isGameEnded(game));
 
   const handleGameClick = (game: GameSummary) => {
-    if (isGameEnded(game)) return;
     const opponent =
       game.opponentPubkey || game.players.find((p) => p !== user?.pubkey);
     if (opponent) {
       onGameStart(game.gameId, opponent);
     }
+  };
+
+  const getScorePreview = (game: GameSummary) => {
+    if (game.p1Score === undefined || game.p2Score === undefined) return null;
+    const isPlayerOne = (game.playerOne || game.creatorPubkey) === user?.pubkey;
+    const myScore = isPlayerOne ? game.p1Score : game.p2Score;
+    const opponentScore = isPlayerOne ? game.p2Score : game.p1Score;
+    return { myScore, opponentScore };
   };
 
   return (
@@ -265,6 +272,7 @@ export function Lobby({
                 "";
               const ended = isGameEnded(game);
               const myTurn = isMyTurn(game);
+              const scorePreview = getScorePreview(game);
 
               return (
                 <div
@@ -321,6 +329,11 @@ export function Lobby({
                       <span className="game-name">
                         {getGameLabel(game.gameId)}
                       </span>
+                      {scorePreview && (
+                        <span className="game-score">
+                          {scorePreview.myScore} – {scorePreview.opponentScore}
+                        </span>
+                      )}
                     </div>
                   </div>
 

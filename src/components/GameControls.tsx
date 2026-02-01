@@ -7,7 +7,6 @@ interface GameControlsProps {
   isLoading: boolean;
   pendingScore?: number;
   walletConnected?: boolean;
-  zapAmount?: number;
   onPlay: () => void;
   onPass: () => void;
   onExchange: () => void;
@@ -21,14 +20,14 @@ export function GameControls({
   canExchange,
   isLoading,
   pendingScore,
-  walletConnected = false,
-  zapAmount = 1,
+  walletConnected: _walletConnected = false,
   onPlay,
   onPass,
   onExchange,
   onClear,
   onShuffle,
 }: GameControlsProps) {
+  void _walletConnected; // Reserved for future use
   return (
     <div className="game-controls">
       <div className="controls-left">
@@ -59,14 +58,7 @@ export function GameControls({
           onClick={onPlay}
           disabled={!canPlay || isLoading}
         >
-          {isLoading ? (
-            "Playing..."
-          ) : (
-            <>
-              Zap <img src="/assets/bolt.svg" alt="" className="bolt-icon" />
-              {zapAmount} & Play
-            </>
-          )}
+          {isLoading ? "Playing..." : "Play Turn"}
         </button>
       </div>
 

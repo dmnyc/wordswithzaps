@@ -1,0 +1,227 @@
+.zap-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.zap-modal {
+    background: linear-gradient(160deg, #1f1f1f 0%, #141414 100%);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 460px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+}
+
+.zap-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: none;
+    border: none;
+    color: #7a7a7a;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+}
+
+.zap-modal-close:hover {
+    color: #fff;
+}
+
+.zap-modal h2 {
+    color: #ffcc00;
+    font-size: 22px;
+    margin: 0 0 16px;
+}
+
+.zap-summary {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 18px;
+    display: grid;
+    gap: 6px;
+}
+
+.zap-summary-word {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.zap-summary-points {
+    color: #ffcc00;
+    font-weight: 600;
+}
+
+.zap-summary-scores {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.zap-summary-scores div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+
+.zap-summary-label {
+    color: #9a9a9a;
+    font-size: 12px;
+}
+
+.zap-summary-value {
+    color: #fff;
+    font-weight: 700;
+}
+
+.zap-section {
+    margin-bottom: 16px;
+}
+
+.zap-section h3 {
+    color: #9a9a9a;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 10px;
+}
+
+.zap-amounts {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.zap-amount-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #eaeaea;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    width: 100%;
+    white-space: nowrap;
+}
+
+.zap-amount-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.zap-amount-btn.active {
+    background: rgba(255, 204, 0, 0.18);
+    color: #ffcc00;
+}
+
+.zap-custom-input {
+    width: 140px;
+    border-radius: 8px;
+    border: none;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.zap-custom-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.zap-custom-error {
+    color: #ff8f8f;
+    font-size: 12px;
+}
+
+.zap-hint {
+    color: #7a7a7a;
+    font-size: 12px;
+    margin: 6px 0 0;
+}
+
+.zap-hint.error {
+    color: #ff8f8f;
+}
+
+.zap-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #eaeaea;
+    font-size: 13px;
+    margin-bottom: 18px;
+}
+
+.zap-checkbox input {
+    accent-color: #ffcc00;
+}
+
+.zap-preview {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 12px;
+    margin: 0 0 18px;
+}
+
+.zap-preview-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9a9a9a;
+    margin-bottom: 8px;
+}
+
+.zap-preview-content {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family:
+        "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    color: #eaeaea;
+    line-height: 1.4;
+}
+
+.zap-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.zap-btn {
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.zap-btn.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #eaeaea;
+}
+
+.zap-btn.primary {
+    background: linear-gradient(180deg, #ffcc00, #e6b800);
+    color: #0b0b0b;
+}

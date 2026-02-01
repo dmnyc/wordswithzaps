@@ -20,6 +20,10 @@ export interface GameSummary {
   activePlayer?: string;
   deletedBy?: string;
   creatorPubkey?: string;
+  playerOne?: string;
+  playerTwo?: string;
+  p1Score?: number;
+  p2Score?: number;
 }
 
 const getTagValues = (tags: string[][], name: string): string[] =>
@@ -78,8 +82,12 @@ export async function fetchUserGames(
       summary.status = state.meta.status;
       summary.deletedBy = state.meta.deletedBy;
       summary.creatorPubkey = state.meta.playerOne;
+      summary.playerOne = state.meta.playerOne;
+      summary.playerTwo = state.meta.playerTwo;
       summary.turnIndex = state.turn.index;
       summary.activePlayer = state.turn.activePlayer;
+      summary.p1Score = state.scoring.p1Score;
+      summary.p2Score = state.scoring.p2Score;
     } catch {
       // Skip if decryption fails
     }

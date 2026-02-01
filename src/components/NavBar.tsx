@@ -1,32 +1,80 @@
 import { useEffect, useRef, useState } from "react";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
+import type { WalletProviderType } from "../types/wallet";
+import {
+  getDisableGameplayZaps,
+  setDisableGameplayZaps,
+  getShareToNostrDefault,
+  setShareToNostrDefault,
+} from "../settings/appSettings";
+import {
+  SparkLogo,
+  NwcLogo,
+  BitcoinConnectLogo,
+  EyeIcon,
+} from "./icons/WalletIcons";
 import "./NavBar.css";
 
-interface WalletState {
-  connected: boolean;
-  provider?: string;
-}
+const BALANCE_HIDDEN_KEY = "wordswithzaps_wallet_balance_hidden";
 
 interface NavBarProps {
   user: NDKUser | null;
   onDisconnect: () => void;
   onBackToLobby?: () => void;
-  walletState?: WalletState;
-  isWebLNAvailable?: boolean;
-  onConnectWallet?: () => void;
+  onOpenSupportZap?: () => void;
+  walletConnected?: boolean;
+  walletBalance?: number;
+  walletLoading?: boolean;
+  walletType?: WalletProviderType;
+  onOpenWalletSettings?: () => void;
   onShareGame?: () => void;
+  connectionMethod?: "NIP-07" | "NIP-46" | null;
+  relayCount?: number;
+}
+
+function WalletTypeIcon({ walletType }: { walletType?: WalletProviderType }) {
+  if (walletType === "spark") {
+    return <SparkLogo className="wallet-type-icon spark" />;
+  }
+  if (walletType === "nwc") {
+    return <NwcLogo className="wallet-type-icon nwc" />;
+  }
+  if (walletType === "bitcoin-connect") {
+    return <BitcoinConnectLogo className="wallet-type-icon bitcoin-connect" />;
+  }
+  return null;
 }
 
 export function NavBar({
   user,
   onDisconnect,
   onBackToLobby,
-  walletState,
-  isWebLNAvailable,
-  onConnectWallet,
+  onOpenSupportZap,
+  walletConnected,
+  walletBalance,
+  walletLoading: _walletLoading,
+  walletType,
+  onOpenWalletSettings,
   onShareGame,
+  connectionMethod,
+  relayCount,
 }: NavBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [hideBalance, setHideBalance] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem(BALANCE_HIDDEN_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [zapsDisabled, setZapsDisabled] = useState(() =>
+    getDisableGameplayZaps(),
+  );
+  const [shareToNostr, setShareToNostr] = useState(() =>
+    getShareToNostrDefault(),
+  );
   const [profileSnapshot, setProfileSnapshot] = useState<Record<
     string,
     unknown
@@ -37,12 +85,29 @@ export function NavBar({
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
+        setWalletMenuOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(BALANCE_HIDDEN_KEY, String(hideBalance));
+    } catch {
+      // Ignore storage errors
+    }
+  }, [hideBalance]);
+
+  useEffect(() => {
+    setDisableGameplayZaps(zapsDisabled);
+  }, [zapsDisabled]);
+
+  useEffect(() => {
+    setShareToNostrDefault(shareToNostr);
+  }, [shareToNostr]);
 
   useEffect(() => {
     if (!user) {
@@ -83,6 +148,25 @@ export function NavBar({
   const displayName =
     profile?.displayName || profile?.display_name || profile?.name || "You";
   const picture = profile?.picture || profile?.image;
+  const balanceKnown = walletBalance !== undefined && walletBalance !== null;
+  const hasWallet = walletConnected || walletType !== "none";
+  const isExternalWallet = walletType === "bitcoin-connect";
+  // External wallets don't show balance text, just the bolt icon
+  const balanceText = isExternalWallet
+    ? null
+    : balanceKnown
+      ? walletBalance.toLocaleString()
+      : hasWallet
+        ? "..."
+        : "Set up";
+  const walletTypeLabel =
+    walletType === "spark"
+      ? "Spark Wallet"
+      : walletType === "nwc"
+        ? "NWC Wallet"
+        : walletType === "bitcoin-connect"
+          ? "Bitcoin Connect"
+          : "No wallet connected";
 
   return (
     <nav className="main-nav">
@@ -102,37 +186,69 @@ export function NavBar({
       </div>
 
       <div className="nav-right" ref={menuRef}>
-        {walletState !== undefined && (
-          <div className="wallet-status">
-            {walletState.connected ? (
-              <span className="wallet-connected" title="Wallet connected">
-                <img
-                  src="/assets/bolt.svg"
-                  alt="Connected"
-                  className="bolt-icon"
-                />
-              </span>
-            ) : isWebLNAvailable && onConnectWallet ? (
-              <button
-                className="wallet-connect-btn"
-                onClick={onConnectWallet}
-                title="Connect Lightning wallet"
-              >
-                <img src="/assets/bolt.svg" alt="" className="bolt-icon" />{" "}
-                Connect
-              </button>
-            ) : null}
+        {onOpenWalletSettings && (
+          <div className="wallet-menu-wrap">
+            <button
+              className={`wallet-status-btn ${hideBalance ? "balance-hidden" : ""} ${isExternalWallet ? "external-wallet" : ""}`}
+              onClick={() => {
+                setWalletMenuOpen((prev) => !prev);
+                setMenuOpen(false);
+              }}
+              title="Wallet"
+            >
+              <img
+                src="/assets/bolt-yellow.svg"
+                alt=""
+                className={`bolt-icon ${walletConnected ? "connected" : ""}`}
+              />
+              {!hideBalance && balanceText && (
+                <span className="wallet-balance-text">{balanceText}</span>
+              )}
+            </button>
+            {walletMenuOpen && (
+              <div className="wallet-menu">
+                <div className="wallet-menu-header">
+                  {walletType !== "none" && (
+                    <WalletTypeIcon walletType={walletType} />
+                  )}
+                  <span className="wallet-menu-title">{walletTypeLabel}</span>
+                </div>
+                {!isExternalWallet && walletType !== "none" && (
+                  <button
+                    className="menu-item icon-row"
+                    onClick={() => {
+                      setHideBalance((prev) => !prev);
+                    }}
+                  >
+                    <EyeIcon className="menu-icon" />
+                    {hideBalance ? "Show balance" : "Hide balance"}
+                  </button>
+                )}
+                <button
+                  className="menu-item"
+                  onClick={() => {
+                    setWalletMenuOpen(false);
+                    onOpenWalletSettings();
+                  }}
+                >
+                  Wallet Settings
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         <button
           className="user-button"
-          onClick={() => setMenuOpen((prev) => !prev)}
+          onClick={() => {
+            setMenuOpen((prev) => !prev);
+            setWalletMenuOpen(false);
+          }}
         >
           {picture ? (
             <img
               src={picture}
-              alt={displayName}
+              alt={String(displayName)}
               className="user-avatar"
               onError={(event) => {
                 (event.target as HTMLImageElement).src =
@@ -141,7 +257,7 @@ export function NavBar({
             />
           ) : (
             <div className="user-avatar fallback">
-              {displayName.charAt(0).toUpperCase()}
+              {String(displayName).charAt(0).toUpperCase()}
             </div>
           )}
           <span className="user-name">{displayName}</span>
@@ -172,6 +288,47 @@ export function NavBar({
                 Back to Lobby
               </button>
             )}
+            {onOpenSupportZap && (
+              <button
+                className="menu-item support"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenSupportZap();
+                }}
+              >
+                Zap to support!
+              </button>
+            )}
+            <div className="menu-section">
+              <div className="menu-section-title">App Settings</div>
+              <label className="menu-toggle">
+                <input
+                  type="checkbox"
+                  checked={zapsDisabled}
+                  onChange={() => setZapsDisabled((prev) => !prev)}
+                />
+                <span>Disable gameplay zaps</span>
+              </label>
+              <label className="menu-toggle">
+                <input
+                  type="checkbox"
+                  checked={shareToNostr}
+                  onChange={() => setShareToNostr((prev) => !prev)}
+                />
+                <span>Share turns to Nostr</span>
+              </label>
+            </div>
+            <div className="menu-section">
+              <div className="menu-section-title">Connection</div>
+              <div className="menu-info-row">
+                <span>Connect method</span>
+                <span>{connectionMethod || "—"}</span>
+              </div>
+              <div className="menu-info-row">
+                <span>Relays connected</span>
+                <span>{relayCount ?? 0}</span>
+              </div>
+            </div>
             <button
               className="menu-item danger"
               onClick={() => {

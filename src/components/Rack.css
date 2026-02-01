@@ -3,6 +3,15 @@
     padding: 8px 12px;
     border-radius: 6px;
     display: inline-block;
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.rack * {
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 }
 
 .rack.disabled {
