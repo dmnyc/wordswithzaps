@@ -67,6 +67,7 @@ function App() {
   const [showCreatorZapModal, setShowCreatorZapModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showRelayListModal, setShowRelayListModal] = useState(false);
+  const creatorZapReturnRef = useRef<null | (() => void)>(null);
   const walletType = activeWallet
     ? activeWallet.kind === WalletKind.SPARK
       ? "spark"
@@ -91,12 +92,18 @@ function App() {
     setShowProfileSettings(false);
   }, []);
 
-  const handleOpenCreatorZap = useCallback(() => {
+  const handleOpenCreatorZap = useCallback((onReturn?: () => void) => {
+    creatorZapReturnRef.current = onReturn || null;
     setShowCreatorZapModal(true);
   }, []);
 
   const handleCloseCreatorZap = useCallback(() => {
     setShowCreatorZapModal(false);
+    const returnCallback = creatorZapReturnRef.current;
+    creatorZapReturnRef.current = null;
+    if (returnCallback) {
+      returnCallback();
+    }
   }, []);
 
   const handleOpenAbout = useCallback(() => {

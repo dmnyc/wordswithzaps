@@ -214,7 +214,7 @@
 }
 
 /* Bingo celebration overlay */
-.bingo-celebration {
+.zapathon-celebration {
     position: fixed;
     inset: 0;
     display: flex;
@@ -222,10 +222,10 @@
     justify-content: center;
     z-index: 2000;
     pointer-events: none;
-    animation: bingoCelebrationFade 2.5s ease-out forwards;
+    animation: zapathonCelebrationFade 2.5s ease-out forwards;
 }
 
-@keyframes bingoCelebrationFade {
+@keyframes zapathonCelebrationFade {
     0% {
         opacity: 0;
     }
@@ -240,15 +240,15 @@
     }
 }
 
-.bingo-celebration-content {
+.zapathon-celebration-content {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    animation: bingoBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: zapathonBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-@keyframes bingoBounce {
+@keyframes zapathonBounce {
     0% {
         transform: scale(0) rotate(-10deg);
         opacity: 0;
@@ -265,7 +265,7 @@
     }
 }
 
-.bingo-text {
+.zapathon-text {
     font-size: 72px;
     font-weight: 900;
     color: #ffcc00;
@@ -277,14 +277,14 @@
     letter-spacing: 0.1em;
 }
 
-.bingo-subtext {
+.zapathon-subtext {
     font-size: 18px;
     font-weight: 600;
     color: #fff;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.bingo-bonus {
+.zapathon-bonus {
     font-size: 24px;
     font-weight: 700;
     color: #68d391;
@@ -303,7 +303,7 @@
 }
 
 /* Confetti particles */
-.bingo-confetti {
+.zapathon-confetti {
     position: absolute;
     inset: 0;
     overflow: hidden;
@@ -349,13 +349,13 @@
 }
 
 @media (max-width: 520px) {
-    .bingo-text {
+    .zapathon-text {
         font-size: 48px;
     }
-    .bingo-subtext {
+    .zapathon-subtext {
         font-size: 14px;
     }
-    .bingo-bonus {
+    .zapathon-bonus {
         font-size: 18px;
     }
 }

@@ -11,6 +11,7 @@ import {
   shuffleArray,
   RACK_SIZE,
   BINGO_BONUS,
+  LETTER_VALUES,
 } from "./constants";
 import { validateMove, applyPlacements, findAllWords } from "./Board";
 
@@ -19,6 +20,7 @@ import { validateMove, applyPlacements, findAllWords } from "./Board";
  * Stateless pure functions - no side effects
  */
 export class GameEngine {
+  private static readonly MAX_HISTORY_ENTRIES = 60;
   /**
    * Initialize a new game between two players
    */
@@ -162,7 +164,7 @@ export class GameEngine {
           score,
           coords: placements.map((p) => `${p.x},${p.y}`),
         } as MoveHistory,
-      ],
+      ].slice(-GameEngine.MAX_HISTORY_ENTRIES),
     };
 
     // Create new state
@@ -216,7 +218,7 @@ export class GameEngine {
             score: 0,
             coords: [],
           },
-        ],
+        ].slice(-GameEngine.MAX_HISTORY_ENTRIES),
       },
     };
   }
@@ -267,7 +269,7 @@ export class GameEngine {
             score: 0,
             coords: [],
           },
-        ],
+        ].slice(-GameEngine.MAX_HISTORY_ENTRIES),
       },
     };
 
@@ -282,11 +284,6 @@ export class GameEngine {
     p1Rack: string[],
     p2Rack: string[],
   ): boolean {
-    // Game over if one player has no tiles
-    if (p1Rack.length === 0 || p2Rack.length === 0) {
-      return true;
-    }
-
     // Game over if both players pass consecutively
     const recentHistory = state.scoring.history.slice(-2);
     if (recentHistory.length === 2) {
@@ -307,36 +304,6 @@ export class GameEngine {
     p1Rack: string[],
     p2Rack: string[],
   ): { p1Final: number; p2Final: number; winner: string | null } {
-    const LETTER_VALUES: Record<string, number> = {
-      A: 1,
-      B: 3,
-      C: 3,
-      D: 2,
-      E: 1,
-      F: 4,
-      G: 2,
-      H: 4,
-      I: 1,
-      J: 8,
-      K: 5,
-      L: 1,
-      M: 3,
-      N: 1,
-      O: 1,
-      P: 3,
-      Q: 10,
-      R: 1,
-      S: 1,
-      T: 1,
-      U: 1,
-      V: 4,
-      W: 4,
-      X: 8,
-      Y: 4,
-      Z: 10,
-      BLANK: 0,
-    };
-
     const p1RackValue = p1Rack.reduce(
       (sum, t) => sum + (LETTER_VALUES[t] || 0),
       0,

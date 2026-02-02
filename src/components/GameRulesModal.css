@@ -60,7 +60,7 @@
     color: #a0c4e8;
 }
 
-.multiplier.tl {
+.multiplier.ql {
     background: linear-gradient(145deg, #1a4a5c, #143a48);
     color: #7ec8e3;
 }
@@ -70,9 +70,9 @@
     color: #e8a0a0;
 }
 
-.multiplier.tw {
-    background: linear-gradient(145deg, #6b2020, #4a1515);
-    color: #ff9999;
+.multiplier.zap {
+    background: linear-gradient(145deg, #4a3a10, #3a2a08);
+    color: #ffd86b;
 }
 
 .bingo {

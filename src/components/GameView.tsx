@@ -10,7 +10,7 @@ import ScoreBoard from "./ScoreBoard";
 import GameControls from "./GameControls";
 import BlankTilePicker from "./BlankTilePicker";
 import ExchangeTilesModal from "./ExchangeTilesModal";
-import { shuffleArray } from "../engine/constants";
+import { BINGO_BONUS, RACK_SIZE, shuffleArray } from "../engine/constants";
 import {
   getDisableGameplayZaps,
   subscribeAppSettings,
@@ -30,7 +30,7 @@ interface GameViewProps {
   opponentPubkey: string;
   onShareGame?: (copyFn: () => void) => void;
   onToast?: (message: string, tone?: "success" | "error" | "info") => void;
-  onOpenCreatorZap?: () => void;
+  onOpenCreatorZap?: (onReturn?: () => void) => void;
   onOpenWalletSettings?: () => void;
   onOpenRelayList?: () => void;
 }
@@ -91,12 +91,13 @@ export function GameView({
     myScore: number;
     opponentScore: number;
     isFirstMove: boolean;
+    kind: "move" | "skip";
   } | null>(null);
   const [opponentDisplayName, setOpponentDisplayName] = useState<string | null>(
     null,
   );
   const [confirmAction, setConfirmAction] = useState<
-    "forfeit" | "delete" | "exchange" | null
+    "forfeit" | "delete" | "pass" | null
   >(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
@@ -381,6 +382,7 @@ export function GameView({
       myScore,
       opponentScore,
       isFirstMove,
+      kind: "move" as const,
     };
 
     const wasBingo = pendingPlacements.length === 7;
@@ -465,7 +467,9 @@ export function GameView({
       if (options.shareMode !== "none") {
         try {
           let shareText = "";
-          if (pendingMoveSummary?.isFirstMove) {
+          if (pendingMoveSummary?.kind === "skip") {
+            shareText = "I just completed my turn in #WordsWithZaps.";
+          } else if (pendingMoveSummary?.isFirstMove) {
             const challengeTarget =
               options.shareMode === "public"
                 ? opponentLabel
@@ -536,10 +540,9 @@ export function GameView({
     ],
   );
 
-  const handlePass = useCallback(async () => {
-    await pass();
-    setPendingPlacements([]);
-  }, [pass]);
+  const handlePass = useCallback(() => {
+    setConfirmAction("pass");
+  }, []);
 
   const handleClear = useCallback(() => {
     setPendingPlacements([]);
@@ -554,6 +557,10 @@ export function GameView({
   const sharePreviewText = useMemo(() => {
     if (!pendingMoveSummary) {
       return { public: "", private: "" };
+    }
+    if (pendingMoveSummary.kind === "skip") {
+      const message = "I just completed my turn in #WordsWithZaps.";
+      return { public: message, private: message };
     }
     const points = pendingMoveSummary.points;
     if (pendingMoveSummary.isFirstMove) {
@@ -583,8 +590,8 @@ export function GameView({
       if (prev.includes(index)) {
         return prev.filter((i) => i !== index);
       }
-      // Limit to 7 tiles max
-      if (prev.length >= 7) return prev;
+      // Limit to rack size
+      if (prev.length >= RACK_SIZE) return prev;
       return [...prev, index];
     });
   }, []);
@@ -605,6 +612,15 @@ export function GameView({
         `Exchanged ${tilesToExchange.length} tile${tilesToExchange.length === 1 ? "" : "s"}`,
         "success",
       );
+      setPendingMoveSummary({
+        word: "Turn completed",
+        points: 0,
+        myScore: gameState?.scoring.p1Score || 0,
+        opponentScore: gameState?.scoring.p2Score || 0,
+        isFirstMove: false,
+        kind: "skip",
+      });
+      setShowZapModal(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Exchange failed";
       onToast?.(message, "error");
@@ -612,7 +628,7 @@ export function GameView({
 
     setExchangeMode(false);
     setExchangeSelection([]);
-  }, [exchangeSelection, availableRack, exchange, onToast]);
+  }, [exchangeSelection, availableRack, exchange, onToast, gameState]);
 
   const handleCopyLink = useCallback(async () => {
     try {
@@ -693,6 +709,15 @@ export function GameView({
         showCancel: true,
       };
     }
+    if (confirmAction === "pass") {
+      return {
+        title: "Pass your turn?",
+        message: "You'll skip this turn and your opponent can play.",
+        confirmLabel: "Pass turn",
+        tone: "danger",
+        showCancel: true,
+      };
+    }
     if (confirmAction === "delete") {
       return {
         title: "Delete game?",
@@ -713,6 +738,19 @@ export function GameView({
         await resign();
         onToast?.("Game forfeited.", "info");
       }
+      if (confirmAction === "pass") {
+        await pass();
+        setPendingPlacements([]);
+        setPendingMoveSummary({
+          word: "Turn completed",
+          points: 0,
+          myScore: gameState?.scoring.p1Score || 0,
+          opponentScore: gameState?.scoring.p2Score || 0,
+          isFirstMove: false,
+          kind: "skip",
+        });
+        setShowZapModal(true);
+      }
       if (confirmAction === "delete") {
         await deleteGame();
       }
@@ -724,7 +762,7 @@ export function GameView({
     } finally {
       setConfirmBusy(false);
     }
-  }, [confirmAction, deleteGame, onToast, resign]);
+  }, [confirmAction, deleteGame, onToast, resign, pass, gameState]);
 
   const handleCloseConfirm = useCallback(() => {
     if (confirmBusy) return;
@@ -841,7 +879,7 @@ export function GameView({
         canExchange={
           isMyTurn &&
           gameState.meta.status === "active" &&
-          gameState.tileBag.length >= 7
+          gameState.tileBag.length >= RACK_SIZE
         }
         isLoading={isLoading}
         pendingScore={validation?.score}
@@ -932,7 +970,7 @@ export function GameView({
           onSendZap={handleSendGgZap}
           onOpenCreatorZap={() => {
             setShowGameOverModal(false);
-            onOpenCreatorZap?.();
+            onOpenCreatorZap?.(() => setShowGameOverModal(true));
           }}
         />
       )}
@@ -948,8 +986,8 @@ export function GameView({
       )}
 
       {showBingoCelebration && (
-        <div className="bingo-celebration">
-          <div className="bingo-confetti">
+        <div className="zapathon-celebration">
+          <div className="zapathon-confetti">
             {Array.from({ length: 30 }).map((_, i) => (
               <div
                 key={i}
@@ -962,10 +1000,12 @@ export function GameView({
               />
             ))}
           </div>
-          <div className="bingo-celebration-content">
-            <div className="bingo-text">BINGO!</div>
-            <div className="bingo-subtext">All 7 tiles played!</div>
-            <div className="bingo-bonus">+50 bonus points</div>
+          <div className="zapathon-celebration-content">
+            <div className="zapathon-text">ZAPATHON!</div>
+            <div className="zapathon-subtext">
+              All {RACK_SIZE} tiles played!
+            </div>
+            <div className="zapathon-bonus">+{BINGO_BONUS} bonus points</div>
           </div>
         </div>
       )}

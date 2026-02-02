@@ -3,8 +3,8 @@
     --cell-gap: 2px;
     --cell-pad: 6px;
     display: grid;
-    grid-template-columns: repeat(15, var(--cell-size));
-    grid-template-rows: repeat(15, var(--cell-size));
+    grid-template-columns: repeat(var(--board-size, 13), var(--cell-size));
+    grid-template-rows: repeat(var(--board-size, 13), var(--cell-size));
     gap: var(--cell-gap);
     background: var(--bg);
     padding: var(--cell-pad);
@@ -72,17 +72,6 @@
     text-align: center;
 }
 
-/* Triple Word Score - Deep red/burgundy */
-.cell-tw {
-    background: linear-gradient(145deg, #6b2020, #4a1515);
-}
-.cell-tw:hover {
-    background: linear-gradient(145deg, #7b3030, #5a2020);
-}
-.cell-tw .cell-label {
-    color: #ff9999;
-}
-
 /* Double Word Score - Muted rose */
 .cell-dw {
     background: linear-gradient(145deg, #5c3a3a, #4a2e2e);
@@ -94,14 +83,14 @@
     color: #e8a0a0;
 }
 
-/* Triple Letter Score - Deep teal */
-.cell-tl {
+/* Quad Letter Score - Deep teal */
+.cell-ql {
     background: linear-gradient(145deg, #1a4a5c, #143a48);
 }
-.cell-tl:hover {
+.cell-ql:hover {
     background: linear-gradient(145deg, #2a5a6c, #1a4a58);
 }
-.cell-tl .cell-label {
+.cell-ql .cell-label {
     color: #7ec8e3;
 }
 
@@ -116,17 +105,23 @@
     color: #a0c4e8;
 }
 
-/* Center Star - Gold accent */
-.cell-star {
+/* Zap Bonus - Gold accent */
+.cell-zap {
     background: linear-gradient(145deg, #4a3a10, #3a2a08);
 }
-.cell-star:hover {
+.cell-zap:hover {
     background: linear-gradient(145deg, #5a4a20, #4a3a18);
 }
-.cell-star .cell-label {
-    font-size: 18px;
-    color: var(--accent);
-    text-shadow: 0 0 8px rgba(255, 204, 0, 0.5);
+.cell-zap .cell-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cell-bolt {
+    width: 18px;
+    height: 18px;
+    filter: drop-shadow(0 0 6px rgba(255, 204, 0, 0.45));
 }
 
 /* Mobile responsive breakpoints */
@@ -139,8 +134,12 @@
     .cell-label {
         font-size: 8px;
     }
-    .cell-star .cell-label {
+    .cell-zap .cell-label {
         font-size: 16px;
+    }
+    .cell-bolt {
+        width: 16px;
+        height: 16px;
     }
 }
 
@@ -158,8 +157,12 @@
         font-size: 7px;
         letter-spacing: 0;
     }
-    .cell-star .cell-label {
+    .cell-zap .cell-label {
         font-size: 14px;
+    }
+    .cell-bolt {
+        width: 14px;
+        height: 14px;
     }
 }
 
@@ -172,8 +175,12 @@
     .cell-label {
         font-size: 6px;
     }
-    .cell-star .cell-label {
+    .cell-zap .cell-label {
         font-size: 12px;
+    }
+    .cell-bolt {
+        width: 12px;
+        height: 12px;
     }
 }
 
@@ -190,7 +197,11 @@
     .cell-label {
         font-size: 5px;
     }
-    .cell-star .cell-label {
+    .cell-zap .cell-label {
         font-size: 10px;
+    }
+    .cell-bolt {
+        width: 10px;
+        height: 10px;
     }
 }

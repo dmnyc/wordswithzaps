@@ -1,4 +1,5 @@
 import Modal from "./Modal";
+import { BINGO_BONUS, RACK_SIZE, ZAP_BONUS_POINTS } from "../engine/constants";
 import "./GameRulesModal.css";
 
 interface GameRulesModalProps {
@@ -19,8 +20,10 @@ export function GameRulesModal({ open, onClose }: GameRulesModalProps) {
           <h3>Your Turn</h3>
           <ul>
             <li>Place tiles to form a word (horizontal or vertical)</li>
-            <li>New words must connect to existing tiles (except first move)</li>
-            <li>First word must cover the center star</li>
+            <li>
+              New words must connect to existing tiles (except first move)
+            </li>
+            <li>First word must cover the center bolt</li>
           </ul>
         </section>
 
@@ -28,19 +31,37 @@ export function GameRulesModal({ open, onClose }: GameRulesModalProps) {
           <h3>Scoring</h3>
           <ul>
             <li>Each letter has a point value (shown on tile)</li>
-            <li><span className="multiplier dl">DL</span> = Double Letter</li>
-            <li><span className="multiplier tl">TL</span> = Triple Letter</li>
-            <li><span className="multiplier dw">DW</span> = Double Word</li>
-            <li><span className="multiplier tw">TW</span> = Triple Word</li>
-            <li><span className="bingo">BINGO:</span> Play all 7 tiles = +50 bonus points</li>
+            <li>
+              <span className="multiplier dl">DL</span> = Double Letter
+            </li>
+            <li>
+              <span className="multiplier ql">QL</span> = Quad Letter
+            </li>
+            <li>
+              <span className="multiplier dw">DW</span> = Double Word
+            </li>
+            <li>
+              <span className="multiplier zap">ZAP</span> = +{ZAP_BONUS_POINTS}{" "}
+              per word that includes a newly placed bolt tile
+            </li>
+            <li>
+              <span className="bingo">ZAPATHON:</span> Play all {RACK_SIZE}{" "}
+              tiles = +{BINGO_BONUS} bonus points
+            </li>
           </ul>
         </section>
 
         <section className="rules-section">
           <h3>Special Moves</h3>
           <ul>
-            <li><strong>Pass:</strong> Skip your turn (game ends after 4 consecutive passes)</li>
-            <li><strong>Exchange:</strong> Swap 1-7 tiles with the bag (requires 7+ tiles in bag)</li>
+            <li>
+              <strong>Pass:</strong> Skip your turn (game ends after two
+              consecutive passes)
+            </li>
+            <li>
+              <strong>Exchange:</strong> Swap 1–{RACK_SIZE} tiles with the bag
+              (requires at least that many tiles in bag)
+            </li>
           </ul>
         </section>
 
@@ -56,8 +77,8 @@ export function GameRulesModal({ open, onClose }: GameRulesModalProps) {
         <section className="rules-section">
           <h3>Game End</h3>
           <ul>
-            <li>Both players pass consecutively twice (4 total passes)</li>
-            <li>One player uses all tiles and bag is empty</li>
+            <li>Both players pass consecutively (2 total passes)</li>
+            <li>One player uses all tiles (goes out)</li>
             <li>A player forfeits</li>
           </ul>
         </section>

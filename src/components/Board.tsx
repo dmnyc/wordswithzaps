@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { BOARD_SIZE, getMultiplier, MultiplierType } from "../engine/constants";
 import type { TilePlacement } from "../types/game";
 import Tile from "./Tile";
@@ -21,33 +22,38 @@ interface BoardProps {
 
 function getCellClass(multiplier: MultiplierType): string {
   switch (multiplier) {
-    case "TW":
-      return "cell-tw";
     case "DW":
       return "cell-dw";
-    case "TL":
-      return "cell-tl";
+    case "QL":
+      return "cell-ql";
     case "DL":
       return "cell-dl";
-    case "STAR":
-      return "cell-star";
+    case "ZAP":
+      return "cell-zap";
     default:
       return "";
   }
 }
 
-function getCellLabel(multiplier: MultiplierType): string {
+function getCellLabel(multiplier: MultiplierType): ReactNode {
   switch (multiplier) {
     case "TW":
       return "TW";
     case "DW":
       return "DW";
-    case "TL":
-      return "TL";
+    case "QL":
+      return "QL";
     case "DL":
       return "DL";
-    case "STAR":
-      return "★";
+    case "ZAP":
+      return (
+        <img
+          src="/assets/bolt-yellow.svg"
+          alt=""
+          className="cell-bolt"
+          aria-hidden="true"
+        />
+      );
     default:
       return "";
   }
@@ -63,6 +69,9 @@ export function Board({
   disabled = false,
 }: BoardProps) {
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const boardStyle = {
+    ["--board-size"]: BOARD_SIZE,
+  } as CSSProperties;
 
   const handleDragOver = useCallback(
     (e: React.DragEvent, x: number, y: number) => {
@@ -200,7 +209,11 @@ export function Board({
     }
   }
 
-  return <div className={`board ${disabled ? "disabled" : ""}`}>{cells}</div>;
+  return (
+    <div className={`board ${disabled ? "disabled" : ""}`} style={boardStyle}>
+      {cells}
+    </div>
+  );
 }
 
 export default Board;

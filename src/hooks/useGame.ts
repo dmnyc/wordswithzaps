@@ -159,9 +159,15 @@ export function useGame(): UseGameReturn {
         // Save rack
         await syncRef.current.savePlayerRack({ rack });
 
+        // Publish updated state with reduced tile bag so relays don't keep the full bag
+        const updatedEventId = await syncRef.current.publishGameState(
+          updatedState,
+          "",
+        );
+
         setGameState(updatedState);
         setPlayerRack(rack);
-        setLastEventId(""); // Initial state has no previous event
+        setLastEventId(updatedEventId);
 
         // Subscribe to updates
         syncRef.current.subscribeToGameUpdates(
@@ -334,9 +340,11 @@ export function useGame(): UseGameReturn {
           myPubkey === newState.meta.playerOne ? newRack : opponentRack;
         const p2Rack =
           myPubkey === newState.meta.playerTwo ? newRack : opponentRack;
-        const finalState = GameEngine.isGameOver(newState, p1Rack, p2Rack)
-          ? GameEngine.endGame(newState, p1Rack, p2Rack)
-          : newState;
+        const didGoOut = newRack.length === 0;
+        const finalState =
+          didGoOut || GameEngine.isGameOver(newState, p1Rack, p2Rack)
+            ? GameEngine.endGame(newState, p1Rack, p2Rack)
+            : newState;
 
         // Publish to Nostr
         const eventId = await syncRef.current.publishGameState(
