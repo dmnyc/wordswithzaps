@@ -24,7 +24,8 @@ interface ZapNudgeModalProps {
   opponentLabel: string;
   walletConnected: boolean;
   zapsDisabled: boolean;
-  sharePreviewText: string;
+  sharePreviewTextPublic: string;
+  sharePreviewTextPrivate: string;
   onConfirm: (options: {
     zapAmount: number;
     shareMode: ShareMode;
@@ -49,7 +50,8 @@ export function ZapNudgeModal({
   opponentLabel,
   walletConnected,
   zapsDisabled,
-  sharePreviewText,
+  sharePreviewTextPublic,
+  sharePreviewTextPrivate,
   onConfirm,
   onClose,
   onOpenWalletSettings,
@@ -117,6 +119,8 @@ export function ZapNudgeModal({
     if (!hasZap && hasShare) return "Share";
     return "Done";
   }, [hasShare, hasZap]);
+  const sharePreviewText =
+    shareMode === "private" ? sharePreviewTextPrivate : sharePreviewTextPublic;
 
   useEffect(() => {
     if (!saveShareSetting) return;

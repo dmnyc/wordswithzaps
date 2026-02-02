@@ -1,5 +1,5 @@
 const DISABLE_GAMEPLAY_ZAPS_KEY = "wordswithzaps_disable_gameplay_zaps";
-const DEFAULT_DISABLE_GAMEPLAY_ZAPS = true;
+const DEFAULT_DISABLE_GAMEPLAY_ZAPS = false;
 const SHARE_TO_NOSTR_DEFAULT_KEY = "wordswithzaps_share_to_nostr_default";
 const DEFAULT_SHARE_TO_NOSTR = true;
 const SHARE_METHOD_DEFAULT_KEY = "wordswithzaps_share_method_default";
@@ -12,6 +12,20 @@ const DEFAULT_ZAP_NUDGE_AMOUNT = 0;
 type SettingsListener = () => void;
 export type ShareMethod = "public" | "private";
 const listeners: Set<SettingsListener> = new Set();
+
+function migrateGameplayZapsSetting(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const stored = localStorage.getItem(DISABLE_GAMEPLAY_ZAPS_KEY);
+    if (stored === "true") {
+      localStorage.removeItem(DISABLE_GAMEPLAY_ZAPS_KEY);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+migrateGameplayZapsSetting();
 
 function notifyListeners() {
   listeners.forEach((listener) => {

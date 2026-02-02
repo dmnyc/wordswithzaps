@@ -140,6 +140,7 @@ function App() {
         if (!dict.isLoaded()) {
           const candidates = [
             import.meta.env.VITE_DICTIONARY_URL,
+            "/dictionaries/wwzwords1.txt",
             "/dictionaries/sowpods.txt",
             "/dictionaries/csw21.txt",
             "/dictionaries/nwl2023.txt",

@@ -88,6 +88,7 @@ export function GameView({
     points: number;
     myScore: number;
     opponentScore: number;
+    isFirstMove: boolean;
   } | null>(null);
   const [opponentDisplayName, setOpponentDisplayName] = useState<string | null>(
     null,
@@ -371,11 +372,13 @@ export function GameView({
     const isPlayerOne = gameState?.meta.playerOne === myPubkey;
     const myScore = isPlayerOne ? p1Score + points : p2Score + points;
     const opponentScore = isPlayerOne ? p2Score : p1Score;
+    const isFirstMove = (gameState?.turn.index ?? 0) === 0;
     const moveSummary = {
       word: mainWord,
       points,
       myScore,
       opponentScore,
+      isFirstMove,
     };
 
     const wasBingo = pendingPlacements.length === 7;
@@ -459,18 +462,33 @@ export function GameView({
 
       if (options.shareMode !== "none") {
         try {
-          let opponentRef = "";
-          if (opponentPubkey) {
-            try {
-              opponentRef = `nostr:${opponentNpub}`;
-            } catch {
-              opponentRef = opponentPubkey;
+          let shareText = "";
+          if (pendingMoveSummary?.isFirstMove) {
+            const challengeTarget =
+              options.shareMode === "public"
+                ? opponentLabel
+                  ? `@${opponentLabel}`
+                  : "you"
+                : "you";
+            const joinLine =
+              options.shareMode === "public"
+                ? "Join or start a new game here:"
+                : "Join the game here:";
+            shareText = `I'm challenging ${challengeTarget} to play #WordsWithZaps.\n\nI just played ${word} for ${points} point${points === 1 ? "" : "s"}.\n\n${joinLine}\n\n${gameLink}`;
+          } else {
+            let opponentRef = "";
+            if (opponentPubkey) {
+              try {
+                opponentRef = `nostr:${opponentNpub}`;
+              } catch {
+                opponentRef = opponentPubkey;
+              }
             }
+            const turnLine = opponentRef
+              ? `It's your turn, ${opponentRef}!`
+              : "It's your turn!";
+            shareText = `I just played ${word} for ${points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
           }
-          const turnLine = opponentRef
-            ? `It's your turn, ${opponentRef}!`
-            : "It's your turn!";
-          const shareText = `I just played ${word} for ${points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
 
           if (options.shareMode === "public") {
             const event = createEvent(1, shareText, [
@@ -504,8 +522,10 @@ export function GameView({
       gameId,
       gameLink,
       onToast,
+      opponentLabel,
       opponentNpub,
       opponentPubkey,
+      pendingMoveSummary?.isFirstMove,
       pendingMoveSummary?.points,
       pendingMoveSummary?.word,
       walletState.connected,
@@ -530,11 +550,22 @@ export function GameView({
   }, []);
 
   const sharePreviewText = useMemo(() => {
-    if (!pendingMoveSummary) return "";
+    if (!pendingMoveSummary) {
+      return { public: "", private: "" };
+    }
+    const points = pendingMoveSummary.points;
+    if (pendingMoveSummary.isFirstMove) {
+      const publicTarget = opponentLabel ? `@${opponentLabel}` : "you";
+      return {
+        public: `I'm challenging ${publicTarget} to play #WordsWithZaps.\n\nI just played ${pendingMoveSummary.word} for ${points} point${points === 1 ? "" : "s"}.\n\nJoin or start a new game here:\n\n${gameLink}`,
+        private: `I'm challenging you to play #WordsWithZaps.\n\nI just played ${pendingMoveSummary.word} for ${points} point${points === 1 ? "" : "s"}.\n\nJoin the game here:\n\n${gameLink}`,
+      };
+    }
     const turnLine = opponentLabel
       ? `It's your turn, ${opponentLabel}!`
       : "It's your turn!";
-    return `I just played ${pendingMoveSummary.word} for ${pendingMoveSummary.points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+    const standard = `I just played ${pendingMoveSummary.word} for ${pendingMoveSummary.points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+    return { public: standard, private: standard };
   }, [gameLink, opponentLabel, pendingMoveSummary]);
 
   const handleExchange = useCallback(() => {
@@ -843,7 +874,8 @@ export function GameView({
           opponentLabel={opponentLabel}
           walletConnected={walletState.connected}
           zapsDisabled={zapsDisabled}
-          sharePreviewText={sharePreviewText}
+          sharePreviewTextPublic={sharePreviewText.public}
+          sharePreviewTextPrivate={sharePreviewText.private}
           onConfirm={handleConfirmPlay}
           onClose={() => {
             setShowZapModal(false);
