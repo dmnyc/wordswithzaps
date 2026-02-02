@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import type { WalletProviderType } from "../types/wallet";
-import {
-  getDisableGameplayZaps,
-  setDisableGameplayZaps,
-  getShareToNostrDefault,
-  setShareToNostrDefault,
-} from "../settings/appSettings";
+
 import {
   SparkLogo,
   NwcLogo,
@@ -69,12 +64,7 @@ export function NavBar({
       return false;
     }
   });
-  const [zapsDisabled, setZapsDisabled] = useState(() =>
-    getDisableGameplayZaps(),
-  );
-  const [shareToNostr, setShareToNostr] = useState(() =>
-    getShareToNostrDefault(),
-  );
+
   const [profileSnapshot, setProfileSnapshot] = useState<Record<
     string,
     unknown
@@ -100,14 +90,6 @@ export function NavBar({
       // Ignore storage errors
     }
   }, [hideBalance]);
-
-  useEffect(() => {
-    setDisableGameplayZaps(zapsDisabled);
-  }, [zapsDisabled]);
-
-  useEffect(() => {
-    setShareToNostrDefault(shareToNostr);
-  }, [shareToNostr]);
 
   useEffect(() => {
     if (!user) {
@@ -299,25 +281,7 @@ export function NavBar({
                 Zap to support!
               </button>
             )}
-            <div className="menu-section">
-              <div className="menu-section-title">App Settings</div>
-              <label className="menu-toggle">
-                <input
-                  type="checkbox"
-                  checked={zapsDisabled}
-                  onChange={() => setZapsDisabled((prev) => !prev)}
-                />
-                <span>Disable gameplay zaps</span>
-              </label>
-              <label className="menu-toggle">
-                <input
-                  type="checkbox"
-                  checked={shareToNostr}
-                  onChange={() => setShareToNostr((prev) => !prev)}
-                />
-                <span>Share turns to Nostr</span>
-              </label>
-            </div>
+
             <div className="menu-section">
               <div className="menu-section-title">Connection</div>
               <div className="menu-info-row">

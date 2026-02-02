@@ -101,6 +101,7 @@ export function GameView({
   const lastAchievementTurnRef = useRef<number | null>(null);
   const wordScoreTimeoutRef = useRef<number | null>(null);
   const postMoveModalTimeoutRef = useRef<number | null>(null);
+  const bingoTimeoutRef = useRef<number | null>(null);
 
   const opponentLabel = opponentDisplayName || "Opponent";
   const opponentNpub = useMemo(() => {
@@ -174,6 +175,9 @@ export function GameView({
       }
       if (postMoveModalTimeoutRef.current !== null) {
         window.clearTimeout(postMoveModalTimeoutRef.current);
+      }
+      if (bingoTimeoutRef.current !== null) {
+        window.clearTimeout(bingoTimeoutRef.current);
       }
     };
   }, []);
@@ -380,7 +384,13 @@ export function GameView({
       // Show bingo celebration if all 7 tiles were played
       if (wasBingo) {
         setShowBingoCelebration(true);
-        setTimeout(() => setShowBingoCelebration(false), 2500);
+        if (bingoTimeoutRef.current !== null) {
+          window.clearTimeout(bingoTimeoutRef.current);
+        }
+        bingoTimeoutRef.current = window.setTimeout(() => {
+          setShowBingoCelebration(false);
+          bingoTimeoutRef.current = null;
+        }, 2500);
       }
 
       triggerWordScorePop(points);
