@@ -295,7 +295,23 @@ export async function sendPayment(
   if (!wallet) {
     if (isBitcoinConnectEnabled()) {
       try {
-        const result = await payWithBitcoinConnect(invoice);
+        let bolt11Invoice = invoice;
+
+        // If it's a lightning address, we need to resolve it to an invoice first
+        if (isLightningAddress(invoice)) {
+          if (!metadata?.amount) {
+            throw new Error(
+              "Amount is required for Lightning address payments",
+            );
+          }
+          bolt11Invoice = await getInvoiceFromLightningAddress(
+            invoice,
+            metadata.amount,
+            metadata?.comment,
+          );
+        }
+
+        const result = await payWithBitcoinConnect(bolt11Invoice);
         return { success: true, preimage: result.preimage };
       } catch (e) {
         const error = e instanceof Error ? e.message : "Payment failed";
@@ -654,6 +670,73 @@ export async function initializeWalletManager(): Promise<void> {
   } finally {
     initializationPromise = null;
   }
+}
+
+/**
+ * Get a BOLT11 invoice from a Lightning address
+ * Used when paying via Bitcoin Connect which only accepts invoices
+ */
+async function getInvoiceFromLightningAddress(
+  address: string,
+  amountSats: number,
+  comment?: string,
+): Promise<string> {
+  const [username, domain] = address.trim().toLowerCase().split("@");
+  const lnurlpUrl = `https://${domain}/.well-known/lnurlp/${username}`;
+
+  const response = await fetch(lnurlpUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to resolve Lightning address: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (data.status === "ERROR") {
+    throw new Error(data.reason || "Lightning address resolution failed");
+  }
+
+  const amountMsats = amountSats * 1000;
+  const minSendable = data.minSendable || 1000;
+  const maxSendable = data.maxSendable || 100000000000;
+
+  if (amountMsats < minSendable) {
+    throw new Error(
+      `Amount too small. Minimum: ${Math.ceil(minSendable / 1000)} sats`,
+    );
+  }
+  if (amountMsats > maxSendable) {
+    throw new Error(
+      `Amount too large. Maximum: ${Math.floor(maxSendable / 1000)} sats`,
+    );
+  }
+
+  // Build callback URL
+  let callbackUrl = `${data.callback}${data.callback.includes("?") ? "&" : "?"}amount=${amountMsats}`;
+
+  // Add comment if allowed
+  if (comment && data.commentAllowed) {
+    const trimmedComment =
+      comment.length > data.commentAllowed
+        ? comment.substring(0, data.commentAllowed)
+        : comment;
+    callbackUrl += `&comment=${encodeURIComponent(trimmedComment)}`;
+  }
+
+  const invoiceResponse = await fetch(callbackUrl);
+  if (!invoiceResponse.ok) {
+    throw new Error(`Failed to fetch invoice: ${invoiceResponse.status}`);
+  }
+
+  const invoiceData = await invoiceResponse.json();
+  if (invoiceData.status === "ERROR") {
+    throw new Error(
+      invoiceData.reason || "Failed to get invoice from Lightning address",
+    );
+  }
+  if (!invoiceData.pr) {
+    throw new Error("No invoice returned from Lightning address");
+  }
+
+  return invoiceData.pr;
 }
 
 /**

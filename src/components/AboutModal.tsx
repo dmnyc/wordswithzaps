@@ -16,7 +16,7 @@ interface AboutModalProps {
 }
 
 export function AboutModal({ open, onClose, onZapCreator }: AboutModalProps) {
-  const njumpUrl = `https://njump.me/${CREATOR_NPUB}`;
+  const profileUrl = `https://zap.cooking/user/${CREATOR_NPUB}`;
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -35,7 +35,7 @@ export function AboutModal({ open, onClose, onZapCreator }: AboutModalProps) {
         <div className="about-creator">
           <span>Created by </span>
           <a
-            href={njumpUrl}
+            href={profileUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="about-creator-link"

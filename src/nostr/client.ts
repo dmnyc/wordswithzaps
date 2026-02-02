@@ -207,7 +207,7 @@ export function generateNostrConnectURI(): {
     url:
       typeof window !== "undefined"
         ? window.location.origin
-        : "https://wordswithzaps.com",
+        : "https://wordswithzaps.top",
   });
 
   // Store session for later use

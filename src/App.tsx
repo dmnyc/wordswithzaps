@@ -14,6 +14,7 @@ import ProfileSettings from "./components/ProfileSettings";
 import CreatorZapModal from "./components/CreatorZapModal";
 import AboutModal from "./components/AboutModal";
 import RelayListModal from "./components/RelayListModal";
+import ZapAnimation from "./components/ZapAnimation";
 import { sendPayment } from "./wallet/walletManager";
 import "./index.css";
 
@@ -67,6 +68,7 @@ function App() {
   const [showCreatorZapModal, setShowCreatorZapModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showRelayListModal, setShowRelayListModal] = useState(false);
+  const [showZapAnimation, setShowZapAnimation] = useState(false);
   const creatorZapReturnRef = useRef<null | (() => void)>(null);
   const walletType = activeWallet
     ? activeWallet.kind === WalletKind.SPARK
@@ -138,7 +140,7 @@ function App() {
 
   const handleZapCreator = useCallback(
     async (amount: number) => {
-      const result = await sendPayment("thedaniel@breez.tips", {
+      const result = await sendPayment("daniel@breez.tips", {
         amount,
         comment: "Words With Zaps - thanks for the game!",
       });
@@ -147,6 +149,7 @@ function App() {
         showToast(message, "error");
         throw new Error(message);
       }
+      setShowZapAnimation(true);
       showToast(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
     },
     [showToast],
@@ -464,7 +467,9 @@ function App() {
 
       <CreatorZapModal
         open={showCreatorZapModal}
-        walletConnected={walletReady}
+        walletConnected={
+          walletReady || walletState.connected || bitcoinConnectConnected
+        }
         onClose={handleCloseCreatorZap}
         onSendZap={handleZapCreator}
       />
@@ -481,6 +486,10 @@ function App() {
         connectedRelays={connectedRelayUrls}
         onClose={handleCloseRelayList}
       />
+
+      {showZapAnimation && (
+        <ZapAnimation onComplete={() => setShowZapAnimation(false)} />
+      )}
     </div>
   );
 }

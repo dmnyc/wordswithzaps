@@ -96,3 +96,14 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.creator-error {
+    color: #ff6b6b;
+    font-size: 12px;
+    margin: 4px 0;
+    padding: 8px 12px;
+    background: rgba(255, 107, 107, 0.1);
+    border-radius: 6px;
+    max-width: 280px;
+    word-break: break-word;
+}

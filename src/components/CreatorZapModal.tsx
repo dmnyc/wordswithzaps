@@ -7,7 +7,7 @@ import {
 import Modal from "./Modal";
 import "./CreatorZapModal.css";
 
-const CREATOR_LIGHTNING_ADDRESS = "thedaniel@breez.tips";
+const CREATOR_LIGHTNING_ADDRESS = "daniel@breez.tips";
 const PRESET_AMOUNTS = [50, 100, 500, 1000];
 
 interface CreatorZapModalProps {
@@ -31,6 +31,7 @@ export function CreatorZapModal({
     return saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "";
   });
   const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -42,6 +43,7 @@ export function CreatorZapModal({
       saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "",
     );
     setIsSending(false);
+    setError(null);
   }, [open]);
 
   const customAmountValue = useMemo(() => {
@@ -70,9 +72,13 @@ export function CreatorZapModal({
   const handleSend = async () => {
     if (!walletConnected || customAmountInvalid || resolvedAmount <= 0) return;
     setIsSending(true);
+    setError(null);
     try {
       await onSendZap(resolvedAmount);
       onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Zap failed";
+      setError(message);
     } finally {
       setIsSending(false);
     }
@@ -129,6 +135,7 @@ export function CreatorZapModal({
             {isSending ? "Sending..." : "Zap"}
           </button>
         </div>
+        {error && <p className="creator-error">{error}</p>}
         <p className="creator-hint">Send from your connected wallet.</p>
       </div>
     </Modal>

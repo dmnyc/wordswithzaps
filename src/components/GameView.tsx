@@ -20,6 +20,7 @@ import GameOverModal from "./GameOverModal";
 import AchievementModal from "./AchievementModal";
 import GameRulesModal from "./GameRulesModal";
 import Modal from "./Modal";
+import ZapAnimation from "./ZapAnimation";
 import { detectAchievement, type Achievement } from "../utils/achievements";
 import { nip19 } from "nostr-tools";
 import { fetchProfile } from "../nostr/profiles";
@@ -106,6 +107,7 @@ export function GameView({
     useState<Achievement | null>(null);
   const [showBingoCelebration, setShowBingoCelebration] = useState(false);
   const [wordScorePop, setWordScorePop] = useState<WordScorePop | null>(null);
+  const [showZapAnimation, setShowZapAnimation] = useState(false);
   const lastValidationErrorRef = useRef<string | null>(null);
   const lastAchievementTurnRef = useRef<number | null>(null);
   const wordScoreTimeoutRef = useRef<number | null>(null);
@@ -125,7 +127,8 @@ export function GameView({
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
   const isCreator = gameState?.meta.playerOne === myPubkey;
-  const { zapUser, state: walletState } = useWallet();
+  const { zapUser, state: walletState, bitcoinConnectConnected } = useWallet();
+  const isWalletConnected = walletState.connected || bitcoinConnectConnected;
 
   useEffect(() => {
     const unsubscribe = subscribeAppSettings(() => {
@@ -365,6 +368,14 @@ export function GameView({
     }, WORD_SCORE_POP_DURATION_MS);
   }, []);
 
+  const triggerZapAnimation = useCallback(() => {
+    setShowZapAnimation(true);
+  }, []);
+
+  const handleZapAnimationComplete = useCallback(() => {
+    setShowZapAnimation(false);
+  }, []);
+
   const handlePlay = useCallback(async () => {
     if (!validation?.valid) return;
 
@@ -437,7 +448,7 @@ export function GameView({
       const points = pendingMoveSummary?.points ?? 0;
 
       if (!zapsDisabled && options.zapAmount > 0) {
-        if (walletState.connected && opponentPubkey) {
+        if (isWalletConnected && opponentPubkey) {
           try {
             const message = "It's your turn on #WordsWithZaps!";
             await zapUser({
@@ -446,6 +457,7 @@ export function GameView({
               gameId,
               moveDescription: message,
             });
+            triggerZapAnimation();
             onToast?.(
               `Sent ${options.zapAmount} sat${
                 options.zapAmount === 1 ? "" : "s"
@@ -457,7 +469,7 @@ export function GameView({
             const errorMsg = err instanceof Error ? err.message : String(err);
             onToast?.(`Zap failed: ${errorMsg}`, "error");
           }
-        } else if (!walletState.connected) {
+        } else if (!isWalletConnected) {
           console.log("Wallet not ready, skipping zap");
         }
       } else if (zapsDisabled) {
@@ -468,7 +480,18 @@ export function GameView({
         try {
           let shareText = "";
           if (pendingMoveSummary?.kind === "skip") {
-            shareText = "I just completed my turn in #WordsWithZaps.";
+            let opponentRef = "";
+            if (opponentPubkey) {
+              try {
+                opponentRef = `nostr:${opponentNpub}`;
+              } catch {
+                opponentRef = opponentPubkey;
+              }
+            }
+            const turnLine = opponentRef
+              ? `It's your turn, ${opponentRef}!`
+              : "It's your turn!";
+            shareText = `I just completed my turn in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
           } else if (pendingMoveSummary?.isFirstMove) {
             const challengeTarget =
               options.shareMode === "public"
@@ -534,7 +557,8 @@ export function GameView({
       pendingMoveSummary?.isFirstMove,
       pendingMoveSummary?.points,
       pendingMoveSummary?.word,
-      walletState.connected,
+      triggerZapAnimation,
+      isWalletConnected,
       zapUser,
       zapsDisabled,
     ],
@@ -559,8 +583,14 @@ export function GameView({
       return { public: "", private: "" };
     }
     if (pendingMoveSummary.kind === "skip") {
-      const message = "I just completed my turn in #WordsWithZaps.";
-      return { public: message, private: message };
+      const publicTurnLine = opponentLabel
+        ? `It's your turn, @${opponentLabel}!`
+        : "It's your turn!";
+      const privateTurnLine = "It's your turn!";
+      return {
+        public: `I just completed my turn in #WordsWithZaps.\n\n${publicTurnLine}\n\n${gameLink}`,
+        private: `I just completed my turn in #WordsWithZaps.\n\n${privateTurnLine}\n\n${gameLink}`,
+      };
     }
     const points = pendingMoveSummary.points;
     if (pendingMoveSummary.isFirstMove) {
@@ -643,7 +673,7 @@ export function GameView({
 
   const handleSendGgZap = useCallback(
     async (amount: number) => {
-      if (!walletState.connected || !opponentPubkey) return;
+      if (!isWalletConnected || !opponentPubkey) return;
       try {
         const message = `Words With Zaps: GG! ${gameLink}`;
         await zapUser({
@@ -652,6 +682,7 @@ export function GameView({
           gameId,
           moveDescription: message,
         });
+        triggerZapAnimation();
         onToast?.(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
       } catch (err) {
         const message = err instanceof Error ? err.message : "Zap failed";
@@ -659,13 +690,20 @@ export function GameView({
         throw err;
       }
     },
-    [gameId, gameLink, onToast, opponentPubkey, walletState.connected, zapUser],
+    [
+      gameId,
+      gameLink,
+      onToast,
+      opponentPubkey,
+      triggerZapAnimation,
+      isWalletConnected,
+      zapUser,
+    ],
   );
 
   const handleAchievementZap = useCallback(
     async (amount: number, message: string) => {
-      if (!walletState.connected || !opponentPubkey || !pendingAchievement)
-        return;
+      if (!isWalletConnected || !opponentPubkey || !pendingAchievement) return;
       try {
         await zapUser({
           recipientPubkey: opponentPubkey,
@@ -673,6 +711,7 @@ export function GameView({
           gameId,
           moveDescription: message,
         });
+        triggerZapAnimation();
         onToast?.(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
         setPendingAchievement(null);
       } catch (err) {
@@ -685,7 +724,8 @@ export function GameView({
       onToast,
       opponentPubkey,
       pendingAchievement,
-      walletState.connected,
+      triggerZapAnimation,
+      isWalletConnected,
       zapUser,
     ],
   );
@@ -916,7 +956,7 @@ export function GameView({
           myScore={pendingMoveSummary.myScore}
           opponentScore={pendingMoveSummary.opponentScore}
           opponentLabel={opponentLabel}
-          walletConnected={walletState.connected}
+          walletConnected={isWalletConnected}
           zapsDisabled={zapsDisabled}
           sharePreviewTextPublic={sharePreviewText.public}
           sharePreviewTextPrivate={sharePreviewText.private}
@@ -965,7 +1005,7 @@ export function GameView({
         <GameOverModal
           open={showGameOverModal}
           opponentLabel={opponentLabel}
-          walletConnected={walletState.connected}
+          walletConnected={isWalletConnected}
           onClose={() => setShowGameOverModal(false)}
           onSendZap={handleSendGgZap}
           onOpenCreatorZap={() => {
@@ -979,9 +1019,10 @@ export function GameView({
         <AchievementModal
           achievement={pendingAchievement}
           opponentName={opponentLabel}
-          walletConnected={walletState.connected}
+          walletConnected={isWalletConnected}
           onZap={handleAchievementZap}
           onClose={() => setPendingAchievement(null)}
+          onOpenWalletSettings={onOpenWalletSettings}
         />
       )}
 
@@ -1014,6 +1055,10 @@ export function GameView({
         open={showRulesModal}
         onClose={() => setShowRulesModal(false)}
       />
+
+      {showZapAnimation && (
+        <ZapAnimation onComplete={handleZapAnimationComplete} />
+      )}
     </div>
   );
 }

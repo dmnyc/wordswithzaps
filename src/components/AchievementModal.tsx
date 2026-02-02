@@ -8,6 +8,7 @@ interface AchievementModalProps {
   walletConnected: boolean;
   onZap: (amount: number, message: string) => void | Promise<void>;
   onClose: () => void;
+  onOpenWalletSettings?: () => void;
 }
 
 const PRESET_AMOUNTS = [21, 50, 100, 500];
@@ -32,6 +33,7 @@ export function AchievementModal({
   walletConnected,
   onZap,
   onClose,
+  onOpenWalletSettings,
 }: AchievementModalProps) {
   const [selectedAmount, setSelectedAmount] = useState<number | "custom">(21);
   const [customAmount, setCustomAmount] = useState("");
@@ -94,16 +96,20 @@ export function AchievementModal({
           <h3>Send a congratulatory zap?</h3>
 
           {!walletConnected ? (
-            <p
-              style={{
-                color: "#7a7a7a",
-                fontSize: "13px",
-                textAlign: "center",
-                marginBottom: "16px",
-              }}
-            >
-              Connect a wallet to send zaps
-            </p>
+            <div className="achievement-wallet-cta">
+              <p className="achievement-wallet-hint">
+                Connect a wallet to send zaps
+              </p>
+              {onOpenWalletSettings && (
+                <button
+                  className="achievement-btn wallet"
+                  onClick={onOpenWalletSettings}
+                  type="button"
+                >
+                  Connect Wallet
+                </button>
+              )}
+            </div>
           ) : (
             <>
               <div className="achievement-zap-presets">
