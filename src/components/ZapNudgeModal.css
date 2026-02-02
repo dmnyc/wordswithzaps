@@ -366,12 +366,12 @@
 
 @media (max-width: 520px) {
     .zap-modal-overlay {
-        align-items: flex-start;
+        align-items: center;
         padding: 12px;
     }
 
     .zap-modal {
-        margin-top: 12px;
+        margin-top: 0;
         max-height: calc(100vh - 24px);
         overflow-y: auto;
     }

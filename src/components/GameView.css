@@ -167,6 +167,12 @@
     }
 }
 
+@media (max-width: 900px) {
+    .game-view {
+        padding-top: 32px;
+    }
+}
+
 @media (max-width: 380px) {
     .game-view {
         padding: 6px;
@@ -177,6 +183,33 @@
     }
     .game-actions {
         gap: 6px;
+    }
+}
+
+@media (max-width: 360px) {
+    .game-view {
+        padding: 4px;
+        gap: 4px;
+    }
+    .game-header {
+        gap: 4px;
+    }
+    .game-status {
+        font-size: 11px;
+        padding: 3px 10px;
+    }
+    .action-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+    .game-error,
+    .game-success {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+    .validation-error {
+        font-size: 11px;
+        padding: 3px 8px;
     }
 }
 

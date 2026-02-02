@@ -12,6 +12,7 @@ interface BoardTile {
 interface BoardProps {
   board: Record<string, string | BoardTile>;
   pendingPlacements: TilePlacement[];
+  selectedTileIndex: number | null;
   onPlaceTile: (x: number, y: number) => void;
   onRemoveTile: (x: number, y: number) => void;
   onMoveTile: (fromX: number, fromY: number, toX: number, toY: number) => void;
@@ -55,6 +56,7 @@ function getCellLabel(multiplier: MultiplierType): string {
 export function Board({
   board,
   pendingPlacements,
+  selectedTileIndex,
   onPlaceTile,
   onRemoveTile,
   onMoveTile,
@@ -99,13 +101,32 @@ export function Board({
 
   const handleCellClick = useCallback(
     (x: number, y: number) => {
-      // Check if this cell has a pending placement
+      if (disabled) return;
+
+      // Check if this cell has a pending placement - tap to remove
       const pending = pendingPlacements.find((p) => p.x === x && p.y === y);
       if (pending) {
         onRemoveTile(x, y);
+        return;
+      }
+
+      // Check if cell already has a permanent tile
+      const coord = `${x},${y}`;
+      if (board[coord]) return;
+
+      // If a tile is selected on the rack, place it here (tap-to-place)
+      if (selectedTileIndex !== null) {
+        onPlaceTile(x, y);
       }
     },
-    [pendingPlacements, onRemoveTile],
+    [
+      disabled,
+      pendingPlacements,
+      board,
+      selectedTileIndex,
+      onRemoveTile,
+      onPlaceTile,
+    ],
   );
 
   const handlePendingDragStart = useCallback(
@@ -126,6 +147,9 @@ export function Board({
     const tile = board[coord];
     const pending = pendingPlacements.find((p) => p.x === x && p.y === y);
     const isDraggedOver = dragOver === coord;
+    // Show tap target indicator when a tile is selected and cell is empty
+    const isTapTarget =
+      selectedTileIndex !== null && !tile && !pending && !disabled;
 
     // Extract letter and isBlank from tile (handles both string and BoardTile)
     let letter: string | undefined;
@@ -148,7 +172,7 @@ export function Board({
     return (
       <div
         key={coord}
-        className={`board-cell ${getCellClass(multiplier)} ${isDraggedOver ? "drag-over" : ""}`}
+        className={`board-cell ${getCellClass(multiplier)} ${isDraggedOver ? "drag-over" : ""} ${isTapTarget ? "tap-target" : ""}`}
         onDragOver={(e) => handleDragOver(e, x, y)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, x, y)}

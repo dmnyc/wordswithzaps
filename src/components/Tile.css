@@ -121,3 +121,19 @@
         right: 1px;
     }
 }
+
+@media (max-width: 360px) {
+    .tile {
+        width: 17px;
+        height: 17px;
+        border-radius: 1px;
+    }
+    .tile-letter {
+        font-size: 10px;
+    }
+    .tile-value {
+        font-size: 5px;
+        bottom: 0;
+        right: 0;
+    }
+}

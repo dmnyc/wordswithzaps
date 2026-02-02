@@ -17,6 +17,7 @@ import {
 import ZapNudgeModal from "./ZapNudgeModal";
 import GameOverModal from "./GameOverModal";
 import AchievementModal from "./AchievementModal";
+import GameRulesModal from "./GameRulesModal";
 import Modal from "./Modal";
 import { detectAchievement, type Achievement } from "../utils/achievements";
 import { nip19 } from "nostr-tools";
@@ -58,6 +59,7 @@ export function GameView({
     loadGame,
     makeMove,
     pass,
+    exchange,
     validateMove,
     resign,
     deleteGame,
@@ -70,6 +72,8 @@ export function GameView({
     null,
   );
   const [localRack, setLocalRack] = useState<string[]>([]);
+  const [exchangeMode, setExchangeMode] = useState(false);
+  const [exchangeSelection, setExchangeSelection] = useState<number[]>([]);
   const [shuffleCount, setShuffleCount] = useState(0);
   const [pendingBlankPosition, setPendingBlankPosition] = useState<{
     x: number;
@@ -93,6 +97,7 @@ export function GameView({
   >(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const [pendingAchievement, setPendingAchievement] =
     useState<Achievement | null>(null);
   const [showBingoCelebration, setShowBingoCelebration] = useState(false);
@@ -473,6 +478,7 @@ export function GameView({
               ...(opponentPubkey ? [["p", opponentPubkey]] : []),
             ]);
             await publishEvent(event);
+            onToast?.("Shared publicly!", "success");
           } else if (options.shareMode === "private") {
             if (!opponentPubkey) {
               throw new Error("Opponent pubkey not available for DM.");
@@ -483,6 +489,7 @@ export function GameView({
             );
             const event = createEvent(4, encrypted, [["p", opponentPubkey]]);
             await publishEvent(event);
+            onToast?.("Shared directly!", "success");
           }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err);
@@ -531,8 +538,48 @@ export function GameView({
   }, [gameLink, opponentLabel, pendingMoveSummary]);
 
   const handleExchange = useCallback(() => {
-    setConfirmAction("exchange");
+    // Enter exchange mode - clear any pending placements first
+    setPendingPlacements([]);
+    setSelectedTileIndex(null);
+    setExchangeMode(true);
+    setExchangeSelection([]);
   }, []);
+
+  const handleToggleExchangeSelect = useCallback((index: number) => {
+    setExchangeSelection((prev) => {
+      if (prev.includes(index)) {
+        return prev.filter((i) => i !== index);
+      }
+      // Limit to 7 tiles max
+      if (prev.length >= 7) return prev;
+      return [...prev, index];
+    });
+  }, []);
+
+  const handleCancelExchange = useCallback(() => {
+    setExchangeMode(false);
+    setExchangeSelection([]);
+  }, []);
+
+  const handleConfirmExchange = useCallback(async () => {
+    if (exchangeSelection.length === 0) return;
+
+    const tilesToExchange = exchangeSelection.map((idx) => availableRack[idx]);
+
+    try {
+      await exchange(tilesToExchange);
+      onToast?.(
+        `Exchanged ${tilesToExchange.length} tile${tilesToExchange.length === 1 ? "" : "s"}`,
+        "success",
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Exchange failed";
+      onToast?.(message, "error");
+    }
+
+    setExchangeMode(false);
+    setExchangeSelection([]);
+  }, [exchangeSelection, availableRack, exchange, onToast]);
 
   const handleCopyLink = useCallback(async () => {
     try {
@@ -624,24 +671,11 @@ export function GameView({
         showCancel: true,
       };
     }
-    if (confirmAction === "exchange") {
-      return {
-        title: "Exchange tiles",
-        message: "Exchange is not implemented yet. Select tiles to exchange.",
-        confirmLabel: "Got it",
-        tone: "primary",
-        showCancel: false,
-      };
-    }
     return null;
   }, [confirmAction]);
 
   const handleConfirmAction = useCallback(async () => {
     if (!confirmAction) return;
-    if (confirmAction === "exchange") {
-      setConfirmAction(null);
-      return;
-    }
     setConfirmBusy(true);
     try {
       if (confirmAction === "forfeit") {
@@ -716,6 +750,7 @@ export function GameView({
           tilesRemaining={gameState.tileBag.length}
           currentUserPubkey={myPubkey}
           onShare={handleCopyLink}
+          onShowRules={() => setShowRulesModal(true)}
           onForfeit={
             gameState.meta.status === "active" ? handleForfeit : undefined
           }
@@ -748,6 +783,7 @@ export function GameView({
       <Board
         board={gameState.board}
         pendingPlacements={pendingPlacements}
+        selectedTileIndex={selectedTileIndex}
         onPlaceTile={handlePlaceTile}
         onRemoveTile={handleRemoveTile}
         onMoveTile={handleMoveTile}
@@ -762,6 +798,9 @@ export function GameView({
         onReorder={setLocalRack}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
         shuffleKey={shuffleCount}
+        exchangeMode={exchangeMode}
+        exchangeSelection={exchangeSelection}
+        onToggleExchangeSelect={handleToggleExchangeSelect}
       />
 
       <GameControls
@@ -781,6 +820,10 @@ export function GameView({
         onClear={handleClear}
         onShuffle={handleShuffle}
         scorePop={wordScorePop}
+        exchangeMode={exchangeMode}
+        exchangeCount={exchangeSelection.length}
+        onCancelExchange={handleCancelExchange}
+        onConfirmExchange={handleConfirmExchange}
       />
 
       {pendingBlankPosition && (
@@ -888,6 +931,11 @@ export function GameView({
           </div>
         </div>
       )}
+
+      <GameRulesModal
+        open={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+      />
     </div>
   );
 }

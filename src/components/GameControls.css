@@ -122,45 +122,162 @@
     margin: 0 2px;
 }
 
+/* Exchange mode styling */
+.game-controls.exchange-mode {
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(255, 107, 107, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.2);
+}
+
+.exchange-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.exchange-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.exchange-count {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.15);
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.exchange-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.control-btn.exchange-confirm {
+    background: linear-gradient(180deg, #ff6b6b, #e55a5a);
+    color: #fff;
+}
+
+.control-btn.exchange-confirm:not(:disabled):hover {
+    background: linear-gradient(180deg, #ff7b7b, #f06a6a);
+}
+
 /* Mobile responsive breakpoints */
 @media (max-width: 520px) {
     .game-controls {
-        flex-wrap: wrap;
+        display: flex;
+        flex-direction: column;
         gap: 8px;
-        padding: 8px 12px;
+        padding: 10px 12px;
     }
-    .control-btn {
-        padding: 6px 12px;
-        font-size: 12px;
+
+    /* Play button row - first, prominent, full width */
+    .controls-center {
+        order: -1;
+        width: 100%;
+        justify-content: center;
+        gap: 10px;
+        flex-direction: column;
+        align-items: stretch;
     }
+
     .play-btn {
-        padding: 8px 24px;
+        flex: 1;
+        width: 100%;
+        padding: 16px 24px;
+        font-size: 18px;
+        font-weight: 700;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
+    }
+
+    .pending-score {
+        font-size: 18px;
+        padding: 8px 14px;
+        order: 2;
+        align-self: center;
+    }
+
+    .play-btn-wrap {
+        width: 100%;
+        order: 1;
+    }
+
+    /* Utility buttons container - 2x2 grid */
+    .controls-left,
+    .controls-right {
+        display: contents;
+    }
+
+    .game-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto;
+        gap: 8px;
+    }
+
+    .controls-center {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    /* Each button takes a cell in 2x2 grid */
+    .controls-left .control-btn,
+    .controls-right .control-btn {
+        width: 100%;
+        padding: 10px 8px;
         font-size: 13px;
     }
-    .pending-score {
-        font-size: 16px;
-        padding: 4px 10px;
-    }
+
     .play-score-pop {
-        font-size: 22px;
+        font-size: 24px;
     }
 }
 
-@media (max-width: 380px) {
-    .game-controls {
-        flex-direction: column;
-        gap: 6px;
-    }
-    .controls-left,
-    .controls-center,
-    .controls-right {
-        width: 100%;
-        justify-content: center;
-    }
-    .control-btn {
-        flex: 1;
-    }
+@media (max-width: 430px) {
     .play-btn {
-        width: 100%;
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+
+    .pending-score {
+        font-size: 16px;
+        padding: 6px 12px;
+    }
+
+    .controls-left .control-btn,
+    .controls-right .control-btn {
+        padding: 9px 6px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .game-controls {
+        gap: 6px;
+        padding: 8px 10px;
+    }
+
+    .play-btn {
+        padding: 11px 16px;
+        font-size: 14px;
+    }
+
+    .pending-score {
+        font-size: 15px;
+        padding: 5px 10px;
+    }
+
+    .controls-left .control-btn,
+    .controls-right .control-btn {
+        padding: 8px 4px;
+        font-size: 11px;
+    }
+
+    .play-score-pop {
+        font-size: 20px;
     }
 }

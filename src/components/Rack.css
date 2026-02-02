@@ -6,6 +6,18 @@
     user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
+    --rack-tile-size: 36px;
+    --rack-tile-letter: 20px;
+    --rack-tile-value: 9px;
+    --rack-tile-value-bottom: 2px;
+    --rack-tile-value-right: 3px;
+    --rack-tile-radius: 3px;
+    --board-tile-size: 36px;
+    --board-tile-letter: 20px;
+    --board-tile-value: 9px;
+    --board-tile-value-bottom: 2px;
+    --board-tile-value-right: 3px;
+    --board-tile-radius: 3px;
 }
 
 .rack * {
@@ -40,6 +52,38 @@
         box-shadow 0.1s;
 }
 
+.rack-slot .tile {
+    width: var(--rack-tile-size);
+    height: var(--rack-tile-size);
+    border-radius: var(--rack-tile-radius);
+}
+
+.rack-slot .tile-letter {
+    font-size: var(--rack-tile-letter);
+}
+
+.rack-slot .tile-value {
+    font-size: var(--rack-tile-value);
+    bottom: var(--rack-tile-value-bottom);
+    right: var(--rack-tile-value-right);
+}
+
+.rack-slot .tile.dragging {
+    width: var(--board-tile-size);
+    height: var(--board-tile-size);
+    border-radius: var(--board-tile-radius);
+}
+
+.rack-slot .tile.dragging .tile-letter {
+    font-size: var(--board-tile-letter);
+}
+
+.rack-slot .tile.dragging .tile-value {
+    font-size: var(--board-tile-value);
+    bottom: var(--board-tile-value-bottom);
+    right: var(--board-tile-value-right);
+}
+
 .rack-slot:hover:not(.empty) {
     transform: translateY(-3px);
 }
@@ -49,11 +93,55 @@
         0 0 0 2px #ffcc00,
         0 3px 6px rgba(255, 204, 0, 0.3);
     transform: translateY(-3px);
+    animation: selectedPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes selectedPulse {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 2px #ffcc00,
+            0 3px 6px rgba(255, 204, 0, 0.3);
+    }
+    50% {
+        box-shadow:
+            0 0 0 3px #ffcc00,
+            0 0 12px rgba(255, 204, 0, 0.5),
+            0 3px 8px rgba(255, 204, 0, 0.4);
+    }
 }
 
 .rack-slot.empty {
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
     cursor: default;
+}
+
+/* Exchange mode styling */
+.rack-slot.exchange-mode {
+    cursor: pointer;
+}
+
+.rack-slot.exchange-selected {
+    box-shadow:
+        0 0 0 2px #ff6b6b,
+        0 3px 6px rgba(255, 107, 107, 0.3);
+    transform: translateY(-3px);
+    animation: exchangePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes exchangePulse {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 2px #ff6b6b,
+            0 3px 6px rgba(255, 107, 107, 0.3);
+    }
+    50% {
+        box-shadow:
+            0 0 0 3px #ff6b6b,
+            0 0 10px rgba(255, 107, 107, 0.5),
+            0 3px 8px rgba(255, 107, 107, 0.4);
+    }
 }
 
 .rack-slot.drag-over {
@@ -134,13 +222,36 @@
 }
 
 /* Mobile responsive breakpoints */
+@media (max-width: 650px) {
+    .rack {
+        --board-tile-size: 30px;
+        --board-tile-letter: 17px;
+        --board-tile-value: 8px;
+        --board-tile-value-bottom: 1px;
+        --board-tile-value-right: 2px;
+        --board-tile-radius: 3px;
+    }
+}
+
 @media (max-width: 520px) {
     .rack {
-        padding: 6px 8px;
+        padding: 10px 12px;
+        --rack-tile-size: 40px;
+        --rack-tile-letter: 22px;
+        --rack-tile-value: 10px;
+        --rack-tile-value-bottom: 2px;
+        --rack-tile-value-right: 3px;
+        --rack-tile-radius: 3px;
+        --board-tile-size: 24px;
+        --board-tile-letter: 14px;
+        --board-tile-value: 7px;
+        --board-tile-value-bottom: 1px;
+        --board-tile-value-right: 1px;
+        --board-tile-radius: 2px;
     }
     .rack-slot {
-        width: 32px;
-        height: 32px;
+        width: 42px;
+        height: 42px;
     }
     .rack-tiles {
         gap: 3px;
@@ -149,11 +260,48 @@
 
 @media (max-width: 430px) {
     .rack {
-        padding: 5px 6px;
+        padding: 8px 10px;
+        --rack-tile-size: 36px;
+        --rack-tile-letter: 20px;
+        --rack-tile-value: 9px;
+        --rack-tile-value-bottom: 2px;
+        --rack-tile-value-right: 3px;
+        --rack-tile-radius: 3px;
+        --board-tile-size: 20px;
+        --board-tile-letter: 12px;
+        --board-tile-value: 6px;
+        --board-tile-value-bottom: 0;
+        --board-tile-value-right: 1px;
+        --board-tile-radius: 2px;
     }
     .rack-slot {
-        width: 28px;
-        height: 28px;
+        width: 38px;
+        height: 38px;
+    }
+    .rack-tiles {
+        gap: 3px;
+    }
+}
+
+@media (max-width: 360px) {
+    .rack {
+        padding: 6px 8px;
+        --rack-tile-size: 32px;
+        --rack-tile-letter: 18px;
+        --rack-tile-value: 8px;
+        --rack-tile-value-bottom: 2px;
+        --rack-tile-value-right: 3px;
+        --rack-tile-radius: 2px;
+        --board-tile-size: 17px;
+        --board-tile-letter: 10px;
+        --board-tile-value: 5px;
+        --board-tile-value-bottom: 0;
+        --board-tile-value-right: 0;
+        --board-tile-radius: 1px;
+    }
+    .rack-slot {
+        width: 34px;
+        height: 34px;
     }
     .rack-tiles {
         gap: 2px;

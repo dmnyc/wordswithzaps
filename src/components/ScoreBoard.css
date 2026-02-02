@@ -1,12 +1,20 @@
 .scoreboard {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 16px;
+    gap: 6px;
     padding: 10px 20px;
     background: rgba(255, 255, 255, 0.04);
     border-radius: 8px;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.scoreboard-scores {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
 }
 
 .player-score {
@@ -68,6 +76,11 @@
     color: var(--text-muted);
 }
 
+/* Mobile-only rows - hidden on desktop */
+.scoreboard-status-row {
+    display: none;
+}
+
 .turn-indicator {
     font-size: 10px;
     font-weight: 600;
@@ -77,7 +90,11 @@
     background: rgba(104, 211, 145, 0.15);
     padding: 2px 6px;
     border-radius: 4px;
-    margin-left: 8px;
+}
+
+.turn-indicator.waiting {
+    color: var(--text-muted);
+    background: rgba(154, 154, 154, 0.12);
 }
 
 .scoreboard-actions {
@@ -87,6 +104,11 @@
     margin-left: 8px;
 }
 
+.scoreboard-actions.actions-mobile {
+    display: none;
+}
+
+.rules-btn,
 .share-btn,
 .forfeit-btn {
     display: flex;
@@ -101,11 +123,13 @@
     transition: background 0.15s;
 }
 
+.rules-btn:hover,
 .share-btn:hover,
 .forfeit-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.14);
 }
 
+.rules-icon,
 .share-icon {
     width: 16px;
     height: 16px;
@@ -125,4 +149,155 @@
     width: 16px;
     height: 16px;
     color: #ff9b9b;
+}
+
+/* Mobile responsive breakpoints */
+@media (max-width: 520px) {
+    .scoreboard {
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px 14px;
+    }
+
+    /* One row split 50/50 for scores */
+    .scoreboard-scores {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+
+    /* Hide desktop tiles/actions, show mobile */
+    .tiles-desktop {
+        display: none;
+    }
+
+    .actions-desktop {
+        display: none;
+    }
+
+    /* Player scores - fill each half */
+    .player-score {
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+        padding: 6px 10px;
+        border-radius: 6px;
+        min-width: 0;
+    }
+
+    .player-name {
+        font-size: 14px;
+        max-width: 100%;
+        min-width: 0;
+        font-weight: 500;
+        flex: 1;
+    }
+
+    .player-points {
+        font-size: 20px;
+        min-width: auto;
+        flex: none;
+    }
+
+    /* Status row: turn indicator + tiles */
+    .scoreboard-status-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 8px 12px;
+        width: 100%;
+        padding-top: 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .tiles-mobile {
+        display: flex;
+        border: none;
+        padding: 0;
+        gap: 4px;
+    }
+
+    .turn-indicator {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+
+    .tiles-icon {
+        width: 14px;
+        height: 14px;
+    }
+
+    .tiles-count {
+        font-size: 13px;
+    }
+
+    /* Show mobile actions below scores */
+    .scoreboard-actions.actions-mobile {
+        display: flex;
+        justify-content: center;
+        margin-left: 0;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 430px) {
+    .scoreboard {
+        gap: 4px 10px;
+        padding: 5px 8px;
+    }
+
+    .player-name {
+        font-size: 11px;
+        max-width: 100%;
+    }
+
+    .player-points {
+        font-size: 16px;
+    }
+
+    .turn-indicator {
+        font-size: 8px;
+        padding: 2px 5px;
+    }
+
+    .tiles-icon {
+        width: 11px;
+        height: 11px;
+    }
+
+    .tiles-count {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 360px) {
+    .scoreboard {
+        gap: 3px 8px;
+        padding: 4px 6px;
+    }
+
+    .player-name {
+        font-size: 10px;
+        max-width: 100%;
+    }
+
+    .player-points {
+        font-size: 15px;
+    }
+
+    .turn-indicator {
+        font-size: 7px;
+        padding: 2px 4px;
+    }
+
+    .tiles-icon {
+        width: 10px;
+        height: 10px;
+    }
+
+    .tiles-count {
+        font-size: 10px;
+    }
 }

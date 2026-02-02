@@ -27,10 +27,13 @@ import { getTransactionHistory } from "../wallet/walletManager";
 import { getCurrentUser } from "../nostr/client";
 import { fetchProfile, updateProfileLightningAddress } from "../nostr/profiles";
 import { SparkLogo, NwcLogo, BitcoinConnectLogo } from "./icons/WalletIcons";
+import { QRCodeSVG } from "qrcode.react";
+import { sendPayment, createInvoice } from "../wallet/walletManager";
 import "./WalletSettings.css";
 
 interface WalletSettingsProps {
   onClose: () => void;
+  onToast?: (message: string, tone?: "success" | "error" | "info") => void;
 }
 
 type ViewState =
@@ -40,7 +43,8 @@ type ViewState =
   | "spark-restore-phrase"
   | "backup"
   | "transactions"
-  | "lightning-address";
+  | "lightning-address"
+  | "funds";
 
 interface WalletOptionCardProps {
   icon: React.ReactNode;
@@ -137,7 +141,292 @@ function MnemonicBackupScreen({
   );
 }
 
-export function WalletSettings({ onClose }: WalletSettingsProps) {
+type FundsSubView = "main" | "receive" | "send";
+
+interface FundsViewProps {
+  balance?: number;
+  onBack: () => void;
+  onBalanceChange?: () => void;
+  onToast?: (message: string, tone?: "success" | "error" | "info") => void;
+}
+
+function FundsView({
+  balance,
+  onBack,
+  onBalanceChange,
+  onToast,
+}: FundsViewProps) {
+  const [subView, setSubView] = useState<FundsSubView>("main");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Receive state
+  const [receiveAmount, setReceiveAmount] = useState("");
+  const [receiveDescription, setReceiveDescription] = useState("");
+  const [invoice, setInvoice] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Send state
+  const [sendInput, setSendInput] = useState("");
+
+  const handleCreateInvoice = async () => {
+    const amount = parseInt(receiveAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await createInvoice(
+        amount,
+        receiveDescription || undefined,
+      );
+      setInvoice(result.invoice);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create invoice";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopyInvoice = async () => {
+    if (!invoice) return;
+
+    try {
+      await navigator.clipboard.writeText(invoice);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Failed to copy to clipboard");
+    }
+  };
+
+  const handleSendPayment = async () => {
+    if (!sendInput.trim()) {
+      setError("Please enter an invoice or lightning address");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await sendPayment(sendInput.trim());
+      if (result.success) {
+        onToast?.("Payment sent!", "success");
+        onBalanceChange?.();
+        onBack();
+      } else {
+        setError(result.error || "Payment failed");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Payment failed";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubBack = () => {
+    setSubView("main");
+    setError(null);
+    setInvoice(null);
+    setReceiveAmount("");
+    setReceiveDescription("");
+    setSendInput("");
+  };
+
+  return (
+    <>
+      {subView === "main" && (
+        <>
+          <h2>Manage Funds</h2>
+          {error && <div className="wallet-error">{error}</div>}
+
+          <div className="funds-balance-display">
+            <span className="funds-balance-label">Balance</span>
+            <span className="funds-balance-amount">
+              <img
+                src="/assets/bolt-yellow.svg"
+                alt=""
+                className="balance-bolt"
+              />
+              {balance !== undefined ? balance.toLocaleString() : "—"}
+              <span className="funds-balance-unit">sats</span>
+            </span>
+          </div>
+
+          <div className="funds-action-buttons">
+            <button
+              className="funds-action-btn receive"
+              onClick={() => setSubView("receive")}
+            >
+              <span className="funds-action-icon">↓</span>
+              Receive
+            </button>
+            <button
+              className="funds-action-btn send"
+              onClick={() => setSubView("send")}
+            >
+              <span className="funds-action-icon">↑</span>
+              Send
+            </button>
+          </div>
+
+          <div className="wallet-actions">
+            <button className="wallet-btn" onClick={onBack}>
+              Back
+            </button>
+          </div>
+        </>
+      )}
+
+      {subView === "receive" && (
+        <>
+          <h2>Receive Sats</h2>
+          {error && <div className="wallet-error">{error}</div>}
+
+          {!invoice ? (
+            <>
+              <div className="wallet-section">
+                <label className="wallet-input-label">Amount (sats)</label>
+                <input
+                  type="number"
+                  className="wallet-input"
+                  placeholder="1000"
+                  value={receiveAmount}
+                  onChange={(e) => setReceiveAmount(e.target.value)}
+                  disabled={loading}
+                  min="1"
+                />
+              </div>
+
+              <div className="wallet-section">
+                <label className="wallet-input-label">
+                  Description (optional)
+                </label>
+                <input
+                  type="text"
+                  className="wallet-input"
+                  placeholder="What's this for?"
+                  value={receiveDescription}
+                  onChange={(e) => setReceiveDescription(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="wallet-actions">
+                <button
+                  className="wallet-btn secondary"
+                  onClick={handleSubBack}
+                  disabled={loading}
+                >
+                  Back
+                </button>
+                <button
+                  className="wallet-btn primary"
+                  onClick={handleCreateInvoice}
+                  disabled={loading || !receiveAmount}
+                >
+                  {loading ? "Creating..." : "Create Invoice"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="funds-qr-container">
+                <QRCodeSVG
+                  value={invoice}
+                  size={180}
+                  level="M"
+                  includeMargin
+                  bgColor="#1a1a1a"
+                  fgColor="#ffffff"
+                />
+              </div>
+
+              <div className="funds-invoice-display">
+                <code className="funds-invoice-text">
+                  {invoice.substring(0, 25)}...
+                  {invoice.substring(invoice.length - 15)}
+                </code>
+                <button
+                  className="wallet-btn-small"
+                  onClick={handleCopyInvoice}
+                >
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+
+              <p className="wallet-hint" style={{ textAlign: "center" }}>
+                Scan QR code or copy invoice to receive {receiveAmount} sats
+              </p>
+
+              <div className="wallet-actions">
+                <button
+                  className="wallet-btn secondary"
+                  onClick={handleSubBack}
+                >
+                  Create New Invoice
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {subView === "send" && (
+        <>
+          <h2>Send Sats</h2>
+          {error && <div className="wallet-error">{error}</div>}
+
+          <div className="wallet-section">
+            <label className="wallet-input-label">
+              Invoice or Lightning Address
+            </label>
+            <textarea
+              className="wallet-input"
+              placeholder="lnbc... or user@wallet.com"
+              value={sendInput}
+              onChange={(e) => setSendInput(e.target.value)}
+              disabled={loading}
+              rows={3}
+            />
+          </div>
+
+          <p className="wallet-hint">
+            Paste a Lightning invoice (lnbc...) or enter a Lightning address
+            (user@domain.com)
+          </p>
+
+          <div className="wallet-actions">
+            <button
+              className="wallet-btn secondary"
+              onClick={handleSubBack}
+              disabled={loading}
+            >
+              Back
+            </button>
+            <button
+              className="wallet-btn primary"
+              onClick={handleSendPayment}
+              disabled={loading || !sendInput.trim()}
+            >
+              {loading ? "Sending..." : "Send Payment"}
+            </button>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const {
     wallets,
     activeWallet,
@@ -738,12 +1027,20 @@ export function WalletSettings({ onClose }: WalletSettingsProps) {
                   />
                   {state.balance.toLocaleString()}
                 </span>
-                <button
-                  className="wallet-btn-small"
-                  onClick={() => setView("transactions")}
-                >
-                  History
-                </button>
+                <div className="balance-actions">
+                  <button
+                    className="wallet-btn-small primary"
+                    onClick={() => setView("funds")}
+                  >
+                    Manage Funds
+                  </button>
+                  <button
+                    className="wallet-btn-small"
+                    onClick={() => setView("transactions")}
+                  >
+                    History
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1561,6 +1858,15 @@ export function WalletSettings({ onClose }: WalletSettingsProps) {
               </button>
             </div>
           </>
+        )}
+
+        {view === "funds" && (
+          <FundsView
+            balance={state.balance}
+            onBack={() => setView("main")}
+            onBalanceChange={() => refreshBalance(true)}
+            onToast={onToast}
+          />
         )}
       </div>
     </div>

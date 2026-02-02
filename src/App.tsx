@@ -340,7 +340,7 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app ${screen === "game" ? "game-mode" : ""}`}>
       {dictionaryError && (
         <div className="dictionary-warning">{dictionaryError}</div>
       )}
