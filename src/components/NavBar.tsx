@@ -22,8 +22,9 @@ interface NavBarProps {
   walletLoading?: boolean;
   walletType?: WalletProviderType;
   onOpenWalletSettings?: () => void;
+  onOpenProfileSettings?: () => void;
   onShareGame?: () => void;
-  connectionMethod?: "NIP-07" | "NIP-46" | null;
+  connectionMethod?: "nip07" | "private-key" | "nip46" | null;
   relayCount?: number;
 }
 
@@ -50,6 +51,7 @@ export function NavBar({
   walletLoading: _walletLoading,
   walletType,
   onOpenWalletSettings,
+  onOpenProfileSettings,
   onShareGame,
   connectionMethod,
   relayCount,
@@ -270,6 +272,17 @@ export function NavBar({
                 Back to Lobby
               </button>
             )}
+            {onOpenProfileSettings && (
+              <button
+                className="menu-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenProfileSettings();
+                }}
+              >
+                Edit Profile
+              </button>
+            )}
             {onOpenSupportZap && (
               <button
                 className="menu-item support"
@@ -286,7 +299,15 @@ export function NavBar({
               <div className="menu-section-title">Connection</div>
               <div className="menu-info-row">
                 <span>Connect method</span>
-                <span>{connectionMethod || "—"}</span>
+                <span>
+                  {connectionMethod === "nip07"
+                    ? "Extension"
+                    : connectionMethod === "private-key"
+                      ? "Private Key"
+                      : connectionMethod === "nip46"
+                        ? "Remote Signer"
+                        : "—"}
+                </span>
               </div>
               <div className="menu-info-row">
                 <span>Relays connected</span>

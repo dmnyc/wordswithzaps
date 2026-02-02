@@ -10,6 +10,7 @@ import Lobby from "./components/Lobby";
 import GameView from "./components/GameView";
 import NavBar from "./components/NavBar";
 import WalletSettings from "./components/WalletSettings";
+import ProfileSettings from "./components/ProfileSettings";
 import CreatorZapModal from "./components/CreatorZapModal";
 import { sendPayment } from "./wallet/walletManager";
 import "./index.css";
@@ -39,9 +40,15 @@ function App() {
     user,
     disconnect,
     connect,
+    connectWithPrivateKey,
+    connectWithBunker,
+    generateKeypair,
+    startNostrConnect,
+    waitForNostrConnect,
+    cancelNostrConnect,
     isConnecting,
     error,
-    connectionMethod,
+    authMethod,
     relayCount,
   } = useNostr();
   const {
@@ -52,6 +59,7 @@ function App() {
     refreshBalance,
   } = useWallet();
   const [showWalletSettings, setShowWalletSettings] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showCreatorZapModal, setShowCreatorZapModal] = useState(false);
   const walletType = activeWallet
     ? activeWallet.kind === WalletKind.SPARK
@@ -67,6 +75,14 @@ function App() {
 
   const handleCloseWalletSettings = useCallback(() => {
     setShowWalletSettings(false);
+  }, []);
+
+  const handleOpenProfileSettings = useCallback(() => {
+    setShowProfileSettings(true);
+  }, []);
+
+  const handleCloseProfileSettings = useCallback(() => {
+    setShowProfileSettings(false);
   }, []);
 
   const handleOpenCreatorZap = useCallback(() => {
@@ -336,6 +352,12 @@ function App() {
           isConnecting={isConnecting}
           error={error}
           connect={connect}
+          connectWithPrivateKey={connectWithPrivateKey}
+          connectWithBunker={connectWithBunker}
+          generateKeypair={generateKeypair}
+          startNostrConnect={startNostrConnect}
+          waitForNostrConnect={waitForNostrConnect}
+          cancelNostrConnect={cancelNostrConnect}
         />
       )}
 
@@ -350,7 +372,8 @@ function App() {
             walletLoading={walletState.loading}
             walletType={walletType}
             onOpenWalletSettings={handleOpenWalletSettings}
-            connectionMethod={connectionMethod}
+            onOpenProfileSettings={handleOpenProfileSettings}
+            connectionMethod={authMethod}
             relayCount={relayCount}
           />
           <Lobby
@@ -373,7 +396,8 @@ function App() {
             walletLoading={walletState.loading}
             walletType={walletType}
             onOpenWalletSettings={handleOpenWalletSettings}
-            connectionMethod={connectionMethod}
+            onOpenProfileSettings={handleOpenProfileSettings}
+            connectionMethod={authMethod}
             relayCount={relayCount}
           />
           <GameView
@@ -394,6 +418,13 @@ function App() {
 
       {showWalletSettings && (
         <WalletSettings onClose={handleCloseWalletSettings} />
+      )}
+
+      {showProfileSettings && (
+        <ProfileSettings
+          onClose={handleCloseProfileSettings}
+          onToast={showToast}
+        />
       )}
 
       <CreatorZapModal

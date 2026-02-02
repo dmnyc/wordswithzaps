@@ -4,8 +4,11 @@ export interface NostrProfile {
   pubkey: string;
   name?: string;
   displayName?: string;
+  about?: string; // Bio
   picture?: string;
+  banner?: string; // Banner image
   nip05?: string;
+  website?: string;
   lud16?: string; // Lightning address
   lud06?: string; // LNURL
 }
