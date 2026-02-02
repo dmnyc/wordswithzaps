@@ -1,11 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getShareToNostrDefault,
   setShareToNostrDefault,
+  getShareMethodDefault,
+  setShareMethodDefault,
+  type ShareMethod,
+  getSaveShareSettingDefault,
+  setSaveShareSettingDefault,
   getZapNudgeDefaultAmount,
   setZapNudgeDefaultAmount,
 } from "../settings/appSettings";
 import "./ZapNudgeModal.css";
+
+type ShareMode = "none" | ShareMethod;
+type ShareOption = { value: ShareMode; label: string };
 
 interface ZapNudgeModalProps {
   open: boolean;
@@ -17,11 +25,20 @@ interface ZapNudgeModalProps {
   walletConnected: boolean;
   zapsDisabled: boolean;
   sharePreviewText: string;
-  onConfirm: (options: { zapAmount: number; shareToNostr: boolean }) => void;
+  onConfirm: (options: {
+    zapAmount: number;
+    shareMode: ShareMode;
+  }) => void | Promise<void>;
   onClose: () => void;
+  onOpenWalletSettings?: () => void;
 }
 
 const PRESET_AMOUNTS = [50, 100, 500, 1000];
+const SHARE_OPTIONS: ShareOption[] = [
+  { value: "none", label: "Don't share" },
+  { value: "public", label: "Public note (kind 1)" },
+  { value: "private", label: "Private DM (kind 4)" },
+];
 
 export function ZapNudgeModal({
   open,
@@ -35,6 +52,7 @@ export function ZapNudgeModal({
   sharePreviewText,
   onConfirm,
   onClose,
+  onOpenWalletSettings,
 }: ZapNudgeModalProps) {
   const [selectedAmount, setSelectedAmount] = useState<number | "custom" | 0>(
     getZapNudgeDefaultAmount(),
@@ -43,12 +61,22 @@ export function ZapNudgeModal({
     const saved = getZapNudgeDefaultAmount();
     return saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "";
   });
-  const [shareToNostr, setShareToNostr] = useState(() =>
-    getShareToNostrDefault(),
+  const [shareMode, setShareMode] = useState<ShareMode>(() => {
+    if (!getShareToNostrDefault()) return "none";
+    return getShareMethodDefault();
+  });
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement | null>(null);
+  const [saveShareSetting, setSaveShareSetting] = useState(() =>
+    getSaveShareSettingDefault(),
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     if (open) {
+      setShareMenuOpen(false);
+      setIsSubmitting(false);
       const saved = getZapNudgeDefaultAmount();
       setSelectedAmount(
         saved > 0 && !PRESET_AMOUNTS.includes(saved) ? "custom" : saved,
@@ -56,7 +84,12 @@ export function ZapNudgeModal({
       setCustomAmount(
         saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "",
       );
-      setShareToNostr(getShareToNostrDefault());
+      setSaveShareSetting(getSaveShareSettingDefault());
+      if (!getShareToNostrDefault()) {
+        setShareMode("none");
+      } else {
+        setShareMode(getShareMethodDefault());
+      }
     }
   }, [open]);
 
@@ -73,10 +106,27 @@ export function ZapNudgeModal({
 
   const customAmountInvalid =
     selectedAmount === "custom" && customAmountValue <= 0;
+  const hasZap = resolvedZapAmount > 0;
+  const hasShare = shareMode !== "none";
+  const shareLabel =
+    SHARE_OPTIONS.find((option) => option.value === shareMode)?.label ||
+    "Don't share";
+  const confirmLabel = useMemo(() => {
+    if (hasZap && hasShare) return "Zap & Share";
+    if (hasZap && !hasShare) return "Zap";
+    if (!hasZap && hasShare) return "Share";
+    return "Done";
+  }, [hasShare, hasZap]);
 
   useEffect(() => {
-    setShareToNostrDefault(shareToNostr);
-  }, [shareToNostr]);
+    if (!saveShareSetting) return;
+    if (shareMode === "none") {
+      setShareToNostrDefault(false);
+      return;
+    }
+    setShareToNostrDefault(true);
+    setShareMethodDefault(shareMode);
+  }, [shareMode, saveShareSetting]);
 
   useEffect(() => {
     const amount =
@@ -85,6 +135,45 @@ export function ZapNudgeModal({
       setZapNudgeDefaultAmount(amount);
     }
   }, [customAmountValue, selectedAmount]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shareMenuOpen) return;
+
+    const handleOutside = (event: MouseEvent | TouchEvent) => {
+      if (!shareMenuRef.current) return;
+      if (!shareMenuRef.current.contains(event.target as Node)) {
+        setShareMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShareMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [shareMenuOpen]);
+
+  useEffect(() => {
+    if (isSubmitting && shareMenuOpen) {
+      setShareMenuOpen(false);
+    }
+  }, [isSubmitting, shareMenuOpen]);
 
   if (!open) return null;
 
@@ -95,10 +184,11 @@ export function ZapNudgeModal({
           className="zap-modal-close"
           onClick={onClose}
           aria-label="Close"
+          disabled={isSubmitting}
         >
           &times;
         </button>
-        <h2>Play Turn</h2>
+        <h2>Zap & Share</h2>
         <div className="zap-summary">
           <div className="zap-summary-word">{word || "Your move"}</div>
           <div className="zap-summary-points">
@@ -121,7 +211,19 @@ export function ZapNudgeModal({
           {zapsDisabled ? (
             <p className="zap-hint">Gameplay zaps are disabled.</p>
           ) : !walletConnected ? (
-            <p className="zap-hint">Connect a wallet to send a zap.</p>
+            <div className="zap-wallet-cta">
+              <p className="zap-hint">Connect a wallet to send a zap.</p>
+              {onOpenWalletSettings && (
+                <button
+                  className="zap-btn tertiary"
+                  type="button"
+                  onClick={onOpenWalletSettings}
+                  disabled={isSubmitting}
+                >
+                  Open Wallet Settings
+                </button>
+              )}
+            </div>
           ) : (
             <>
               <div className="zap-amounts">
@@ -129,6 +231,7 @@ export function ZapNudgeModal({
                   className={`zap-amount-btn ${selectedAmount === 0 ? "active" : ""}`}
                   onClick={() => setSelectedAmount(0)}
                   type="button"
+                  disabled={isSubmitting}
                 >
                   No zap
                 </button>
@@ -138,6 +241,7 @@ export function ZapNudgeModal({
                     className={`zap-amount-btn ${selectedAmount === amount ? "active" : ""}`}
                     onClick={() => setSelectedAmount(amount)}
                     type="button"
+                    disabled={isSubmitting}
                   >
                     {amount}
                   </button>
@@ -146,6 +250,7 @@ export function ZapNudgeModal({
                   className={`zap-amount-btn ${selectedAmount === "custom" ? "active" : ""}`}
                   onClick={() => setSelectedAmount("custom")}
                   type="button"
+                  disabled={isSubmitting}
                 >
                   Custom
                 </button>
@@ -163,6 +268,7 @@ export function ZapNudgeModal({
                     min={1}
                     placeholder="Custom sats"
                     value={customAmount}
+                    disabled={isSubmitting}
                     onChange={(event) => setCustomAmount(event.target.value)}
                   />
                 </div>
@@ -171,35 +277,100 @@ export function ZapNudgeModal({
           )}
         </div>
 
-        <label className="zap-checkbox">
-          <input
-            type="checkbox"
-            checked={shareToNostr}
-            onChange={() => setShareToNostr((prev) => !prev)}
-          />
-          <span>Share to Nostr</span>
-        </label>
-        {shareToNostr && (
+        <div className="zap-share-stack">
+          <h3>Share</h3>
+          <div className="zap-share-dropdown" ref={shareMenuRef}>
+            <button
+              className="zap-share-trigger"
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={shareMenuOpen}
+              onClick={() => setShareMenuOpen((prev) => !prev)}
+              disabled={isSubmitting}
+            >
+              <span>{shareLabel}</span>
+              <span className="zap-share-caret" aria-hidden="true">
+                ▾
+              </span>
+            </button>
+            {shareMenuOpen && !isSubmitting && (
+              <div className="zap-share-menu" role="listbox">
+                {SHARE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="option"
+                    aria-selected={shareMode === option.value}
+                    className={`zap-share-option ${shareMode === option.value ? "active" : ""}`}
+                    onClick={() => {
+                      setShareMode(option.value);
+                      setShareMenuOpen(false);
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        {shareMode !== "none" && (
           <div className="zap-preview">
-            <div className="zap-preview-title">Nostr preview</div>
+            <div className="zap-preview-title">
+              {shareMode === "private" ? "DM preview" : "Public note preview"}
+            </div>
             <pre className="zap-preview-content">{sharePreviewText}</pre>
           </div>
         )}
 
         <div className="zap-actions">
-          <button className="zap-btn secondary" onClick={onClose}>
-            Back
-          </button>
+          <label className="zap-save-setting">
+            <input
+              type="checkbox"
+              checked={saveShareSetting}
+              disabled={isSubmitting}
+              onChange={() => {
+                setSaveShareSetting((prev) => {
+                  const next = !prev;
+                  setSaveShareSettingDefault(next);
+                  if (next) {
+                    if (shareMode === "none") {
+                      setShareToNostrDefault(false);
+                    } else {
+                      setShareToNostrDefault(true);
+                      setShareMethodDefault(shareMode);
+                    }
+                  }
+                  return next;
+                });
+              }}
+            />
+            <span>Save share setting</span>
+          </label>
           <button
             className="zap-btn primary"
-            onClick={() =>
-              onConfirm({
-                zapAmount: customAmountInvalid ? 0 : resolvedZapAmount,
-                shareToNostr,
-              })
-            }
+            disabled={isSubmitting}
+            onClick={() => {
+              if (isSubmitting) return;
+              setIsSubmitting(true);
+              Promise.resolve(
+                onConfirm({
+                  zapAmount: customAmountInvalid ? 0 : resolvedZapAmount,
+                  shareMode,
+                }),
+              )
+                .catch(() => {
+                  // Errors handled by parent.
+                })
+                .finally(() => {
+                  if (isMountedRef.current) {
+                    setIsSubmitting(false);
+                  }
+                });
+            }}
           >
-            Play Turn
+            {isSubmitting ? "Sending..." : confirmLabel}
           </button>
         </div>
       </div>

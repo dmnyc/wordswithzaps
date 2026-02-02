@@ -47,6 +47,28 @@ export async function encryptMessage(
 }
 
 /**
+ * Encrypt a direct message (kind 4) for a recipient using NIP-04.
+ */
+export async function encryptDirectMessage(
+  recipientPubkey: string,
+  plaintext: string,
+): Promise<string> {
+  if (typeof window !== "undefined") {
+    const nostr = window.nostr as typeof window.nostr & {
+      nip04?: {
+        encrypt: (pubkey: string, plaintext: string) => Promise<string>;
+      };
+    };
+    if (nostr?.nip04?.encrypt) {
+      return nostr.nip04.encrypt(recipientPubkey, plaintext);
+    }
+  }
+  throw new Error(
+    "NIP-04 encryption requires a browser extension with NIP-04 support (e.g., Alby, nos2x)",
+  );
+}
+
+/**
  * Decrypt a message from a sender
  * @param senderPubkey - The sender's public key (hex)
  * @param ciphertext - The encrypted message

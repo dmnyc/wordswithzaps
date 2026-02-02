@@ -1,10 +1,13 @@
 .board {
+    --cell-size: 40px;
+    --cell-gap: 2px;
+    --cell-pad: 6px;
     display: grid;
-    grid-template-columns: repeat(15, 40px);
-    grid-template-rows: repeat(15, 40px);
-    gap: 2px;
+    grid-template-columns: repeat(15, var(--cell-size));
+    grid-template-rows: repeat(15, var(--cell-size));
+    gap: var(--cell-gap);
     background: var(--bg);
-    padding: 6px;
+    padding: var(--cell-pad);
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow:
@@ -27,8 +30,8 @@
 }
 
 .board-cell {
-    width: 40px;
-    height: 40px;
+    width: var(--cell-size);
+    height: var(--cell-size);
     background: #1a1a1a;
     border: none;
     border-radius: 3px;
@@ -36,6 +39,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    touch-action: none;
     transition:
         background 0.15s,
         box-shadow 0.15s;
@@ -114,4 +118,52 @@
     font-size: 18px;
     color: var(--accent);
     text-shadow: 0 0 8px rgba(255, 204, 0, 0.5);
+}
+
+/* Mobile responsive breakpoints */
+@media (max-width: 650px) {
+    .board {
+        --cell-size: 32px;
+        --cell-gap: 1px;
+        --cell-pad: 4px;
+    }
+    .cell-label {
+        font-size: 8px;
+    }
+    .cell-star .cell-label {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 520px) {
+    .board {
+        --cell-size: 26px;
+        --cell-gap: 1px;
+        --cell-pad: 3px;
+        border-radius: 6px;
+    }
+    .board-cell {
+        border-radius: 2px;
+    }
+    .cell-label {
+        font-size: 7px;
+        letter-spacing: 0;
+    }
+    .cell-star .cell-label {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 430px) {
+    .board {
+        --cell-size: 22px;
+        --cell-gap: 1px;
+        --cell-pad: 2px;
+    }
+    .cell-label {
+        font-size: 6px;
+    }
+    .cell-star .cell-label {
+        font-size: 12px;
+    }
 }

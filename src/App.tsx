@@ -381,6 +381,7 @@ function App() {
             opponentPubkey={gameSession.opponentPubkey}
             onToast={showToast}
             onOpenCreatorZap={handleOpenCreatorZap}
+            onOpenWalletSettings={handleOpenWalletSettings}
           />
         </>
       )}

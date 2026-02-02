@@ -7,6 +7,7 @@ interface GameControlsProps {
   isLoading: boolean;
   pendingScore?: number;
   walletConnected?: boolean;
+  scorePop?: { id: number; points: number } | null;
   onPlay: () => void;
   onPass: () => void;
   onExchange: () => void;
@@ -21,6 +22,7 @@ export function GameControls({
   isLoading,
   pendingScore,
   walletConnected: _walletConnected = false,
+  scorePop = null,
   onPlay,
   onPass,
   onExchange,
@@ -53,13 +55,20 @@ export function GameControls({
         {pendingScore !== undefined && pendingScore > 0 && (
           <div className="pending-score">+{pendingScore}</div>
         )}
-        <button
-          className="control-btn primary play-btn"
-          onClick={onPlay}
-          disabled={!canPlay || isLoading}
-        >
-          {isLoading ? "Playing..." : "Play Turn"}
-        </button>
+        <div className="play-btn-wrap">
+          {scorePop && (
+            <span key={scorePop.id} className="play-score-pop">
+              +{scorePop.points}
+            </span>
+          )}
+          <button
+            className="control-btn primary play-btn"
+            onClick={onPlay}
+            disabled={!canPlay || isLoading}
+          >
+            {isLoading ? "Playing..." : "Play Turn"}
+          </button>
+        </div>
       </div>
 
       <div className="controls-right">

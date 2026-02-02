@@ -69,6 +69,43 @@
     font-size: 14px;
 }
 
+.play-btn-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.play-score-pop {
+    position: absolute;
+    left: 50%;
+    top: -14px;
+    transform: translateX(-50%);
+    font-size: 26px;
+    font-weight: 800;
+    color: #68d391;
+    text-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.4),
+        0 0 12px rgba(104, 211, 145, 0.6);
+    animation: playScorePop 0.9s ease-out forwards;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+@keyframes playScorePop {
+    0% {
+        transform: translate(-50%, 10px) scale(0.9);
+        opacity: 0;
+    }
+    25% {
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -18px) scale(1.25);
+        opacity: 0;
+    }
+}
+
 .pending-score {
     font-size: 18px;
     font-weight: 700;
@@ -83,4 +120,47 @@
     width: auto;
     vertical-align: middle;
     margin: 0 2px;
+}
+
+/* Mobile responsive breakpoints */
+@media (max-width: 520px) {
+    .game-controls {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 12px;
+    }
+    .control-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    .play-btn {
+        padding: 8px 24px;
+        font-size: 13px;
+    }
+    .pending-score {
+        font-size: 16px;
+        padding: 4px 10px;
+    }
+    .play-score-pop {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 380px) {
+    .game-controls {
+        flex-direction: column;
+        gap: 6px;
+    }
+    .controls-left,
+    .controls-center,
+    .controls-right {
+        width: 100%;
+        justify-content: center;
+    }
+    .control-btn {
+        flex: 1;
+    }
+    .play-btn {
+        width: 100%;
+    }
 }

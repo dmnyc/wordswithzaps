@@ -155,9 +155,13 @@ export function useGame(): UseGameReturn {
         setLastEventId(""); // Initial state has no previous event
 
         // Subscribe to updates
-        syncRef.current.subscribeToGameUpdates(handleGameUpdate, (err) => {
-          setError(err.message);
-        });
+        syncRef.current.subscribeToGameUpdates(
+          handleGameUpdate,
+          (err) => {
+            setError(err.message);
+          },
+          { heartbeatMs: 45000 },
+        );
 
         return gameId;
       } catch (err) {
@@ -218,9 +222,13 @@ export function useGame(): UseGameReturn {
         setPlayerRack(rack);
 
         // Subscribe to updates
-        syncRef.current.subscribeToGameUpdates(handleGameUpdate, (err) => {
-          setError(err.message);
-        });
+        syncRef.current.subscribeToGameUpdates(
+          handleGameUpdate,
+          (err) => {
+            setError(err.message);
+          },
+          { heartbeatMs: 45000 },
+        );
 
         // Set up polling as backup (every 15 seconds)
         if (pollIntervalRef.current) {

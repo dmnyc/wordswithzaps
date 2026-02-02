@@ -3,6 +3,7 @@ import type { TilePlacement } from "../types/game";
 import { useGame } from "../hooks/useGame";
 import { useWallet } from "../hooks/useWallet";
 import { getCurrentUser, createEvent, publishEvent } from "../nostr/client";
+import { encryptDirectMessage } from "../nostr/encryption";
 import Board from "./Board";
 import Rack from "./Rack";
 import ScoreBoard from "./ScoreBoard";
@@ -15,7 +16,9 @@ import {
 } from "../settings/appSettings";
 import ZapNudgeModal from "./ZapNudgeModal";
 import GameOverModal from "./GameOverModal";
+import AchievementModal from "./AchievementModal";
 import Modal from "./Modal";
+import { detectAchievement, type Achievement } from "../utils/achievements";
 import { nip19 } from "nostr-tools";
 import { fetchProfile } from "../nostr/profiles";
 import "./GameView.css";
@@ -26,7 +29,16 @@ interface GameViewProps {
   onShareGame?: (copyFn: () => void) => void;
   onToast?: (message: string, tone?: "success" | "error" | "info") => void;
   onOpenCreatorZap?: () => void;
+  onOpenWalletSettings?: () => void;
 }
+
+type WordScorePop = {
+  id: number;
+  points: number;
+};
+
+const WORD_SCORE_POP_DURATION_MS = 900;
+const POST_MOVE_MODAL_DELAY_MS = 1000;
 
 export function GameView({
   gameId,
@@ -34,6 +46,7 @@ export function GameView({
   onShareGame: _onShareGame,
   onToast,
   onOpenCreatorZap,
+  onOpenWalletSettings,
 }: GameViewProps) {
   void _onShareGame; // Reserved for share UI
   const {
@@ -57,6 +70,7 @@ export function GameView({
     null,
   );
   const [localRack, setLocalRack] = useState<string[]>([]);
+  const [shuffleCount, setShuffleCount] = useState(0);
   const [pendingBlankPosition, setPendingBlankPosition] = useState<{
     x: number;
     y: number;
@@ -79,7 +93,14 @@ export function GameView({
   >(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [pendingAchievement, setPendingAchievement] =
+    useState<Achievement | null>(null);
+  const [showBingoCelebration, setShowBingoCelebration] = useState(false);
+  const [wordScorePop, setWordScorePop] = useState<WordScorePop | null>(null);
   const lastValidationErrorRef = useRef<string | null>(null);
+  const lastAchievementTurnRef = useRef<number | null>(null);
+  const wordScoreTimeoutRef = useRef<number | null>(null);
+  const postMoveModalTimeoutRef = useRef<number | null>(null);
 
   const opponentLabel = opponentDisplayName || "Opponent";
   const opponentNpub = useMemo(() => {
@@ -146,6 +167,17 @@ export function GameView({
     }
   }, [gameState?.meta.status, gameId]);
 
+  useEffect(() => {
+    return () => {
+      if (wordScoreTimeoutRef.current !== null) {
+        window.clearTimeout(wordScoreTimeoutRef.current);
+      }
+      if (postMoveModalTimeoutRef.current !== null) {
+        window.clearTimeout(postMoveModalTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Sync local rack with latest playerRack.
   // Only refresh when it's our turn, except for initial load.
   useEffect(() => {
@@ -153,13 +185,44 @@ export function GameView({
     const isInitialLoad = localRack.length === 0;
     if (!isInitialLoad && !isMyTurn) return;
     const sameLength = playerRack.length === localRack.length;
+    // Compare tile contents (sorted) rather than order to preserve shuffle
     const sameTiles =
       sameLength &&
-      playerRack.every((tile, index) => tile === localRack[index]);
+      [...playerRack].sort().join(",") === [...localRack].sort().join(",");
     if (!sameTiles) {
       setLocalRack(playerRack);
     }
   }, [playerRack, localRack, isMyTurn]);
+
+  // Detect opponent's achievement when our turn begins
+  useEffect(() => {
+    if (!gameState || !isMyTurn) return;
+
+    const currentTurnIndex = gameState.turn.index;
+    if (lastAchievementTurnRef.current === currentTurnIndex) return;
+    lastAchievementTurnRef.current = currentTurnIndex;
+
+    if (currentTurnIndex === 0) return;
+
+    const history = gameState.scoring.history;
+    const lastMove = history[history.length - 1];
+
+    // Check if the last move was by the opponent
+    if (
+      lastMove &&
+      lastMove.player !== myPubkey &&
+      lastMove.coords.length > 0
+    ) {
+      const achievement = detectAchievement(
+        lastMove.word,
+        lastMove.score,
+        lastMove.coords,
+      );
+      if (achievement) {
+        setPendingAchievement(achievement);
+      }
+    }
+  }, [gameState, isMyTurn, myPubkey]);
 
   // Load game on mount
   useMemo(() => {
@@ -271,6 +334,24 @@ export function GameView({
     [gameState?.board, isMyTurn],
   );
 
+  const triggerWordScorePop = useCallback((points: number) => {
+    if (points <= 0) return;
+
+    if (wordScoreTimeoutRef.current !== null) {
+      window.clearTimeout(wordScoreTimeoutRef.current);
+    }
+
+    setWordScorePop({
+      id: Date.now(),
+      points,
+    });
+
+    wordScoreTimeoutRef.current = window.setTimeout(() => {
+      setWordScorePop(null);
+      wordScoreTimeoutRef.current = null;
+    }, WORD_SCORE_POP_DURATION_MS);
+  }, []);
+
   const handlePlay = useCallback(async () => {
     if (!validation?.valid) return;
 
@@ -281,100 +362,135 @@ export function GameView({
     const isPlayerOne = gameState?.meta.playerOne === myPubkey;
     const myScore = isPlayerOne ? p1Score + points : p2Score + points;
     const opponentScore = isPlayerOne ? p2Score : p1Score;
-
-    setPendingMoveSummary({
+    const moveSummary = {
       word: mainWord,
       points,
       myScore,
       opponentScore,
-    });
-    setShowZapModal(true);
-  }, [gameState?.scoring.p1Score, gameState?.scoring.p2Score, validation]);
+    };
+
+    const wasBingo = pendingPlacements.length === 7;
+
+    const result = await makeMove(pendingPlacements);
+    if (result.valid) {
+      const remainingTiles = availableRack;
+      setPendingPlacements([]);
+      setLocalRack(remainingTiles);
+
+      // Show bingo celebration if all 7 tiles were played
+      if (wasBingo) {
+        setShowBingoCelebration(true);
+        setTimeout(() => setShowBingoCelebration(false), 2500);
+      }
+
+      triggerWordScorePop(points);
+
+      setPendingMoveSummary(moveSummary);
+      if (postMoveModalTimeoutRef.current !== null) {
+        window.clearTimeout(postMoveModalTimeoutRef.current);
+      }
+      postMoveModalTimeoutRef.current = window.setTimeout(() => {
+        setShowZapModal(true);
+        postMoveModalTimeoutRef.current = null;
+      }, POST_MOVE_MODAL_DELAY_MS);
+    }
+  }, [
+    availableRack,
+    gameState?.meta.playerOne,
+    gameState?.scoring.p1Score,
+    gameState?.scoring.p2Score,
+    makeMove,
+    myPubkey,
+    pendingPlacements,
+    triggerWordScorePop,
+    validation,
+  ]);
 
   const handleConfirmPlay = useCallback(
-    async (options: { zapAmount: number; shareToNostr: boolean }) => {
-      if (!validation?.valid) return;
+    async (options: {
+      zapAmount: number;
+      shareMode: "none" | "public" | "private";
+    }) => {
+      const word = pendingMoveSummary?.word || "Your move";
+      const points = pendingMoveSummary?.points ?? 0;
 
-      const result = await makeMove(pendingPlacements);
-      if (result.valid) {
-        const remainingTiles = availableRack;
-        setPendingPlacements([]);
-        setLocalRack(remainingTiles);
-        setShowZapModal(false);
-
-        const word =
-          pendingMoveSummary?.word || validation.words?.[0] || "Your move";
-        const points = pendingMoveSummary?.points ?? validation.score ?? 0;
-
-        if (!zapsDisabled && options.zapAmount > 0) {
-          if (walletState.connected && opponentPubkey) {
-            try {
-              const message = `Words With Zaps: your turn -> ${gameLink}`;
-              await zapUser({
-                recipientPubkey: opponentPubkey,
-                amountSats: options.zapAmount,
-                gameId,
-                moveDescription: message,
-              });
-              onToast?.(
-                `Sent ${options.zapAmount} sat${
-                  options.zapAmount === 1 ? "" : "s"
-                }!`,
-                "success",
-              );
-            } catch (err) {
-              console.warn("Zap failed:", err);
-              const errorMsg = err instanceof Error ? err.message : String(err);
-              onToast?.(`Move played, but zap failed: ${errorMsg}`, "error");
-            }
-          } else if (!walletState.connected) {
-            console.log("Wallet not ready, skipping zap");
-          }
-        } else if (zapsDisabled) {
-          console.log("[Zap] Gameplay zaps disabled");
-        }
-
-        if (options.shareToNostr) {
+      if (!zapsDisabled && options.zapAmount > 0) {
+        if (walletState.connected && opponentPubkey) {
           try {
-            let opponentRef = "";
-            if (opponentPubkey) {
-              try {
-                opponentRef = `nostr:${opponentNpub}`;
-              } catch {
-                opponentRef = opponentPubkey;
-              }
+            const message = `Words With Zaps: your turn -> ${gameLink}`;
+            await zapUser({
+              recipientPubkey: opponentPubkey,
+              amountSats: options.zapAmount,
+              gameId,
+              moveDescription: message,
+            });
+            onToast?.(
+              `Sent ${options.zapAmount} sat${
+                options.zapAmount === 1 ? "" : "s"
+              }!`,
+              "success",
+            );
+          } catch (err) {
+            console.warn("Zap failed:", err);
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            onToast?.(`Zap failed: ${errorMsg}`, "error");
+          }
+        } else if (!walletState.connected) {
+          console.log("Wallet not ready, skipping zap");
+        }
+      } else if (zapsDisabled) {
+        console.log("[Zap] Gameplay zaps disabled");
+      }
+
+      if (options.shareMode !== "none") {
+        try {
+          let opponentRef = "";
+          if (opponentPubkey) {
+            try {
+              opponentRef = `nostr:${opponentNpub}`;
+            } catch {
+              opponentRef = opponentPubkey;
             }
-            const turnLine = opponentRef
-              ? `It's your turn, ${opponentRef}!`
-              : "It's your turn!";
-            const shareText = `I just played ${word} for ${points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+          }
+          const turnLine = opponentRef
+            ? `It's your turn, ${opponentRef}!`
+            : "It's your turn!";
+          const shareText = `I just played ${word} for ${points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+
+          if (options.shareMode === "public") {
             const event = createEvent(1, shareText, [
               ["t", "wordswithzaps"],
               ...(opponentPubkey ? [["p", opponentPubkey]] : []),
             ]);
             await publishEvent(event);
-          } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : String(err);
-            onToast?.(
-              `Move played, but sharing to Nostr failed: ${errorMsg}`,
-              "error",
+          } else if (options.shareMode === "private") {
+            if (!opponentPubkey) {
+              throw new Error("Opponent pubkey not available for DM.");
+            }
+            const encrypted = await encryptDirectMessage(
+              opponentPubkey,
+              shareText,
             );
+            const event = createEvent(4, encrypted, [["p", opponentPubkey]]);
+            await publishEvent(event);
           }
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          onToast?.(`Sharing failed: ${errorMsg}`, "error");
         }
       }
+
+      setShowZapModal(false);
+      setPendingMoveSummary(null);
     },
     [
-      availableRack,
       gameId,
       gameLink,
-      makeMove,
+      onToast,
       opponentNpub,
       opponentPubkey,
       pendingMoveSummary?.points,
       pendingMoveSummary?.word,
-      pendingPlacements,
-      playerRack,
-      validation,
       walletState.connected,
       zapUser,
       zapsDisabled,
@@ -392,6 +508,7 @@ export function GameView({
   }, []);
 
   const handleShuffle = useCallback(() => {
+    setShuffleCount((c) => c + 1);
     setLocalRack((prev) => shuffleArray(prev));
   }, []);
 
@@ -437,6 +554,36 @@ export function GameView({
       }
     },
     [gameId, gameLink, onToast, opponentPubkey, walletState.connected, zapUser],
+  );
+
+  const handleAchievementZap = useCallback(
+    async (amount: number) => {
+      if (!walletState.connected || !opponentPubkey || !pendingAchievement)
+        return;
+      try {
+        const message = `Words With Zaps: Congrats on "${pendingAchievement.word}"! ${gameLink}`;
+        await zapUser({
+          recipientPubkey: opponentPubkey,
+          amountSats: amount,
+          gameId,
+          moveDescription: message,
+        });
+        onToast?.(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
+        setPendingAchievement(null);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Zap failed";
+        onToast?.(`Zap failed: ${message}`, "error");
+      }
+    },
+    [
+      gameId,
+      gameLink,
+      onToast,
+      opponentPubkey,
+      pendingAchievement,
+      walletState.connected,
+      zapUser,
+    ],
   );
 
   const handleForfeit = useCallback(() => {
@@ -604,6 +751,7 @@ export function GameView({
         onReturnTile={handleRemoveTile}
         onReorder={setLocalRack}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
+        shuffleKey={shuffleCount}
       />
 
       <GameControls
@@ -622,6 +770,7 @@ export function GameView({
         onExchange={handleExchange}
         onClear={handleClear}
         onShuffle={handleShuffle}
+        scorePop={wordScorePop}
       />
 
       {pendingBlankPosition && (
@@ -647,6 +796,7 @@ export function GameView({
             setShowZapModal(false);
             setPendingMoveSummary(null);
           }}
+          onOpenWalletSettings={onOpenWalletSettings}
         />
       )}
 
@@ -694,6 +844,39 @@ export function GameView({
             onOpenCreatorZap?.();
           }}
         />
+      )}
+
+      {pendingAchievement && (
+        <AchievementModal
+          achievement={pendingAchievement}
+          opponentName={opponentLabel}
+          walletConnected={walletState.connected}
+          onZap={handleAchievementZap}
+          onClose={() => setPendingAchievement(null)}
+        />
+      )}
+
+      {showBingoCelebration && (
+        <div className="bingo-celebration">
+          <div className="bingo-confetti">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <div
+                key={i}
+                className="confetti-piece"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 0.5}s`,
+                  animationDuration: `${2 + Math.random() * 1}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="bingo-celebration-content">
+            <div className="bingo-text">BINGO!</div>
+            <div className="bingo-subtext">All 7 tiles played!</div>
+            <div className="bingo-bonus">+50 bonus points</div>
+          </div>
+        </div>
       )}
     </div>
   );

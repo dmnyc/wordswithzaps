@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Tile from "./Tile";
 import "./Rack.css";
 
@@ -9,6 +9,7 @@ interface RackProps {
   onReturnTile?: (x: number, y: number) => void;
   onReorder?: (tiles: string[]) => void;
   disabled?: boolean;
+  shuffleKey?: number;
 }
 
 export function Rack({
@@ -18,9 +19,32 @@ export function Rack({
   onReturnTile,
   onReorder,
   disabled = false,
+  shuffleKey = 0,
 }: RackProps) {
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [shuffleAnimation, setShuffleAnimation] = useState(false);
+  const [lastShuffleKey, setLastShuffleKey] = useState(0);
+  const [lastTileCount, setLastTileCount] = useState(tiles.length);
+
+  // Cancel animation if tile count changes (e.g., from clear or placing tiles)
+  useEffect(() => {
+    if (tiles.length !== lastTileCount) {
+      setLastTileCount(tiles.length);
+      setShuffleAnimation(false);
+    }
+  }, [tiles.length, lastTileCount]);
+
+  // Trigger animation when shuffleKey changes (but not on initial render)
+  useEffect(() => {
+    if (shuffleKey > 0 && shuffleKey !== lastShuffleKey) {
+      setLastShuffleKey(shuffleKey);
+      setShuffleAnimation(true);
+      // Animation is 0.6s + stagger delay (7 tiles × 60ms = 420ms)
+      const timer = setTimeout(() => setShuffleAnimation(false), 1050);
+      return () => clearTimeout(timer);
+    }
+  }, [shuffleKey, lastShuffleKey]);
 
   const handleDragStart = useCallback(
     (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
@@ -136,8 +160,13 @@ export function Rack({
       <div className="rack-tiles">
         {tiles.map((letter, index) => (
           <div
-            key={index}
-            className={`rack-slot ${selectedTile === index ? "selected" : ""} ${dragOverIndex === index ? "drag-over" : ""}`}
+            key={shuffleAnimation ? `${index}-${shuffleKey}` : index}
+            className={`rack-slot ${selectedTile === index ? "selected" : ""} ${dragOverIndex === index ? "drag-over" : ""} ${shuffleAnimation ? "shuffling" : ""}`}
+            style={
+              shuffleAnimation
+                ? { animationDelay: `${index * 60}ms` }
+                : undefined
+            }
             onClick={() => handleClick(index)}
             onDragOver={(e) => handleSlotDragOver(e, index)}
             onDragLeave={handleSlotDragLeave}
