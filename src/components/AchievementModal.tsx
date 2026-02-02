@@ -15,14 +15,14 @@ const PRESET_AMOUNTS = [21, 50, 100, 500];
 
 const ACHIEVEMENT_ICONS: Record<Achievement["type"], string> = {
   bingo: "7",
-  "triple-word": "3x",
+  "zap-bonus": "⚡",
   "double-word": "2x",
   "high-score": "!",
 };
 
 const ACHIEVEMENT_ZAP_MESSAGES: Record<Achievement["type"], string> = {
   bingo: "Nice job on the Bingo! #WordsWithZaps",
-  "triple-word": "Nice job on the Triple Word Score! #WordsWithZaps",
+  "zap-bonus": "Nice job hitting the ZAP square! #WordsWithZaps",
   "double-word": "Nice job on the Double Word Score! #WordsWithZaps",
   "high-score": "Nice job on the High Score! #WordsWithZaps",
 };

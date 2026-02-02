@@ -37,8 +37,6 @@ function getCellClass(multiplier: MultiplierType): string {
 
 function getCellLabel(multiplier: MultiplierType): ReactNode {
   switch (multiplier) {
-    case "TW":
-      return "TW";
     case "DW":
       return "DW";
     case "QL":

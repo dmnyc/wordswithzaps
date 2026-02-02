@@ -1,5 +1,11 @@
 import Modal from "./Modal";
-import { BINGO_BONUS, RACK_SIZE, ZAP_BONUS_POINTS } from "../engine/constants";
+import {
+  BINGO_BONUS,
+  RACK_SIZE,
+  ZAP_BONUS_POINTS,
+  TILE_DISTRIBUTION,
+  LETTER_VALUES,
+} from "../engine/constants";
 import "./GameRulesModal.css";
 
 interface GameRulesModalProps {
@@ -81,6 +87,27 @@ export function GameRulesModal({ open, onClose }: GameRulesModalProps) {
             <li>One player uses all tiles (goes out)</li>
             <li>A player forfeits</li>
           </ul>
+        </section>
+
+        <section className="rules-section">
+          <h3>Tile Distribution</h3>
+          <p className="tile-dist-total">
+            {Object.values(TILE_DISTRIBUTION).reduce((a, b) => a + b, 0)} tiles
+            total
+          </p>
+          <div className="tile-distribution">
+            {Object.entries(TILE_DISTRIBUTION).map(([letter, count]) => (
+              <div key={letter} className="tile-dist-item">
+                <span className="tile-dist-letter">
+                  {letter === "BLANK" ? "?" : letter}
+                </span>
+                <span className="tile-dist-count">×{count}</span>
+                <span className="tile-dist-points">
+                  {letter === "BLANK" ? "0" : LETTER_VALUES[letter]}pt
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
       </div>
     </Modal>

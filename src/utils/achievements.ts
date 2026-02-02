@@ -1,6 +1,6 @@
 export type AchievementType =
   | "bingo"
-  | "triple-word"
+  | "zap-bonus"
   | "double-word"
   | "high-score";
 
@@ -11,37 +11,19 @@ export interface Achievement {
   message: string;
 }
 
-// Triple Word squares on the board
-const TW_SQUARES = new Set([
-  "0,0",
-  "0,7",
-  "0,14",
-  "7,0",
-  "7,14",
-  "14,0",
-  "14,7",
-  "14,14",
-]);
+// ZAP bonus squares on the board (+21 points)
+const ZAP_SQUARES = new Set(["0,0", "0,14", "7,7", "14,0", "14,14"]);
 
-// Double Word squares on the board (including center star)
+// Double Word squares on the board
 const DW_SQUARES = new Set([
-  "1,1",
+  "7,1",
   "2,2",
-  "3,3",
-  "4,4",
-  "10,10",
-  "11,11",
-  "12,12",
-  "13,13",
-  "1,13",
-  "2,12",
-  "3,11",
-  "4,10",
-  "10,4",
-  "11,3",
   "12,2",
-  "13,1",
-  "7,7", // center star
+  "1,7",
+  "13,7",
+  "2,12",
+  "12,12",
+  "7,13",
 ]);
 
 /**
@@ -68,14 +50,14 @@ export function detectAchievement(
     };
   }
 
-  // Check for triple word - any placed tile on a TW square
-  const hitsTW = coords.some((c) => TW_SQUARES.has(c));
-  if (hitsTW) {
+  // Check for ZAP bonus - any placed tile on a ZAP square
+  const hitsZap = coords.some((c) => ZAP_SQUARES.has(c));
+  if (hitsZap) {
     return {
-      type: "triple-word",
+      type: "zap-bonus",
       word,
       score,
-      message: "Triple Word Score!",
+      message: "ZAP Bonus! +21 points!",
     };
   }
 

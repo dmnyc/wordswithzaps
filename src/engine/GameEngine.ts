@@ -281,8 +281,8 @@ export class GameEngine {
    */
   static isGameOver(
     state: GameState,
-    p1Rack: string[],
-    p2Rack: string[],
+    _p1Rack: string[],
+    _p2Rack: string[],
   ): boolean {
     // Game over if both players pass consecutively
     const recentHistory = state.scoring.history.slice(-2);

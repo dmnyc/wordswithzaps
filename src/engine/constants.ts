@@ -1,8 +1,8 @@
-export const BOARD_SIZE = 13;
+export const BOARD_SIZE = 15;
 export const RACK_SIZE = 7;
 export const BINGO_BONUS = 42;
 export const ZAP_BONUS_POINTS = 21;
-export const CENTER_POSITION = { x: 6, y: 6 };
+export const CENTER_POSITION = { x: 7, y: 7 };
 
 // Letter point values (Words With Zaps)
 export const LETTER_VALUES: Record<string, number> = {
@@ -35,13 +35,13 @@ export const LETTER_VALUES: Record<string, number> = {
   BLANK: 0,
 };
 
-// Tile distribution (Words With Zaps - 98 tiles total)
+// Tile distribution (Words With Zaps - 99 tiles total)
 export const TILE_DISTRIBUTION: Record<string, number> = {
-  A: 10,
+  A: 9,
   B: 2,
   C: 2,
   D: 3,
-  E: 12,
+  E: 11,
   F: 2,
   G: 2,
   H: 2,
@@ -63,63 +63,64 @@ export const TILE_DISTRIBUTION: Record<string, number> = {
   X: 1,
   Y: 2,
   Z: 1,
-  BLANK: 2,
+  BLANK: 4,
 };
 
 // Board multiplier types
 export type MultiplierType = "DL" | "QL" | "DW" | "ZAP" | null;
 
 // Zap bonus positions (+21 per word, only on newly placed tiles)
+// Format: [x, y] where x=column, y=row
 const ZAP_BONUS: [number, number][] = [
-  [0, 0],
-  [0, 6],
-  [0, 12],
-  [6, 0],
-  [6, 6],
-  [6, 12],
-  [12, 0],
-  [12, 6],
-  [12, 12],
+  [0, 0], // top-left
+  [14, 0], // top-right
+  [7, 7], // center
+  [0, 14], // bottom-left
+  [14, 14], // bottom-right
 ];
 
 // Double Word Score positions
 const DOUBLE_WORD: [number, number][] = [
-  [2, 2],
-  [2, 10],
-  [10, 2],
-  [10, 10],
-  [4, 4],
-  [4, 8],
-  [8, 4],
-  [8, 8],
+  [7, 1], // row 1
+  [2, 2], // row 2
+  [12, 2],
+  [1, 7], // row 7
+  [13, 7],
+  [2, 12], // row 12
+  [12, 12],
+  [7, 13], // row 13
 ];
 
 // Quadruple Letter Score positions
 const QUAD_LETTER: [number, number][] = [
-  [4, 2],
-  [8, 2],
-  [2, 4],
-  [10, 4],
-  [2, 8],
-  [10, 8],
-  [4, 10],
-  [8, 10],
+  [4, 0], // row 0
+  [10, 0],
+  [0, 4], // row 4
+  [7, 4],
+  [14, 4],
+  [4, 7], // row 7
+  [10, 7],
+  [0, 10], // row 10
+  [7, 10],
+  [14, 10],
+  [4, 14], // row 14
+  [10, 14],
 ];
 
 // Double Letter Score positions
 const DOUBLE_LETTER: [number, number][] = [
-  [0, 3],
-  [0, 9],
-  [3, 0],
-  [9, 0],
-  [3, 12],
-  [9, 12],
-  [12, 3],
-  [12, 9],
-  [6, 3],
-  [6, 9],
-  [3, 6],
-  [9, 6],
+  [5, 3], // row 3
+  [9, 3],
+  [3, 5], // row 5
+  [11, 5],
+  [6, 6], // row 6
+  [8, 6],
+  [6, 8], // row 8
+  [8, 8],
+  [3, 9], // row 9
+  [11, 9],
+  [5, 11], // row 11
+  [9, 11],
 ];
 
 // Build a lookup map for board multipliers
