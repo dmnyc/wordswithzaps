@@ -23,9 +23,11 @@ interface NavBarProps {
   walletType?: WalletProviderType;
   onOpenWalletSettings?: () => void;
   onOpenProfileSettings?: () => void;
+  onOpenAbout?: () => void;
   onShareGame?: () => void;
   connectionMethod?: "nip07" | "private-key" | "nip46" | null;
   relayCount?: number;
+  onOpenRelayList?: () => void;
 }
 
 function WalletTypeIcon({ walletType }: { walletType?: WalletProviderType }) {
@@ -52,9 +54,11 @@ export function NavBar({
   walletType,
   onOpenWalletSettings,
   onOpenProfileSettings,
+  onOpenAbout,
   onShareGame,
   connectionMethod,
   relayCount,
+  onOpenRelayList,
 }: NavBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
@@ -294,6 +298,17 @@ export function NavBar({
                 Zap to support!
               </button>
             )}
+            {onOpenAbout && (
+              <button
+                className="menu-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenAbout();
+                }}
+              >
+                About
+              </button>
+            )}
 
             <div className="menu-section">
               <div className="menu-section-title">Connection</div>
@@ -311,7 +326,20 @@ export function NavBar({
               </div>
               <div className="menu-info-row">
                 <span>Relays</span>
-                <span>{relayCount ?? 0}</span>
+                {onOpenRelayList ? (
+                  <button
+                    className="menu-link"
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onOpenRelayList();
+                    }}
+                  >
+                    {relayCount ?? 0}
+                  </button>
+                ) : (
+                  <span>{relayCount ?? 0}</span>
+                )}
               </div>
             </div>
             <button

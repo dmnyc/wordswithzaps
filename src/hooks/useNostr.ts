@@ -11,6 +11,8 @@ import {
   getCurrentUser,
   isConnected,
   getConnectedRelayCount,
+  getRelayUrls,
+  getConnectedRelayUrls,
   disconnect,
 } from "../nostr/client";
 
@@ -29,6 +31,8 @@ export interface UseNostrReturn {
   error: string | null;
   authMethod: AuthMethod;
   relayCount: number;
+  relayUrls: string[];
+  connectedRelayUrls: string[];
   connect: () => Promise<void>;
   connectWithPrivateKey: (privateKeyHex: string) => Promise<void>;
   connectWithBunker: (bunkerUri: string) => Promise<void>;
@@ -52,6 +56,8 @@ export function useNostr(): UseNostrReturn {
   const [error, setError] = useState<string | null>(null);
   const [authMethod, setAuthMethod] = useState<AuthMethod>(null);
   const [relayCount, setRelayCount] = useState(0);
+  const [relayUrls, setRelayUrls] = useState<string[]>([]);
+  const [connectedRelayUrls, setConnectedRelayUrls] = useState<string[]>([]);
   const nostrConnectCancelledRef = useRef(false);
 
   // Check for existing connection on mount
@@ -283,6 +289,8 @@ export function useNostr(): UseNostrReturn {
     setError(null);
     setAuthMethod(null);
     setRelayCount(0);
+    setRelayUrls([]);
+    setConnectedRelayUrls([]);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(AUTO_CONNECT_KEY);
       window.localStorage.removeItem(LAST_PUBKEY_KEY);
@@ -303,6 +311,8 @@ export function useNostr(): UseNostrReturn {
     }
     const updateCount = () => {
       setRelayCount(getConnectedRelayCount());
+      setRelayUrls(getRelayUrls());
+      setConnectedRelayUrls(getConnectedRelayUrls());
     };
     updateCount();
     const intervalId = window.setInterval(updateCount, 5000);
@@ -316,6 +326,8 @@ export function useNostr(): UseNostrReturn {
     error,
     authMethod,
     relayCount,
+    relayUrls,
+    connectedRelayUrls,
     connect,
     connectWithPrivateKey,
     connectWithBunker,

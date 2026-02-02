@@ -110,6 +110,7 @@
 
 .rules-btn,
 .share-btn,
+.relay-btn,
 .forfeit-btn {
     display: flex;
     align-items: center;
@@ -125,12 +126,14 @@
 
 .rules-btn:hover,
 .share-btn:hover,
+.relay-btn:hover,
 .forfeit-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.14);
 }
 
 .rules-icon,
-.share-icon {
+.share-icon,
+.relay-icon {
     width: 16px;
     height: 16px;
     color: var(--text-muted);

@@ -32,6 +32,7 @@ interface GameViewProps {
   onToast?: (message: string, tone?: "success" | "error" | "info") => void;
   onOpenCreatorZap?: () => void;
   onOpenWalletSettings?: () => void;
+  onOpenRelayList?: () => void;
 }
 
 type WordScorePop = {
@@ -48,6 +49,7 @@ export function GameView({
   onToast,
   onOpenCreatorZap,
   onOpenWalletSettings,
+  onOpenRelayList,
 }: GameViewProps) {
   void _onShareGame; // Reserved for share UI
   const {
@@ -780,6 +782,7 @@ export function GameView({
           currentUserPubkey={myPubkey}
           onShare={handleCopyLink}
           onShowRules={() => setShowRulesModal(true)}
+          onShowRelays={onOpenRelayList}
           onForfeit={
             gameState.meta.status === "active" ? handleForfeit : undefined
           }

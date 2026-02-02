@@ -415,9 +415,12 @@ function FundsView({
                       className="wallet-input"
                       placeholder="Enter amount in sats"
                       value={receiveAmount}
-                      onChange={(e) => setReceiveAmount(e.target.value)}
+                      onChange={(e) =>
+                        setReceiveAmount(e.target.value.slice(0, 8))
+                      }
                       disabled={loading}
                       min="1"
+                      maxLength={8}
                       autoFocus
                     />
                   </div>
@@ -502,9 +505,10 @@ function FundsView({
                 className="wallet-input"
                 placeholder="Enter amount"
                 value={sendAmount}
-                onChange={(e) => setSendAmount(e.target.value)}
+                onChange={(e) => setSendAmount(e.target.value.slice(0, 8))}
                 disabled={loading}
                 min="1"
+                maxLength={8}
               />
             </div>
           )}

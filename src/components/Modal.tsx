@@ -5,6 +5,7 @@ import "./Modal.css";
 interface ModalProps {
   open: boolean;
   title?: string;
+  titleClassName?: string;
   ariaLabel?: string;
   onClose: () => void;
   children?: ReactNode;
@@ -14,6 +15,7 @@ interface ModalProps {
 export function Modal({
   open,
   title,
+  titleClassName,
   ariaLabel,
   onClose,
   children,
@@ -59,7 +61,10 @@ export function Modal({
           className={`wwz-modal-header ${title ? "" : "wwz-modal-header--solo"}`}
         >
           {title && (
-            <h2 className="wwz-modal-title" id={titleId}>
+            <h2
+              className={`wwz-modal-title ${titleClassName || ""}`}
+              id={titleId}
+            >
               {title}
             </h2>
           )}

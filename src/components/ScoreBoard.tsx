@@ -18,6 +18,7 @@ interface ScoreBoardProps {
   onShare?: () => void;
   onForfeit?: () => void;
   onShowRules?: () => void;
+  onShowRelays?: () => void;
   forfeitDisabled?: boolean;
 }
 
@@ -34,6 +35,7 @@ export function ScoreBoard({
   onShare,
   onForfeit,
   onShowRules,
+  onShowRelays,
   forfeitDisabled = false,
 }: ScoreBoardProps) {
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
@@ -136,6 +138,27 @@ export function ScoreBoard({
               </svg>
             </button>
           )}
+          {onShowRelays && (
+            <button
+              className="relay-btn"
+              onClick={onShowRelays}
+              title="Show relays"
+            >
+              <svg
+                className="relay-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="5" cy="12" r="3" />
+                <circle cx="19" cy="5" r="3" />
+                <circle cx="19" cy="19" r="3" />
+                <path d="M7.5 10.5 16 6.5" />
+                <path d="M7.5 13.5 16 17.5" />
+              </svg>
+            </button>
+          )}
           {onForfeit && (
             <button
               className="forfeit-btn"
@@ -209,6 +232,27 @@ export function ScoreBoard({
                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
                 <polyline points="16 6 12 2 8 6" />
                 <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            </button>
+          )}
+          {onShowRelays && (
+            <button
+              className="relay-btn"
+              onClick={onShowRelays}
+              title="Show relays"
+            >
+              <svg
+                className="relay-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="5" cy="12" r="3" />
+                <circle cx="19" cy="5" r="3" />
+                <circle cx="19" cy="19" r="3" />
+                <path d="M7.5 10.5 16 6.5" />
+                <path d="M7.5 13.5 16 17.5" />
               </svg>
             </button>
           )}

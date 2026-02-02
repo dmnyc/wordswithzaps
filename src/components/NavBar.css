@@ -255,6 +255,21 @@
     font-weight: 600;
 }
 
+.menu-link {
+    background: transparent;
+    border: none;
+    color: #ffcc00;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+}
+
+.menu-link:hover {
+    color: #ffe070;
+}
+
 .menu-section-title {
     font-size: 11px;
     text-transform: uppercase;

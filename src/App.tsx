@@ -12,6 +12,8 @@ import NavBar from "./components/NavBar";
 import WalletSettings from "./components/WalletSettings";
 import ProfileSettings from "./components/ProfileSettings";
 import CreatorZapModal from "./components/CreatorZapModal";
+import AboutModal from "./components/AboutModal";
+import RelayListModal from "./components/RelayListModal";
 import { sendPayment } from "./wallet/walletManager";
 import "./index.css";
 
@@ -50,6 +52,8 @@ function App() {
     error,
     authMethod,
     relayCount,
+    relayUrls,
+    connectedRelayUrls,
   } = useNostr();
   const {
     state: walletState,
@@ -61,6 +65,8 @@ function App() {
   const [showWalletSettings, setShowWalletSettings] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showCreatorZapModal, setShowCreatorZapModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showRelayListModal, setShowRelayListModal] = useState(false);
   const walletType = activeWallet
     ? activeWallet.kind === WalletKind.SPARK
       ? "spark"
@@ -91,6 +97,22 @@ function App() {
 
   const handleCloseCreatorZap = useCallback(() => {
     setShowCreatorZapModal(false);
+  }, []);
+
+  const handleOpenAbout = useCallback(() => {
+    setShowAboutModal(true);
+  }, []);
+
+  const handleCloseAbout = useCallback(() => {
+    setShowAboutModal(false);
+  }, []);
+
+  const handleOpenRelayList = useCallback(() => {
+    setShowRelayListModal(true);
+  }, []);
+
+  const handleCloseRelayList = useCallback(() => {
+    setShowRelayListModal(false);
   }, []);
 
   const showToast = useCallback(
@@ -374,8 +396,10 @@ function App() {
             walletType={walletType}
             onOpenWalletSettings={handleOpenWalletSettings}
             onOpenProfileSettings={handleOpenProfileSettings}
+            onOpenAbout={handleOpenAbout}
             connectionMethod={authMethod}
             relayCount={relayCount}
+            onOpenRelayList={handleOpenRelayList}
           />
           <Lobby
             onGameStart={handleGameStart}
@@ -398,8 +422,10 @@ function App() {
             walletType={walletType}
             onOpenWalletSettings={handleOpenWalletSettings}
             onOpenProfileSettings={handleOpenProfileSettings}
+            onOpenAbout={handleOpenAbout}
             connectionMethod={authMethod}
             relayCount={relayCount}
+            onOpenRelayList={handleOpenRelayList}
           />
           <GameView
             gameId={gameSession.gameId}
@@ -407,6 +433,7 @@ function App() {
             onToast={showToast}
             onOpenCreatorZap={handleOpenCreatorZap}
             onOpenWalletSettings={handleOpenWalletSettings}
+            onOpenRelayList={handleOpenRelayList}
           />
         </>
       )}
@@ -433,6 +460,19 @@ function App() {
         walletConnected={walletReady}
         onClose={handleCloseCreatorZap}
         onSendZap={handleZapCreator}
+      />
+
+      <AboutModal
+        open={showAboutModal}
+        onClose={handleCloseAbout}
+        onZapCreator={handleOpenCreatorZap}
+      />
+
+      <RelayListModal
+        open={showRelayListModal}
+        relays={relayUrls}
+        connectedRelays={connectedRelayUrls}
+        onClose={handleCloseRelayList}
       />
     </div>
   );

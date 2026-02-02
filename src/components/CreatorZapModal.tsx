@@ -82,21 +82,8 @@ export function CreatorZapModal({
     <Modal
       open={open}
       title="Zap the creator"
+      titleClassName="title-yellow"
       onClose={onClose}
-      footer={
-        walletConnected ? (
-          <div className="wwz-modal-actions">
-            <button
-              className="wwz-modal-btn primary"
-              type="button"
-              onClick={handleSend}
-              disabled={isSending || customAmountInvalid || resolvedAmount <= 0}
-            >
-              {isSending ? "Sending..." : "Send zap"}
-            </button>
-          </div>
-        ) : undefined
-      }
     >
       <div className="creator-zap-body">
         <div className="creator-qr">
@@ -118,54 +105,32 @@ export function CreatorZapModal({
         <p className="creator-hint">
           Scan the code to zap from another wallet.
         </p>
-      </div>
 
-      {walletConnected && (
-        <div className="creator-zap-amounts">
-          <div className="creator-zap-title">Zap amount</div>
-          <div className="zap-amounts">
-            <button
-              className={`zap-amount-btn ${selectedAmount === 0 ? "active" : ""}`}
-              onClick={() => setSelectedAmount(0)}
-              type="button"
-            >
-              No zap
-            </button>
-            {PRESET_AMOUNTS.map((amount) => (
-              <button
-                key={amount}
-                className={`zap-amount-btn ${selectedAmount === amount ? "active" : ""}`}
-                onClick={() => setSelectedAmount(amount)}
-                type="button"
-              >
-                {amount}
-              </button>
-            ))}
-            <button
-              className={`zap-amount-btn ${selectedAmount === "custom" ? "active" : ""}`}
-              onClick={() => setSelectedAmount("custom")}
-              type="button"
-            >
-              Custom
-            </button>
-          </div>
-          {selectedAmount === "custom" && (
-            <div className="zap-custom-row">
-              {customAmountInvalid && (
-                <span className="zap-custom-error">Enter a zap amount.</span>
-              )}
-              <input
-                className="zap-custom-input"
-                type="number"
-                min={1}
-                placeholder="Custom sats"
-                value={customAmount}
-                onChange={(event) => setCustomAmount(event.target.value)}
-              />
-            </div>
-          )}
+        <div className="creator-zap-inline">
+          <input
+            className="creator-zap-input"
+            type="number"
+            min={1}
+            maxLength={8}
+            placeholder="sats"
+            value={customAmount}
+            onChange={(event) => {
+              const val = event.target.value.slice(0, 8);
+              setCustomAmount(val);
+              setSelectedAmount("custom");
+            }}
+          />
+          <button
+            className="creator-zap-btn"
+            type="button"
+            onClick={handleSend}
+            disabled={!walletConnected || isSending || customAmountValue <= 0}
+          >
+            {isSending ? "Sending..." : "Zap"}
+          </button>
         </div>
-      )}
+        <p className="creator-hint">Send from your connected wallet.</p>
+      </div>
     </Modal>
   );
 }

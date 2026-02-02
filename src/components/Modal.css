@@ -37,6 +37,10 @@
     color: var(--text);
 }
 
+.wwz-modal-title.title-yellow {
+    color: #f7b500;
+}
+
 .wwz-modal-close {
     display: inline-flex;
     align-items: center;

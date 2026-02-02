@@ -422,11 +422,22 @@ export async function fetchUserRelayList(pubkey: string): Promise<string[]> {
  */
 export function getExpandedRelayList(
   userRelays: string[],
-  maxRelays: number = 8,
+  maxRelays: number = 12,
 ): string[] {
   const relaySet = new Set<string>();
+  const pinnedRelays = [
+    "wss://relay.damus.io",
+    "wss://relay.primal.net",
+    "wss://nos.lol",
+  ];
 
-  // Add user relays first (more likely to have user's data)
+  // Always include core game relays so existing games stay visible
+  for (const relay of pinnedRelays) {
+    const normalized = relay.trim().toLowerCase().replace(/\/+$/, "");
+    relaySet.add(normalized);
+  }
+
+  // Add user relays next (more likely to have user's data)
   for (const relay of userRelays) {
     if (relaySet.size >= maxRelays) break;
     // Normalize: lowercase, remove trailing slashes
@@ -481,6 +492,7 @@ export async function loadUserRelays(pubkey: string): Promise<string[]> {
     console.log("Found user relays (NIP-65):", userRelays);
     // Get combined list with defaults
     const expandedRelays = getExpandedRelayList(userRelays);
+    console.log("Expanded relays (NIP-65 + defaults):", expandedRelays);
     // Add any new relays to the pool
     await addRelaysToPool(expandedRelays);
     return expandedRelays;
@@ -506,6 +518,34 @@ export function getConnectedRelayCount(): number {
     return ndkInstance.pool.connectedRelays().length;
   } catch {
     return 0;
+  }
+}
+
+/**
+ * Get relay URLs currently in the NDK pool
+ */
+export function getRelayUrls(): string[] {
+  if (!ndkInstance) return [];
+  try {
+    return Array.from(ndkInstance.pool.relays.keys()).sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Get connected relay URLs
+ */
+export function getConnectedRelayUrls(): string[] {
+  if (!ndkInstance) return [];
+  try {
+    return ndkInstance.pool
+      .connectedRelays()
+      .map((relay) => relay.url)
+      .filter(Boolean)
+      .sort();
+  } catch {
+    return [];
   }
 }
 
@@ -558,10 +598,45 @@ export function subscribeToEvents(
 /**
  * Fetch events matching a filter (one-time query)
  */
+const FETCH_EVENTS_TIMEOUT_MS = 6000;
+
+/**
+ * Fetch events matching a filter (one-time query)
+ * Uses a timeout to avoid hanging if relays never send EOSE.
+ */
 export async function fetchEvents(filter: NDKFilter): Promise<NDKEvent[]> {
   const ndk = getNDK();
-  const events = await ndk.fetchEvents(filter);
-  return Array.from(events);
+
+  return new Promise((resolve) => {
+    const events = new Map<string, NDKEvent>();
+    const subscription = ndk.subscribe(filter, { closeOnEose: true });
+    let settled = false;
+
+    const finalize = () => {
+      if (settled) return;
+      settled = true;
+      subscription.stop();
+      resolve(Array.from(events.values()));
+    };
+
+    const timeoutId = setTimeout(() => {
+      console.warn("fetchEvents timed out, returning partial results", filter);
+      finalize();
+    }, FETCH_EVENTS_TIMEOUT_MS);
+
+    subscription.on("event", (event: NDKEvent) => {
+      const dedupKey =
+        typeof event.deduplicationKey === "function"
+          ? event.deduplicationKey()
+          : event.id;
+      events.set(dedupKey, event);
+    });
+
+    subscription.on("eose", () => {
+      clearTimeout(timeoutId);
+      finalize();
+    });
+  });
 }
 
 /**
