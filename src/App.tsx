@@ -10,7 +10,11 @@ import Lobby from "./components/Lobby";
 import GameView from "./components/GameView";
 import NavBar from "./components/NavBar";
 import WalletSettings from "./components/WalletSettings";
+import ProfileSettings from "./components/ProfileSettings";
 import CreatorZapModal from "./components/CreatorZapModal";
+import AboutModal from "./components/AboutModal";
+import RelayListModal from "./components/RelayListModal";
+import ZapAnimation from "./components/ZapAnimation";
 import { sendPayment } from "./wallet/walletManager";
 import "./index.css";
 
@@ -39,10 +43,18 @@ function App() {
     user,
     disconnect,
     connect,
+    connectWithPrivateKey,
+    connectWithBunker,
+    generateKeypair,
+    startNostrConnect,
+    waitForNostrConnect,
+    cancelNostrConnect,
     isConnecting,
     error,
-    connectionMethod,
+    authMethod,
     relayCount,
+    relayUrls,
+    connectedRelayUrls,
   } = useNostr();
   const {
     state: walletState,
@@ -52,7 +64,12 @@ function App() {
     refreshBalance,
   } = useWallet();
   const [showWalletSettings, setShowWalletSettings] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [showCreatorZapModal, setShowCreatorZapModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showRelayListModal, setShowRelayListModal] = useState(false);
+  const [showZapAnimation, setShowZapAnimation] = useState(false);
+  const creatorZapReturnRef = useRef<null | (() => void)>(null);
   const walletType = activeWallet
     ? activeWallet.kind === WalletKind.SPARK
       ? "spark"
@@ -69,12 +86,42 @@ function App() {
     setShowWalletSettings(false);
   }, []);
 
-  const handleOpenCreatorZap = useCallback(() => {
+  const handleOpenProfileSettings = useCallback(() => {
+    setShowProfileSettings(true);
+  }, []);
+
+  const handleCloseProfileSettings = useCallback(() => {
+    setShowProfileSettings(false);
+  }, []);
+
+  const handleOpenCreatorZap = useCallback((onReturn?: () => void) => {
+    creatorZapReturnRef.current = onReturn || null;
     setShowCreatorZapModal(true);
   }, []);
 
   const handleCloseCreatorZap = useCallback(() => {
     setShowCreatorZapModal(false);
+    const returnCallback = creatorZapReturnRef.current;
+    creatorZapReturnRef.current = null;
+    if (returnCallback) {
+      returnCallback();
+    }
+  }, []);
+
+  const handleOpenAbout = useCallback(() => {
+    setShowAboutModal(true);
+  }, []);
+
+  const handleCloseAbout = useCallback(() => {
+    setShowAboutModal(false);
+  }, []);
+
+  const handleOpenRelayList = useCallback(() => {
+    setShowRelayListModal(true);
+  }, []);
+
+  const handleCloseRelayList = useCallback(() => {
+    setShowRelayListModal(false);
   }, []);
 
   const showToast = useCallback(
@@ -93,7 +140,7 @@ function App() {
 
   const handleZapCreator = useCallback(
     async (amount: number) => {
-      const result = await sendPayment("thedaniel@breez.tips", {
+      const result = await sendPayment("daniel@breez.tips", {
         amount,
         comment: "Words With Zaps - thanks for the game!",
       });
@@ -102,6 +149,7 @@ function App() {
         showToast(message, "error");
         throw new Error(message);
       }
+      setShowZapAnimation(true);
       showToast(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
     },
     [showToast],
@@ -124,6 +172,7 @@ function App() {
         if (!dict.isLoaded()) {
           const candidates = [
             import.meta.env.VITE_DICTIONARY_URL,
+            "/dictionaries/wwzwords1.txt",
             "/dictionaries/sowpods.txt",
             "/dictionaries/csw21.txt",
             "/dictionaries/nwl2023.txt",
@@ -324,7 +373,7 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app ${screen === "game" ? "game-mode" : ""}`}>
       {dictionaryError && (
         <div className="dictionary-warning">{dictionaryError}</div>
       )}
@@ -336,6 +385,12 @@ function App() {
           isConnecting={isConnecting}
           error={error}
           connect={connect}
+          connectWithPrivateKey={connectWithPrivateKey}
+          connectWithBunker={connectWithBunker}
+          generateKeypair={generateKeypair}
+          startNostrConnect={startNostrConnect}
+          waitForNostrConnect={waitForNostrConnect}
+          cancelNostrConnect={cancelNostrConnect}
         />
       )}
 
@@ -350,8 +405,11 @@ function App() {
             walletLoading={walletState.loading}
             walletType={walletType}
             onOpenWalletSettings={handleOpenWalletSettings}
-            connectionMethod={connectionMethod}
+            onOpenProfileSettings={handleOpenProfileSettings}
+            onOpenAbout={handleOpenAbout}
+            connectionMethod={authMethod}
             relayCount={relayCount}
+            onOpenRelayList={handleOpenRelayList}
           />
           <Lobby
             onGameStart={handleGameStart}
@@ -373,14 +431,19 @@ function App() {
             walletLoading={walletState.loading}
             walletType={walletType}
             onOpenWalletSettings={handleOpenWalletSettings}
-            connectionMethod={connectionMethod}
+            onOpenProfileSettings={handleOpenProfileSettings}
+            onOpenAbout={handleOpenAbout}
+            connectionMethod={authMethod}
             relayCount={relayCount}
+            onOpenRelayList={handleOpenRelayList}
           />
           <GameView
             gameId={gameSession.gameId}
             opponentPubkey={gameSession.opponentPubkey}
             onToast={showToast}
             onOpenCreatorZap={handleOpenCreatorZap}
+            onOpenWalletSettings={handleOpenWalletSettings}
+            onOpenRelayList={handleOpenRelayList}
           />
         </>
       )}
@@ -395,12 +458,38 @@ function App() {
         <WalletSettings onClose={handleCloseWalletSettings} />
       )}
 
+      {showProfileSettings && (
+        <ProfileSettings
+          onClose={handleCloseProfileSettings}
+          onToast={showToast}
+        />
+      )}
+
       <CreatorZapModal
         open={showCreatorZapModal}
-        walletConnected={walletReady}
+        walletConnected={
+          walletReady || walletState.connected || bitcoinConnectConnected
+        }
         onClose={handleCloseCreatorZap}
         onSendZap={handleZapCreator}
       />
+
+      <AboutModal
+        open={showAboutModal}
+        onClose={handleCloseAbout}
+        onZapCreator={handleOpenCreatorZap}
+      />
+
+      <RelayListModal
+        open={showRelayListModal}
+        relays={relayUrls}
+        connectedRelays={connectedRelayUrls}
+        onClose={handleCloseRelayList}
+      />
+
+      {showZapAnimation && (
+        <ZapAnimation onComplete={() => setShowZapAnimation(false)} />
+      )}
     </div>
   );
 }

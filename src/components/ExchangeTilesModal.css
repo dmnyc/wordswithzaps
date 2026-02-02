@@ -1,0 +1,32 @@
+.exchange-modal-content {
+    display: grid;
+    gap: 12px;
+}
+
+.exchange-modal-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+    margin: 0;
+}
+
+.exchange-modal-rack {
+    display: flex;
+    justify-content: center;
+}
+
+.exchange-modal-count {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.exchange-modal-actions {
+    margin-top: 16px;
+}
+
+@media (max-width: 520px) {
+    .exchange-modal-content {
+        gap: 10px;
+    }
+}

@@ -1,0 +1,80 @@
+.about-modal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 10px 24px 24px;
+}
+
+.about-logo {
+    width: 170px;
+    height: auto;
+    margin-bottom: 18px;
+}
+
+.about-description {
+    color: #999;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0 0 16px;
+    max-width: 340px;
+}
+
+.about-creator {
+    color: #777;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.about-creator-link {
+    color: #f7b500;
+    text-decoration: none;
+}
+
+.about-creator-link:hover {
+    text-decoration: underline;
+}
+
+.about-version {
+    color: #555;
+    font-size: 11px;
+    margin-bottom: 20px;
+}
+
+.about-links {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.about-link {
+    flex: 1;
+    display: block;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    border-radius: 8px;
+    color: #ccc;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.about-link:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.about-link-btn {
+    font-family: inherit;
+    background: #f7b500;
+    color: #000;
+}
+
+.about-link-btn:hover {
+    background: #ffc520;
+    color: #000;
+}

@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import type { WalletProviderType } from "../types/wallet";
-import {
-  getDisableGameplayZaps,
-  setDisableGameplayZaps,
-  getShareToNostrDefault,
-  setShareToNostrDefault,
-} from "../settings/appSettings";
+
 import {
   SparkLogo,
   NwcLogo,
@@ -27,9 +22,12 @@ interface NavBarProps {
   walletLoading?: boolean;
   walletType?: WalletProviderType;
   onOpenWalletSettings?: () => void;
+  onOpenProfileSettings?: () => void;
+  onOpenAbout?: () => void;
   onShareGame?: () => void;
-  connectionMethod?: "NIP-07" | "NIP-46" | null;
+  connectionMethod?: "nip07" | "private-key" | "nip46" | null;
   relayCount?: number;
+  onOpenRelayList?: () => void;
 }
 
 function WalletTypeIcon({ walletType }: { walletType?: WalletProviderType }) {
@@ -55,9 +53,12 @@ export function NavBar({
   walletLoading: _walletLoading,
   walletType,
   onOpenWalletSettings,
+  onOpenProfileSettings,
+  onOpenAbout,
   onShareGame,
   connectionMethod,
   relayCount,
+  onOpenRelayList,
 }: NavBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
@@ -69,12 +70,7 @@ export function NavBar({
       return false;
     }
   });
-  const [zapsDisabled, setZapsDisabled] = useState(() =>
-    getDisableGameplayZaps(),
-  );
-  const [shareToNostr, setShareToNostr] = useState(() =>
-    getShareToNostrDefault(),
-  );
+
   const [profileSnapshot, setProfileSnapshot] = useState<Record<
     string,
     unknown
@@ -100,14 +96,6 @@ export function NavBar({
       // Ignore storage errors
     }
   }, [hideBalance]);
-
-  useEffect(() => {
-    setDisableGameplayZaps(zapsDisabled);
-  }, [zapsDisabled]);
-
-  useEffect(() => {
-    setShareToNostrDefault(shareToNostr);
-  }, [shareToNostr]);
 
   useEffect(() => {
     if (!user) {
@@ -225,13 +213,13 @@ export function NavBar({
                   </button>
                 )}
                 <button
-                  className="menu-item"
+                  className="menu-item open-wallet"
                   onClick={() => {
                     setWalletMenuOpen(false);
                     onOpenWalletSettings();
                   }}
                 >
-                  Wallet Settings
+                  Open Wallet
                 </button>
               </div>
             )}
@@ -288,6 +276,17 @@ export function NavBar({
                 Back to Lobby
               </button>
             )}
+            {onOpenProfileSettings && (
+              <button
+                className="menu-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenProfileSettings();
+                }}
+              >
+                Edit Profile
+              </button>
+            )}
             {onOpenSupportZap && (
               <button
                 className="menu-item support"
@@ -299,34 +298,48 @@ export function NavBar({
                 Zap to support!
               </button>
             )}
-            <div className="menu-section">
-              <div className="menu-section-title">App Settings</div>
-              <label className="menu-toggle">
-                <input
-                  type="checkbox"
-                  checked={zapsDisabled}
-                  onChange={() => setZapsDisabled((prev) => !prev)}
-                />
-                <span>Disable gameplay zaps</span>
-              </label>
-              <label className="menu-toggle">
-                <input
-                  type="checkbox"
-                  checked={shareToNostr}
-                  onChange={() => setShareToNostr((prev) => !prev)}
-                />
-                <span>Share turns to Nostr</span>
-              </label>
-            </div>
+            {onOpenAbout && (
+              <button
+                className="menu-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenAbout();
+                }}
+              >
+                About
+              </button>
+            )}
+
             <div className="menu-section">
               <div className="menu-section-title">Connection</div>
               <div className="menu-info-row">
-                <span>Connect method</span>
-                <span>{connectionMethod || "—"}</span>
+                <span>Method</span>
+                <span>
+                  {connectionMethod === "nip07"
+                    ? "Extension"
+                    : connectionMethod === "private-key"
+                      ? "Private Key"
+                      : connectionMethod === "nip46"
+                        ? "Remote Signer"
+                        : "—"}
+                </span>
               </div>
               <div className="menu-info-row">
-                <span>Relays connected</span>
-                <span>{relayCount ?? 0}</span>
+                <span>Relays</span>
+                {onOpenRelayList ? (
+                  <button
+                    className="menu-link"
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onOpenRelayList();
+                    }}
+                  >
+                    {relayCount ?? 0}
+                  </button>
+                ) : (
+                  <span>{relayCount ?? 0}</span>
+                )}
               </div>
             </div>
             <button

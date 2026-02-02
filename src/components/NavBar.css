@@ -255,6 +255,21 @@
     font-weight: 600;
 }
 
+.menu-link {
+    background: transparent;
+    border: none;
+    color: #ffcc00;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+}
+
+.menu-link:hover {
+    color: #ffe070;
+}
+
 .menu-section-title {
     font-size: 11px;
     text-transform: uppercase;
@@ -315,7 +330,16 @@
     background: rgba(255, 204, 0, 0.12);
 }
 
-@media (max-width: 720px) {
+.menu-item.open-wallet {
+    color: #f7b500;
+    font-weight: 600;
+}
+
+.menu-item.open-wallet:hover {
+    background: rgba(247, 181, 0, 0.12);
+}
+
+@media (max-width: 900px) {
     .nav-logo.full {
         display: none;
     }

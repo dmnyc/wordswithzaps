@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import qrcode from "qrcode-generator";
+import { QRCodeSVG } from "qrcode.react";
 import {
   getZapNudgeDefaultAmount,
   setZapNudgeDefaultAmount,
@@ -7,7 +7,7 @@ import {
 import Modal from "./Modal";
 import "./CreatorZapModal.css";
 
-const CREATOR_LIGHTNING_ADDRESS = "thedaniel@breez.tips";
+const CREATOR_LIGHTNING_ADDRESS = "daniel@breez.tips";
 const PRESET_AMOUNTS = [50, 100, 500, 1000];
 
 interface CreatorZapModalProps {
@@ -31,6 +31,7 @@ export function CreatorZapModal({
     return saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "";
   });
   const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -42,6 +43,7 @@ export function CreatorZapModal({
       saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "",
     );
     setIsSending(false);
+    setError(null);
   }, [open]);
 
   const customAmountValue = useMemo(() => {
@@ -66,19 +68,17 @@ export function CreatorZapModal({
   }, [customAmountValue, selectedAmount]);
 
   const qrValue = useMemo(() => `lightning:${CREATOR_LIGHTNING_ADDRESS}`, []);
-  const qrDataUrl = useMemo(() => {
-    const qr = qrcode(0, "M");
-    qr.addData(qrValue);
-    qr.make();
-    return qr.createDataURL(6, 2);
-  }, [qrValue]);
 
   const handleSend = async () => {
     if (!walletConnected || customAmountInvalid || resolvedAmount <= 0) return;
     setIsSending(true);
+    setError(null);
     try {
       await onSendZap(resolvedAmount);
       onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Zap failed";
+      setError(message);
     } finally {
       setIsSending(false);
     }
@@ -88,78 +88,56 @@ export function CreatorZapModal({
     <Modal
       open={open}
       title="Zap the creator"
+      titleClassName="title-yellow"
       onClose={onClose}
-      footer={
-        walletConnected ? (
-          <div className="wwz-modal-actions">
-            <button
-              className="wwz-modal-btn primary"
-              type="button"
-              onClick={handleSend}
-              disabled={isSending || customAmountInvalid || resolvedAmount <= 0}
-            >
-              {isSending ? "Sending..." : "Send zap"}
-            </button>
-          </div>
-        ) : undefined
-      }
     >
       <div className="creator-zap-body">
         <div className="creator-qr">
-          <img src={qrDataUrl} alt="Zap the creator" />
+          <QRCodeSVG
+            value={qrValue}
+            size={160}
+            level="M"
+            bgColor="#ffffff"
+            fgColor="#000000"
+            imageSettings={{
+              src: "/favicon.svg",
+              height: 32,
+              width: 32,
+              excavate: true,
+            }}
+          />
         </div>
         <div className="creator-address">{CREATOR_LIGHTNING_ADDRESS}</div>
         <p className="creator-hint">
           Scan the code to zap from another wallet.
         </p>
-      </div>
 
-      {walletConnected && (
-        <div className="creator-zap-amounts">
-          <div className="creator-zap-title">Zap amount</div>
-          <div className="zap-amounts">
-            <button
-              className={`zap-amount-btn ${selectedAmount === 0 ? "active" : ""}`}
-              onClick={() => setSelectedAmount(0)}
-              type="button"
-            >
-              No zap
-            </button>
-            {PRESET_AMOUNTS.map((amount) => (
-              <button
-                key={amount}
-                className={`zap-amount-btn ${selectedAmount === amount ? "active" : ""}`}
-                onClick={() => setSelectedAmount(amount)}
-                type="button"
-              >
-                {amount}
-              </button>
-            ))}
-            <button
-              className={`zap-amount-btn ${selectedAmount === "custom" ? "active" : ""}`}
-              onClick={() => setSelectedAmount("custom")}
-              type="button"
-            >
-              Custom
-            </button>
-          </div>
-          {selectedAmount === "custom" && (
-            <div className="zap-custom-row">
-              {customAmountInvalid && (
-                <span className="zap-custom-error">Enter a zap amount.</span>
-              )}
-              <input
-                className="zap-custom-input"
-                type="number"
-                min={1}
-                placeholder="Custom sats"
-                value={customAmount}
-                onChange={(event) => setCustomAmount(event.target.value)}
-              />
-            </div>
-          )}
+        <div className="creator-zap-inline">
+          <input
+            className="creator-zap-input"
+            type="number"
+            min={1}
+            maxLength={8}
+            placeholder="sats"
+            value={customAmount}
+            onChange={(event) => {
+              const val = event.target.value.slice(0, 8);
+              setCustomAmount(val);
+              setSelectedAmount("custom");
+            }}
+          />
+          <button
+            className="creator-zap-btn"
+            type="button"
+            onClick={handleSend}
+            disabled={!walletConnected || isSending || customAmountValue <= 0}
+          >
+            {isSending ? "Sending..." : "Zap"}
+          </button>
         </div>
-      )}
+        {error && <p className="creator-error">{error}</p>}
+        <p className="creator-hint">Send from your connected wallet.</p>
+      </div>
     </Modal>
   );
 }

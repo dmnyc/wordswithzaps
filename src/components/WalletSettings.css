@@ -196,30 +196,64 @@
 
 .wallet-balance {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
+    gap: 4px;
     background: rgba(255, 204, 0, 0.1);
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 24px;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 12px;
 }
 
 .balance-label {
-    color: #9a9a9a;
+    color: #7a7a7a;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .balance-amount {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     color: #ffcc00;
-    font-size: 20px;
-    font-weight: bold;
+    font-size: 32px;
+    font-weight: 700;
 }
 
 .balance-bolt {
-    height: 18px;
+    height: 24px;
     width: auto;
+}
+
+.balance-unit {
+    font-size: 14px;
+    font-weight: 500;
+    color: #7a7a7a;
+    margin-left: 2px;
+}
+
+.balance-actions-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.balance-action-btn {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.balance-action-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
 }
 
 .wallet-add-options {
@@ -952,5 +986,293 @@
     .amount-incoming,
     .amount-outgoing {
         font-size: 12px;
+    }
+}
+
+/* Funds view styles */
+.funds-balance-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.funds-balance-label {
+    font-size: 13px;
+    color: #7a7a7a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.funds-balance-amount {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.funds-balance-unit {
+    font-size: 14px;
+    font-weight: 500;
+    color: #7a7a7a;
+    margin-left: 4px;
+}
+
+.funds-action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.funds-action-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        transform 0.1s,
+        background 0.15s;
+}
+
+.funds-action-btn:hover {
+    transform: translateY(-2px);
+}
+
+.funds-action-btn.receive {
+    background: rgba(104, 211, 145, 0.15);
+    color: #68d391;
+}
+
+.funds-action-btn.receive:hover {
+    background: rgba(104, 211, 145, 0.25);
+}
+
+.funds-action-btn.send {
+    background: rgba(255, 204, 0, 0.15);
+    color: #ffcc00;
+}
+
+.funds-action-btn.send:hover {
+    background: rgba(255, 204, 0, 0.25);
+}
+
+.funds-action-icon {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.funds-qr-container {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.funds-invoice-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.funds-invoice-text {
+    flex: 1;
+    font-size: 11px;
+    color: #7a7a7a;
+    word-break: break-all;
+    font-family: monospace;
+}
+
+.wallet-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #7a7a7a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.balance-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.wallet-btn-small.primary {
+    background: linear-gradient(180deg, #ffcc00, #e6b800);
+    color: #0b0b0b;
+}
+
+.wallet-btn-small.primary:hover {
+    background: linear-gradient(180deg, #ffd633, #f2c200);
+}
+
+/* Receive screen styles */
+.receive-section {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.receive-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.receive-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.receive-section-hint {
+    font-size: 11px;
+    color: #7a7a7a;
+}
+
+.receive-qr-container {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.receive-address-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.receive-address-text {
+    flex: 1;
+    font-size: 13px;
+    color: #ffcc00;
+    word-break: break-all;
+    font-family: monospace;
+}
+
+.receive-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.receive-preset-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.08);
+    color: #9a9a9a;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.receive-preset-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.receive-preset-btn.active {
+    background: rgba(255, 204, 0, 0.15);
+    border-color: #ffcc00;
+    color: #ffcc00;
+}
+
+.receive-preset-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.receive-custom-input {
+    margin-bottom: 12px;
+}
+
+.receive-custom-input .wallet-input {
+    margin-bottom: 0;
+}
+
+.receive-create-btn {
+    width: 100%;
+}
+
+.receive-invoice-container {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.receive-invoice-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.receive-invoice-text {
+    flex: 1;
+    font-size: 12px;
+    color: #9a9a9a;
+    word-break: break-all;
+    font-family: monospace;
+}
+
+.receive-invoice-hint {
+    font-size: 12px;
+    color: #7a7a7a;
+    text-align: center;
+    margin: 0;
+}
+
+@media (max-width: 480px) {
+    .receive-presets {
+        gap: 6px;
+    }
+
+    .receive-preset-btn {
+        min-width: 60px;
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    .receive-qr-container {
+        padding: 12px;
+    }
+
+    .receive-invoice-text {
+        font-size: 11px;
     }
 }

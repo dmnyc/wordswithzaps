@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Tile from "./Tile";
 import "./Rack.css";
 
@@ -9,6 +9,10 @@ interface RackProps {
   onReturnTile?: (x: number, y: number) => void;
   onReorder?: (tiles: string[]) => void;
   disabled?: boolean;
+  shuffleKey?: number;
+  exchangeMode?: boolean;
+  exchangeSelection?: number[];
+  onToggleExchangeSelect?: (index: number) => void;
 }
 
 export function Rack({
@@ -18,9 +22,35 @@ export function Rack({
   onReturnTile,
   onReorder,
   disabled = false,
+  shuffleKey = 0,
+  exchangeMode = false,
+  exchangeSelection = [],
+  onToggleExchangeSelect,
 }: RackProps) {
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [shuffleAnimation, setShuffleAnimation] = useState(false);
+  const [lastShuffleKey, setLastShuffleKey] = useState(0);
+  const [lastTileCount, setLastTileCount] = useState(tiles.length);
+
+  // Cancel animation if tile count changes (e.g., from clear or placing tiles)
+  useEffect(() => {
+    if (tiles.length !== lastTileCount) {
+      setLastTileCount(tiles.length);
+      setShuffleAnimation(false);
+    }
+  }, [tiles.length, lastTileCount]);
+
+  // Trigger animation when shuffleKey changes (but not on initial render)
+  useEffect(() => {
+    if (shuffleKey > 0 && shuffleKey !== lastShuffleKey) {
+      setLastShuffleKey(shuffleKey);
+      setShuffleAnimation(true);
+      // Animation is 0.6s + stagger delay (7 tiles × 60ms = 420ms)
+      const timer = setTimeout(() => setShuffleAnimation(false), 1050);
+      return () => clearTimeout(timer);
+    }
+  }, [shuffleKey, lastShuffleKey]);
 
   const handleDragStart = useCallback(
     (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
@@ -43,9 +73,22 @@ export function Rack({
   const handleClick = useCallback(
     (index: number) => {
       if (disabled) return;
+
+      // In exchange mode, toggle exchange selection
+      if (exchangeMode && onToggleExchangeSelect) {
+        onToggleExchangeSelect(index);
+        return;
+      }
+
       onSelectTile(selectedTile === index ? null : index);
     },
-    [disabled, selectedTile, onSelectTile],
+    [
+      disabled,
+      selectedTile,
+      onSelectTile,
+      exchangeMode,
+      onToggleExchangeSelect,
+    ],
   );
 
   const handleSlotDragOver = useCallback(
@@ -134,24 +177,35 @@ export function Rack({
       onDrop={handleRackDrop}
     >
       <div className="rack-tiles">
-        {tiles.map((letter, index) => (
-          <div
-            key={index}
-            className={`rack-slot ${selectedTile === index ? "selected" : ""} ${dragOverIndex === index ? "drag-over" : ""}`}
-            onClick={() => handleClick(index)}
-            onDragOver={(e) => handleSlotDragOver(e, index)}
-            onDragLeave={handleSlotDragLeave}
-            onDrop={(e) => handleSlotDrop(e, index)}
-          >
-            <Tile
-              letter={letter}
-              isBlank={letter === "BLANK"}
-              isDragging={draggingIndex === index}
-              onDragStart={handleDragStart(index)}
-              onDragEnd={handleDragEnd}
-            />
-          </div>
-        ))}
+        {tiles.map((letter, index) => {
+          const isSelected = selectedTile === index && !exchangeMode;
+          const isExchangeSelected =
+            exchangeMode && exchangeSelection.includes(index);
+
+          return (
+            <div
+              key={shuffleAnimation ? `${index}-${shuffleKey}` : index}
+              className={`rack-slot ${isSelected ? "selected" : ""} ${isExchangeSelected ? "exchange-selected" : ""} ${dragOverIndex === index ? "drag-over" : ""} ${shuffleAnimation ? "shuffling" : ""} ${exchangeMode ? "exchange-mode" : ""}`}
+              style={
+                shuffleAnimation
+                  ? { animationDelay: `${index * 60}ms` }
+                  : undefined
+              }
+              onClick={() => handleClick(index)}
+              onDragOver={(e) => handleSlotDragOver(e, index)}
+              onDragLeave={handleSlotDragLeave}
+              onDrop={(e) => handleSlotDrop(e, index)}
+            >
+              <Tile
+                letter={letter}
+                isBlank={letter === "BLANK"}
+                isDragging={draggingIndex === index}
+                onDragStart={handleDragStart(index)}
+                onDragEnd={handleDragEnd}
+              />
+            </div>
+          );
+        })}
         {/* Empty slots */}
         {Array.from({ length: 7 - tiles.length }).map((_, i) => (
           <div key={`empty-${i}`} className="rack-slot empty" />

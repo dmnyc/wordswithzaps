@@ -235,6 +235,33 @@ export async function fetchProfile(
   return parseProfile(pubkey, latest.content);
 }
 
+/**
+ * Fetch raw profile metadata as a plain object
+ * Used for profile editing to preserve all fields
+ */
+export async function fetchProfileMetadata(
+  pubkey: string,
+): Promise<Record<string, unknown> | null> {
+  const events = await fetchEvents({
+    kinds: [PROFILE_KIND],
+    authors: [pubkey],
+    limit: 5,
+  });
+
+  if (events.length === 0) return null;
+
+  const sorted = events.sort(
+    (a, b) => (b.created_at || 0) - (a.created_at || 0),
+  );
+  const latest = sorted[0];
+
+  try {
+    return JSON.parse(latest.content) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchProfileIndex(): Promise<NostrProfile[]> {
   const now = Date.now();
   if (cachedProfiles && now - cachedAt < PROFILE_CACHE_TTL_MS) {
@@ -328,6 +355,127 @@ export async function updateProfileLightningAddress(
 
   // Create and publish the updated profile event
   const event = createEvent(PROFILE_KIND, JSON.stringify(existingMetadata), []);
+  await publishEvent(event);
+
+  // Invalidate cache
+  cachedProfiles = null;
+  cachedAt = 0;
+}
+
+export interface ProfileUpdates {
+  name?: string;
+  display_name?: string;
+  about?: string;
+  picture?: string;
+  banner?: string;
+  nip05?: string;
+  website?: string;
+  lud16?: string;
+}
+
+/**
+ * Update the current user's profile with multiple fields
+ * Fetches existing profile, merges updates, and publishes
+ */
+export async function updateProfile(updates: ProfileUpdates): Promise<void> {
+  const currentUser = getCurrentUser();
+  if (!currentUser?.pubkey) {
+    throw new Error("Must be logged in to update profile");
+  }
+
+  // Fetch the existing profile to preserve all other fields
+  const events = await fetchEvents({
+    kinds: [PROFILE_KIND],
+    authors: [currentUser.pubkey],
+    limit: 5,
+  });
+
+  let existingMetadata: Record<string, unknown> = {};
+
+  if (events.length > 0) {
+    const sorted = events.sort(
+      (a, b) => (b.created_at || 0) - (a.created_at || 0),
+    );
+    const latest = sorted[0];
+    try {
+      existingMetadata = JSON.parse(latest.content) as Record<string, unknown>;
+    } catch {
+      console.warn(
+        "[Profiles] Could not parse existing profile, starting fresh",
+      );
+    }
+  }
+
+  // Merge updates with existing metadata
+  // Only overwrite fields that are explicitly provided
+  const updatedMetadata = { ...existingMetadata };
+
+  if (updates.name !== undefined) {
+    if (updates.name.trim()) {
+      updatedMetadata.name = updates.name.trim();
+    } else {
+      delete updatedMetadata.name;
+    }
+  }
+
+  if (updates.display_name !== undefined) {
+    if (updates.display_name.trim()) {
+      updatedMetadata.display_name = updates.display_name.trim();
+    } else {
+      delete updatedMetadata.display_name;
+    }
+  }
+
+  if (updates.about !== undefined) {
+    if (updates.about.trim()) {
+      updatedMetadata.about = updates.about.trim();
+    } else {
+      delete updatedMetadata.about;
+    }
+  }
+
+  if (updates.picture !== undefined) {
+    if (updates.picture.trim()) {
+      updatedMetadata.picture = updates.picture.trim();
+    } else {
+      delete updatedMetadata.picture;
+    }
+  }
+
+  if (updates.banner !== undefined) {
+    if (updates.banner.trim()) {
+      updatedMetadata.banner = updates.banner.trim();
+    } else {
+      delete updatedMetadata.banner;
+    }
+  }
+
+  if (updates.nip05 !== undefined) {
+    if (updates.nip05.trim()) {
+      updatedMetadata.nip05 = updates.nip05.trim();
+    } else {
+      delete updatedMetadata.nip05;
+    }
+  }
+
+  if (updates.website !== undefined) {
+    if (updates.website.trim()) {
+      updatedMetadata.website = updates.website.trim();
+    } else {
+      delete updatedMetadata.website;
+    }
+  }
+
+  if (updates.lud16 !== undefined) {
+    if (updates.lud16.trim()) {
+      updatedMetadata.lud16 = updates.lud16.trim();
+    } else {
+      delete updatedMetadata.lud16;
+    }
+  }
+
+  // Create and publish the updated profile event
+  const event = createEvent(PROFILE_KIND, JSON.stringify(updatedMetadata), []);
   await publishEvent(event);
 
   // Invalidate cache

@@ -17,6 +17,8 @@ interface ScoreBoardProps {
   currentUserPubkey: string;
   onShare?: () => void;
   onForfeit?: () => void;
+  onShowRules?: () => void;
+  onShowRelays?: () => void;
   forfeitDisabled?: boolean;
 }
 
@@ -32,6 +34,8 @@ export function ScoreBoard({
   currentUserPubkey,
   onShare,
   onForfeit,
+  onShowRules,
+  onShowRelays,
   forfeitDisabled = false,
 }: ScoreBoardProps) {
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
@@ -57,75 +61,212 @@ export function ScoreBoard({
     return profile?.displayName || profile?.name || truncatePubkey(pubkey);
   };
 
-  const _isMyTurn =
+  const isMyTurn =
     (player1.isActive && player1.pubkey === currentUserPubkey) ||
     (player2.isActive && player2.pubkey === currentUserPubkey);
-  void _isMyTurn; // Reserved for turn indicator UI
 
   return (
     <div className="scoreboard">
-      <div className={`player-score ${player1.isActive ? "active" : ""}`}>
-        <span className="player-name">{getDisplayName(player1.pubkey)}</span>
-        <span className="player-points">{player1.score}</span>
-        {player1.isActive && player1.pubkey === currentUserPubkey && (
-          <span className="turn-indicator">Your turn</span>
-        )}
-      </div>
+      {/* Row 1: Scores */}
+      <div className="scoreboard-scores">
+        <div className={`player-score ${player1.isActive ? "active" : ""}`}>
+          <span className="player-name">{getDisplayName(player1.pubkey)}</span>
+          <span className="player-points">{player1.score}</span>
+        </div>
 
-      <div className="tiles-remaining" title="Tiles in bag">
-        <svg
-          className="tiles-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
-        <span className="tiles-count">{tilesRemaining}</span>
-      </div>
-
-      <div className={`player-score ${player2.isActive ? "active" : ""}`}>
-        <span className="player-name">{getDisplayName(player2.pubkey)}</span>
-        <span className="player-points">{player2.score}</span>
-        {player2.isActive && player2.pubkey === currentUserPubkey && (
-          <span className="turn-indicator">Your turn</span>
-        )}
-      </div>
-
-      <div className="scoreboard-actions">
-        {onShare && (
-          <button
-            className="share-btn"
-            onClick={onShare}
-            title="Copy game link"
+        {/* Tiles in center - desktop only, hidden on mobile */}
+        <div className="tiles-remaining tiles-desktop" title="Tiles in bag">
+          <svg
+            className="tiles-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
           >
-            <svg
-              className="share-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          <span className="tiles-count">{tilesRemaining}</span>
+        </div>
+
+        <div className={`player-score ${player2.isActive ? "active" : ""}`}>
+          <span className="player-name">{getDisplayName(player2.pubkey)}</span>
+          <span className="player-points">{player2.score}</span>
+        </div>
+
+        {/* Actions - desktop only */}
+        <div className="scoreboard-actions actions-desktop">
+          {onShowRules && (
+            <button
+              className="rules-btn"
+              onClick={onShowRules}
+              title="Game rules"
             >
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
-            </svg>
-          </button>
+              <svg
+                className="rules-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                <line x1="9" y1="7" x2="16" y2="7" />
+                <line x1="9" y1="11" x2="16" y2="11" />
+                <line x1="9" y1="15" x2="13" y2="15" />
+              </svg>
+            </button>
+          )}
+          {onShare && (
+            <button
+              className="share-btn"
+              onClick={onShare}
+              title="Copy game link"
+            >
+              <svg
+                className="share-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            </button>
+          )}
+          {onShowRelays && (
+            <button
+              className="relay-btn"
+              onClick={onShowRelays}
+              title="Show relays"
+            >
+              <svg
+                className="relay-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="5" cy="12" r="3" />
+                <circle cx="19" cy="5" r="3" />
+                <circle cx="19" cy="19" r="3" />
+                <path d="M7.5 10.5 16 6.5" />
+                <path d="M7.5 13.5 16 17.5" />
+              </svg>
+            </button>
+          )}
+          {onForfeit && (
+            <button
+              className="forfeit-btn"
+              onClick={onForfeit}
+              disabled={forfeitDisabled}
+              title="Forfeit game"
+            >
+              <TbDoorExit className="forfeit-icon" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: Turn indicator + Tiles + Actions (mobile only) */}
+      <div className="scoreboard-status-row">
+        {isMyTurn ? (
+          <span className="turn-indicator">Your turn</span>
+        ) : (
+          <span className="turn-indicator waiting">Waiting...</span>
         )}
-        {onForfeit && (
-          <button
-            className="forfeit-btn"
-            onClick={onForfeit}
-            disabled={forfeitDisabled}
-            title="Forfeit game"
+        <div className="tiles-remaining tiles-mobile" title="Tiles in bag">
+          <svg
+            className="tiles-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
           >
-            <TbDoorExit className="forfeit-icon" aria-hidden="true" />
-          </button>
-        )}
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          <span className="tiles-count">{tilesRemaining}</span>
+        </div>
+        <div className="scoreboard-actions actions-mobile">
+          {onShowRules && (
+            <button
+              className="rules-btn"
+              onClick={onShowRules}
+              title="Game rules"
+            >
+              <svg
+                className="rules-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                <line x1="9" y1="7" x2="16" y2="7" />
+                <line x1="9" y1="11" x2="16" y2="11" />
+                <line x1="9" y1="15" x2="13" y2="15" />
+              </svg>
+            </button>
+          )}
+          {onShare && (
+            <button
+              className="share-btn"
+              onClick={onShare}
+              title="Copy game link"
+            >
+              <svg
+                className="share-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            </button>
+          )}
+          {onShowRelays && (
+            <button
+              className="relay-btn"
+              onClick={onShowRelays}
+              title="Show relays"
+            >
+              <svg
+                className="relay-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="5" cy="12" r="3" />
+                <circle cx="19" cy="5" r="3" />
+                <circle cx="19" cy="19" r="3" />
+                <path d="M7.5 10.5 16 6.5" />
+                <path d="M7.5 13.5 16 17.5" />
+              </svg>
+            </button>
+          )}
+          {onForfeit && (
+            <button
+              className="forfeit-btn"
+              onClick={onForfeit}
+              disabled={forfeitDisabled}
+              title="Forfeit game"
+            >
+              <TbDoorExit className="forfeit-icon" aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

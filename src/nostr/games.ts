@@ -68,30 +68,32 @@ export async function fetchUserGames(
     (a, b) => b.updatedAt - a.updatedAt,
   );
 
-  // Attempt to decrypt latest state to get status + turn info
-  for (const summary of summaries) {
-    const event = events.find((e) => e.id === summary.eventId);
-    if (!event || !summary.opponentPubkey) continue;
-    try {
-      const decryptKey =
-        event.pubkey === pubkey ? summary.opponentPubkey : event.pubkey;
-      const state = await decryptGameState<GameState>(
-        decryptKey,
-        event.content,
-      );
-      summary.status = state.meta.status;
-      summary.deletedBy = state.meta.deletedBy;
-      summary.creatorPubkey = state.meta.playerOne;
-      summary.playerOne = state.meta.playerOne;
-      summary.playerTwo = state.meta.playerTwo;
-      summary.turnIndex = state.turn.index;
-      summary.activePlayer = state.turn.activePlayer;
-      summary.p1Score = state.scoring.p1Score;
-      summary.p2Score = state.scoring.p2Score;
-    } catch {
-      // Skip if decryption fails
-    }
-  }
+  // Attempt to decrypt latest state to get status + turn info (parallel)
+  await Promise.all(
+    summaries.map(async (summary) => {
+      const event = events.find((e) => e.id === summary.eventId);
+      if (!event || !summary.opponentPubkey) return;
+      try {
+        const decryptKey =
+          event.pubkey === pubkey ? summary.opponentPubkey : event.pubkey;
+        const state = await decryptGameState<GameState>(
+          decryptKey,
+          event.content,
+        );
+        summary.status = state.meta.status;
+        summary.deletedBy = state.meta.deletedBy;
+        summary.creatorPubkey = state.meta.playerOne;
+        summary.playerOne = state.meta.playerOne;
+        summary.playerTwo = state.meta.playerTwo;
+        summary.turnIndex = state.turn.index;
+        summary.activePlayer = state.turn.activePlayer;
+        summary.p1Score = state.scoring.p1Score;
+        summary.p2Score = state.scoring.p2Score;
+      } catch {
+        // Skip if decryption fails
+      }
+    }),
+  );
 
   return summaries;
 }

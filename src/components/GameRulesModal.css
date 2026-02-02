@@ -1,0 +1,161 @@
+.game-rules-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.rules-section {
+    margin-bottom: 4px;
+}
+
+.rules-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rules-section p {
+    font-size: 13px;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.rules-section ul {
+    margin: 0;
+    padding-left: 18px;
+    list-style: disc;
+}
+
+.rules-section li {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.rules-section li:last-child {
+    margin-bottom: 0;
+}
+
+/* Multiplier badges */
+.multiplier {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-right: 4px;
+    letter-spacing: 0.5px;
+}
+
+.multiplier.dl {
+    background: linear-gradient(145deg, #3a4a5c, #2e3e4a);
+    color: #a0c4e8;
+}
+
+.multiplier.ql {
+    background: linear-gradient(145deg, #1a4a5c, #143a48);
+    color: #7ec8e3;
+}
+
+.multiplier.dw {
+    background: linear-gradient(145deg, #5c3a3a, #4a2e2e);
+    color: #e8a0a0;
+}
+
+.multiplier.zap {
+    background: linear-gradient(145deg, #4a3a10, #3a2a08);
+    color: #ffd86b;
+}
+
+.bingo {
+    font-weight: 700;
+    color: #68d391;
+}
+
+/* Scrollbar styling */
+.game-rules-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.game-rules-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.game-rules-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.game-rules-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Tile distribution */
+.tile-dist-total {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px !important;
+}
+
+.tile-distribution {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 6px;
+}
+
+.tile-dist-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+.tile-dist-letter {
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 14px;
+}
+
+.tile-dist-count {
+    color: var(--text);
+}
+
+.tile-dist-points {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-left: auto;
+}
+
+/* Mobile responsive */
+@media (max-width: 520px) {
+    .game-rules-content {
+        max-height: 50vh;
+        gap: 12px;
+    }
+
+    .rules-section h3 {
+        font-size: 13px;
+    }
+
+    .rules-section p,
+    .rules-section li {
+        font-size: 12px;
+    }
+
+    .multiplier {
+        font-size: 9px;
+        padding: 1px 4px;
+    }
+}

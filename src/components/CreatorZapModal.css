@@ -8,15 +8,12 @@
 
 .creator-qr {
     background: #fff;
-    padding: 12px;
+    padding: 16px;
     border-radius: 12px;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-}
-
-.creator-qr img {
-    display: block;
-    width: 180px;
-    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .creator-address {
@@ -48,4 +45,65 @@
     letter-spacing: 0.08em;
     color: var(--text-muted);
     margin-bottom: 10px;
+}
+
+.creator-zap-inline {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    width: 100%;
+    max-width: 200px;
+}
+
+.creator-zap-input {
+    flex: 1;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    text-align: center;
+    min-width: 0;
+}
+
+.creator-zap-input::placeholder {
+    color: #666;
+}
+
+.creator-zap-input:focus {
+    outline: none;
+    border-color: #f7b500;
+}
+
+.creator-zap-btn {
+    padding: 10px 16px;
+    background: #f7b500;
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.creator-zap-btn:hover:not(:disabled) {
+    background: #ffc520;
+}
+
+.creator-zap-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.creator-error {
+    color: #ff6b6b;
+    font-size: 12px;
+    margin: 4px 0;
+    padding: 8px 12px;
+    background: rgba(255, 107, 107, 0.1);
+    border-radius: 6px;
+    max-width: 280px;
+    word-break: break-word;
 }

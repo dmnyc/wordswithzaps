@@ -74,3 +74,66 @@
 .tile.blank .tile-letter {
     color: #666;
 }
+
+/* Mobile responsive breakpoints */
+@media (max-width: 650px) {
+    .tile {
+        width: 30px;
+        height: 30px;
+    }
+    .tile-letter {
+        font-size: 17px;
+    }
+    .tile-value {
+        font-size: 8px;
+        bottom: 1px;
+        right: 2px;
+    }
+}
+
+@media (max-width: 520px) {
+    .tile {
+        width: 24px;
+        height: 24px;
+        border-radius: 2px;
+    }
+    .tile-letter {
+        font-size: 14px;
+    }
+    .tile-value {
+        font-size: 7px;
+        bottom: 1px;
+        right: 1px;
+    }
+}
+
+@media (max-width: 430px) {
+    .tile {
+        width: 20px;
+        height: 20px;
+    }
+    .tile-letter {
+        font-size: 12px;
+    }
+    .tile-value {
+        font-size: 6px;
+        bottom: 0;
+        right: 1px;
+    }
+}
+
+@media (max-width: 360px) {
+    .tile {
+        width: 17px;
+        height: 17px;
+        border-radius: 1px;
+    }
+    .tile-letter {
+        font-size: 10px;
+    }
+    .tile-value {
+        font-size: 5px;
+        bottom: 0;
+        right: 0;
+    }
+}

@@ -6,6 +6,7 @@ import {
   getMultiplier,
   BINGO_BONUS,
   RACK_SIZE,
+  ZAP_BONUS_POINTS,
 } from "./constants";
 import { getDictionary } from "./Dictionary";
 
@@ -296,6 +297,7 @@ export function calculateWordScore(
 ): number {
   let wordScore = 0;
   let wordMultiplier = 1;
+  let zapBonus = 0;
 
   const newTileCoords = new Set(placements.map((p) => `${p.x},${p.y}`));
 
@@ -331,15 +333,14 @@ export function calculateWordScore(
         case "DL":
           tileScore *= 2;
           break;
-        case "TL":
-          tileScore *= 3;
+        case "QL":
+          tileScore *= 4;
           break;
         case "DW":
-        case "STAR":
           wordMultiplier *= 2;
           break;
-        case "TW":
-          wordMultiplier *= 3;
+        case "ZAP":
+          zapBonus += ZAP_BONUS_POINTS;
           break;
       }
     }
@@ -347,7 +348,7 @@ export function calculateWordScore(
     wordScore += tileScore;
   }
 
-  return wordScore * wordMultiplier;
+  return wordScore * wordMultiplier + zapBonus;
 }
 
 /**

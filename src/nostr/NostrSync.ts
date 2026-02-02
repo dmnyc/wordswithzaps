@@ -27,6 +27,12 @@ export class NostrSync {
   private gameId: string;
   private opponentPubkey: string;
   private unsubscribe: (() => void) | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private heartbeatMs: number | null = null;
+  private subscriptionCallbacks: {
+    onUpdate: (event: DecryptedGameEvent) => void;
+    onError?: (error: Error) => void;
+  } | null = null;
 
   constructor(gameId: string, opponentPubkey: string) {
     this.gameId = gameId;
@@ -220,10 +226,20 @@ export class NostrSync {
   subscribeToGameUpdates(
     onUpdate: (event: DecryptedGameEvent) => void,
     onError?: (error: Error) => void,
+    options?: { heartbeatMs?: number },
   ): void {
+    this.subscriptionCallbacks = { onUpdate, onError };
+    this.heartbeatMs = options?.heartbeatMs ?? null;
+    this.startSubscription();
+    this.startHeartbeat();
+  }
+
+  private startSubscription(): void {
     const user = getCurrentUser();
     if (!user?.pubkey) {
-      onError?.(new Error("Must be logged in to subscribe"));
+      this.subscriptionCallbacks?.onError?.(
+        new Error("Must be logged in to subscribe"),
+      );
       return;
     }
 
@@ -246,7 +262,7 @@ export class NostrSync {
             event.content,
           );
 
-          onUpdate({
+          this.subscriptionCallbacks?.onUpdate({
             event: {
               id: event.id,
               pubkey: event.pubkey,
@@ -259,7 +275,7 @@ export class NostrSync {
             state,
           });
         } catch (err) {
-          onError?.(err as Error);
+          this.subscriptionCallbacks?.onError?.(err as Error);
         }
       },
     );
@@ -267,13 +283,33 @@ export class NostrSync {
     this.unsubscribe = unsubscribe;
   }
 
+  private startHeartbeat(): void {
+    if (!this.heartbeatMs || this.heartbeatMs <= 0) return;
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+    }
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.subscriptionCallbacks) return;
+      this.unsubscribeOnly();
+      this.startSubscription();
+    }, this.heartbeatMs);
+  }
+
+  private unsubscribeOnly(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+  }
+
   /**
    * Stop listening for updates
    */
   stopSubscription(): void {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
+    this.unsubscribeOnly();
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
   }
 

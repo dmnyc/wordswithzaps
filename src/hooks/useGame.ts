@@ -37,11 +37,21 @@ export function useGame(): UseGameReturn {
   const syncRef = useRef<NostrSync | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevIsMyTurnRef = useRef<boolean | null>(null);
+  const gameStateRef = useRef<GameState | null>(null);
+  const lastEventIdRef = useRef<string | null>(null);
 
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
 
   const isMyTurn = gameState?.turn.activePlayer === myPubkey;
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  useEffect(() => {
+    lastEventIdRef.current = lastEventId;
+  }, [lastEventId]);
 
   const deriveOpponentRack = useCallback(
     (state: GameState, myRack: string[]): string[] => {
@@ -102,27 +112,26 @@ export function useGame(): UseGameReturn {
   }, [isMyTurn]);
 
   // Handle incoming game updates
-  const handleGameUpdate = useCallback(
-    (event: DecryptedGameEvent) => {
-      // Validate the update
-      if (gameState && lastEventId) {
-        const validation = syncRef.current?.validateStateUpdate(
-          gameState,
-          event,
-          lastEventId,
-        );
+  const handleGameUpdate = useCallback((event: DecryptedGameEvent) => {
+    // Validate the update
+    const currentState = gameStateRef.current;
+    const currentEventId = lastEventIdRef.current;
+    if (currentState && currentEventId) {
+      const validation = syncRef.current?.validateStateUpdate(
+        currentState,
+        event,
+        currentEventId,
+      );
 
-        if (validation && !validation.valid) {
-          console.warn("Invalid state update:", validation.error);
-          return;
-        }
+      if (validation && !validation.valid) {
+        console.warn("Invalid state update:", validation.error);
+        return;
       }
+    }
 
-      setGameState(event.state);
-      setLastEventId(event.event.id);
-    },
-    [gameState, lastEventId],
-  );
+    setGameState(event.state);
+    setLastEventId(event.event.id);
+  }, []);
 
   // Create a new game
   const createGame = useCallback(
@@ -150,14 +159,24 @@ export function useGame(): UseGameReturn {
         // Save rack
         await syncRef.current.savePlayerRack({ rack });
 
+        // Publish updated state with reduced tile bag so relays don't keep the full bag
+        const updatedEventId = await syncRef.current.publishGameState(
+          updatedState,
+          "",
+        );
+
         setGameState(updatedState);
         setPlayerRack(rack);
-        setLastEventId(""); // Initial state has no previous event
+        setLastEventId(updatedEventId);
 
         // Subscribe to updates
-        syncRef.current.subscribeToGameUpdates(handleGameUpdate, (err) => {
-          setError(err.message);
-        });
+        syncRef.current.subscribeToGameUpdates(
+          handleGameUpdate,
+          (err) => {
+            setError(err.message);
+          },
+          { heartbeatMs: 45000 },
+        );
 
         return gameId;
       } catch (err) {
@@ -218,9 +237,13 @@ export function useGame(): UseGameReturn {
         setPlayerRack(rack);
 
         // Subscribe to updates
-        syncRef.current.subscribeToGameUpdates(handleGameUpdate, (err) => {
-          setError(err.message);
-        });
+        syncRef.current.subscribeToGameUpdates(
+          handleGameUpdate,
+          (err) => {
+            setError(err.message);
+          },
+          { heartbeatMs: 45000 },
+        );
 
         // Set up polling as backup (every 15 seconds)
         if (pollIntervalRef.current) {
@@ -230,7 +253,8 @@ export function useGame(): UseGameReturn {
           if (!syncRef.current) return;
           try {
             const latest = await syncRef.current.fetchLatestGameState();
-            if (latest && latest.event.id !== lastEventId) {
+            const currentEventId = lastEventIdRef.current;
+            if (latest && latest.event.id !== currentEventId) {
               setGameState(latest.state);
               setLastEventId(latest.event.id);
 
@@ -316,9 +340,11 @@ export function useGame(): UseGameReturn {
           myPubkey === newState.meta.playerOne ? newRack : opponentRack;
         const p2Rack =
           myPubkey === newState.meta.playerTwo ? newRack : opponentRack;
-        const finalState = GameEngine.isGameOver(newState, p1Rack, p2Rack)
-          ? GameEngine.endGame(newState, p1Rack, p2Rack)
-          : newState;
+        const didGoOut = newRack.length === 0;
+        const finalState =
+          didGoOut || GameEngine.isGameOver(newState, p1Rack, p2Rack)
+            ? GameEngine.endGame(newState, p1Rack, p2Rack)
+            : newState;
 
         // Publish to Nostr
         const eventId = await syncRef.current.publishGameState(

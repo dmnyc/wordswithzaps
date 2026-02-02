@@ -1,8 +1,7 @@
 .wwz-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(5, 5, 5, 0.7);
-    backdrop-filter: blur(8px);
+    background: rgba(5, 5, 5, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -35,6 +34,10 @@
     font-size: 18px;
     font-weight: 600;
     color: var(--text);
+}
+
+.wwz-modal-title.title-yellow {
+    color: #f7b500;
 }
 
 .wwz-modal-close {

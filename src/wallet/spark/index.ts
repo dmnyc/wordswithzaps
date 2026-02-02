@@ -540,7 +540,9 @@ export async function sendSparkPayment(
     _sparkLoading = true;
     notifyListeners();
 
-    const parsedInput = await _sdkInstance.parse(destination);
+    // Import parse function from SDK (it's a standalone function, not on the instance)
+    const { parse } = await import("@breeztech/breez-sdk-spark/web");
+    const parsedInput = await parse(destination);
 
     // Handle Lightning address / LNURL
     if (

@@ -61,6 +61,10 @@ select,
     min-height: 100vh;
 }
 
+.app.game-mode {
+    background: rgba(0, 0, 0, 0.45);
+}
+
 h1 {
     font-size: 2.5rem;
     margin-bottom: 1rem;
@@ -104,6 +108,23 @@ h1 {
 .app-toast.info {
     background: rgba(255, 255, 255, 0.12);
     color: #f5f5f5;
+}
+
+@media (max-width: 900px) {
+    .app-toast {
+        top: 64px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(800px, calc(100% - 16px));
+        max-width: none;
+        text-align: center;
+    }
+}
+
+@media (max-width: 520px) {
+    .app-toast {
+        width: min(800px, calc(100% - 16px));
+    }
 }
 
 /* Scrollbar styling */
