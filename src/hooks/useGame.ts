@@ -37,11 +37,21 @@ export function useGame(): UseGameReturn {
   const syncRef = useRef<NostrSync | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevIsMyTurnRef = useRef<boolean | null>(null);
+  const gameStateRef = useRef<GameState | null>(null);
+  const lastEventIdRef = useRef<string | null>(null);
 
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
 
   const isMyTurn = gameState?.turn.activePlayer === myPubkey;
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  useEffect(() => {
+    lastEventIdRef.current = lastEventId;
+  }, [lastEventId]);
 
   const deriveOpponentRack = useCallback(
     (state: GameState, myRack: string[]): string[] => {
@@ -102,27 +112,26 @@ export function useGame(): UseGameReturn {
   }, [isMyTurn]);
 
   // Handle incoming game updates
-  const handleGameUpdate = useCallback(
-    (event: DecryptedGameEvent) => {
-      // Validate the update
-      if (gameState && lastEventId) {
-        const validation = syncRef.current?.validateStateUpdate(
-          gameState,
-          event,
-          lastEventId,
-        );
+  const handleGameUpdate = useCallback((event: DecryptedGameEvent) => {
+    // Validate the update
+    const currentState = gameStateRef.current;
+    const currentEventId = lastEventIdRef.current;
+    if (currentState && currentEventId) {
+      const validation = syncRef.current?.validateStateUpdate(
+        currentState,
+        event,
+        currentEventId,
+      );
 
-        if (validation && !validation.valid) {
-          console.warn("Invalid state update:", validation.error);
-          return;
-        }
+      if (validation && !validation.valid) {
+        console.warn("Invalid state update:", validation.error);
+        return;
       }
+    }
 
-      setGameState(event.state);
-      setLastEventId(event.event.id);
-    },
-    [gameState, lastEventId],
-  );
+    setGameState(event.state);
+    setLastEventId(event.event.id);
+  }, []);
 
   // Create a new game
   const createGame = useCallback(
@@ -238,7 +247,8 @@ export function useGame(): UseGameReturn {
           if (!syncRef.current) return;
           try {
             const latest = await syncRef.current.fetchLatestGameState();
-            if (latest && latest.event.id !== lastEventId) {
+            const currentEventId = lastEventIdRef.current;
+            if (latest && latest.event.id !== currentEventId) {
               setGameState(latest.state);
               setLastEventId(latest.event.id);
 
