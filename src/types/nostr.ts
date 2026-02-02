@@ -47,8 +47,15 @@ export const GAME_KIND = 30078;
 export const GAME_D_TAG_PREFIX = "wordswithzaps_v1_";
 export const RACK_D_TAG_PREFIX = "wordswithzaps_rack_";
 
+// Default relay list - reliable, well-maintained relays
 export const DEFAULT_RELAYS = [
   "wss://relay.damus.io",
-  "wss://nos.lol",
   "wss://relay.primal.net",
+  "wss://nos.lol",
+  "wss://relay.snort.social",
+  "wss://purplepag.es",
+  "wss://relay.nostr.net",
 ];
+
+// NIP-65 relay list kind
+export const RELAY_LIST_KIND = 10002;

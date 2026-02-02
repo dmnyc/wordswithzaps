@@ -209,13 +209,13 @@ export function NavBar({
                   </button>
                 )}
                 <button
-                  className="menu-item"
+                  className="menu-item open-wallet"
                   onClick={() => {
                     setWalletMenuOpen(false);
                     onOpenWalletSettings();
                   }}
                 >
-                  Wallet Settings
+                  Open Wallet
                 </button>
               </div>
             )}
@@ -298,7 +298,7 @@ export function NavBar({
             <div className="menu-section">
               <div className="menu-section-title">Connection</div>
               <div className="menu-info-row">
-                <span>Connect method</span>
+                <span>Method</span>
                 <span>
                   {connectionMethod === "nip07"
                     ? "Extension"
@@ -310,7 +310,7 @@ export function NavBar({
                 </span>
               </div>
               <div className="menu-info-row">
-                <span>Relays connected</span>
+                <span>Relays</span>
                 <span>{relayCount ?? 0}</span>
               </div>
             </div>

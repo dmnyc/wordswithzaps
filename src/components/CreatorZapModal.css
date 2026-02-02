@@ -8,15 +8,12 @@
 
 .creator-qr {
     background: #fff;
-    padding: 12px;
+    padding: 16px;
     border-radius: 12px;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-}
-
-.creator-qr img {
-    display: block;
-    width: 180px;
-    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .creator-address {

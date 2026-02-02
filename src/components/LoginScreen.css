@@ -99,6 +99,29 @@
 .login-option-icon {
     font-size: 24px;
     flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc;
+}
+
+.login-option-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.login-option-icon.icon-yellow {
+    color: #f7b500;
+}
+
+.login-option-icon.icon-purple {
+    color: #a855f7;
+}
+
+.login-option-icon.icon-green {
+    color: #22c55e;
 }
 
 .login-option-content {
@@ -171,6 +194,33 @@
 .login-suboption-icon {
     font-size: 20px;
     flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc;
+}
+
+.login-suboption-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.login-suboption-icon.icon-blue {
+    color: #3b82f6;
+}
+
+.login-suboption-icon.icon-orange {
+    color: #f97316;
+}
+
+.login-suboption-icon.icon-green {
+    color: #22c55e;
+}
+
+.login-suboption-icon.icon-purple {
+    color: #a855f7;
 }
 
 .login-suboption-title {

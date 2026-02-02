@@ -15,10 +15,13 @@ import {
   type BunkerPointer,
 } from "nostr-tools/nip46";
 import { bytesToHex } from "@noble/hashes/utils";
-import { DEFAULT_RELAYS } from "../types/nostr";
+import { DEFAULT_RELAYS, RELAY_LIST_KIND } from "../types/nostr";
 
 let ndkInstance: NDK | null = null;
 let currentUser: NDKUser | null = null;
+
+// Cache for user relay lists
+let userRelayCache: Map<string, string[]> = new Map();
 
 export interface NostrClientOptions {
   relays?: string[];
@@ -71,6 +74,12 @@ export async function connectWithNip07(): Promise<NDKUser> {
   await user.fetchProfile();
 
   currentUser = user;
+
+  // Load user's NIP-65 relays in background
+  loadUserRelays(user.pubkey).catch((err) =>
+    console.warn("Failed to load user relays:", err),
+  );
+
   return user;
 }
 
@@ -112,6 +121,12 @@ export async function connectWithPrivateKey(
   await user.fetchProfile();
 
   currentUser = user;
+
+  // Load user's NIP-65 relays in background
+  loadUserRelays(user.pubkey).catch((err) =>
+    console.warn("Failed to load user relays:", err),
+  );
+
   return user;
 }
 
@@ -145,6 +160,11 @@ export async function connectWithBunker(
 
   currentUser = user;
 
+  // Load user's NIP-65 relays in background
+  loadUserRelays(user.pubkey).catch((err) =>
+    console.warn("Failed to load user relays:", err),
+  );
+
   // Get the local signer's private key for persistence
   const localKey = localSignerKey || ((await localSigner.privateKey) as string);
 
@@ -172,9 +192,16 @@ export function generateNostrConnectURI(): {
   const clientPubkey = getPublicKey(secretKey);
   const secret = bytesToHex(generateSecretKey()).substring(0, 16);
 
+  // Use specific relays for nostrconnect - primal first for Primal app compatibility
+  const nostrConnectRelays = [
+    "wss://relay.primal.net",
+    "wss://relay.damus.io",
+    "wss://nos.lol",
+  ];
+
   const uri = createNostrConnectURI({
     clientPubkey,
-    relays: DEFAULT_RELAYS.slice(0, 3),
+    relays: nostrConnectRelays,
     secret,
     name: "Words With Zaps",
     url:
@@ -233,6 +260,11 @@ export async function waitForNostrConnect(
   await user.fetchProfile();
 
   currentUser = user;
+
+  // Load user's NIP-65 relays in background
+  loadUserRelays(user.pubkey).catch((err) =>
+    console.warn("Failed to load user relays:", err),
+  );
 
   // Clear the session
   activeNostrConnectSession = null;
@@ -329,6 +361,143 @@ export function isConnected(): boolean {
 }
 
 /**
+ * Fetch user's relay list from Nostr (NIP-65 kind:10002)
+ * Returns write relays that the user publishes to
+ */
+export async function fetchUserRelayList(pubkey: string): Promise<string[]> {
+  // Check cache first
+  const cached = userRelayCache.get(pubkey);
+  if (cached) {
+    return cached;
+  }
+
+  const ndk = getNDK();
+
+  try {
+    // Query kind:10002 relay list metadata
+    const events = await ndk.fetchEvents({
+      kinds: [RELAY_LIST_KIND],
+      authors: [pubkey],
+      limit: 1,
+    });
+
+    if (events.size === 0) {
+      return [];
+    }
+
+    const event = Array.from(events)[0];
+    const writeRelays: string[] = [];
+
+    // Parse relay tags - "r" tags with optional read/write marker
+    // No marker = both read and write
+    // "read" = read only
+    // "write" = write only
+    event.tags.forEach((tag) => {
+      if (tag[0] === "r") {
+        const relay = tag[1];
+        const permission = tag[2];
+
+        // Include if no permission specified (both) or if explicitly "write"
+        if (!permission || permission === "write") {
+          writeRelays.push(relay);
+        }
+      }
+    });
+
+    // Cache the result
+    if (writeRelays.length > 0) {
+      userRelayCache.set(pubkey, writeRelays);
+    }
+
+    return writeRelays;
+  } catch (error) {
+    console.error("Failed to fetch relay list from Nostr:", error);
+    return [];
+  }
+}
+
+/**
+ * Get expanded relay list combining user relays with defaults
+ * Prioritizes user relays, fills remaining slots with defaults
+ */
+export function getExpandedRelayList(
+  userRelays: string[],
+  maxRelays: number = 8,
+): string[] {
+  const relaySet = new Set<string>();
+
+  // Add user relays first (more likely to have user's data)
+  for (const relay of userRelays) {
+    if (relaySet.size >= maxRelays) break;
+    // Normalize: lowercase, remove trailing slashes
+    const normalized = relay.trim().toLowerCase().replace(/\/+$/, "");
+    if (normalized.startsWith("wss://") || normalized.startsWith("ws://")) {
+      relaySet.add(normalized);
+    }
+  }
+
+  // Fill remaining slots with default relays
+  for (const relay of DEFAULT_RELAYS) {
+    if (relaySet.size >= maxRelays) break;
+    const normalized = relay.trim().toLowerCase().replace(/\/+$/, "");
+    relaySet.add(normalized);
+  }
+
+  return Array.from(relaySet);
+}
+
+/**
+ * Add relays to NDK pool dynamically
+ */
+export async function addRelaysToPool(relays: string[]): Promise<void> {
+  const ndk = getNDK();
+
+  for (const relay of relays) {
+    const normalized = relay.trim().toLowerCase().replace(/\/+$/, "");
+    // Check if relay is already in pool
+    const existingRelay = ndk.pool.relays.get(normalized);
+    if (!existingRelay) {
+      try {
+        // Add relay to pool
+        const ndkRelay = ndk.pool.getRelay(normalized, true);
+        if (ndkRelay) {
+          await ndkRelay.connect();
+        }
+      } catch (error) {
+        console.warn(`Failed to connect to relay ${normalized}:`, error);
+      }
+    }
+  }
+}
+
+/**
+ * Load and connect to user's NIP-65 relays after login
+ * Call this after successful authentication
+ */
+export async function loadUserRelays(pubkey: string): Promise<string[]> {
+  const userRelays = await fetchUserRelayList(pubkey);
+
+  if (userRelays.length > 0) {
+    console.log("Found user relays (NIP-65):", userRelays);
+    // Get combined list with defaults
+    const expandedRelays = getExpandedRelayList(userRelays);
+    // Add any new relays to the pool
+    await addRelaysToPool(expandedRelays);
+    return expandedRelays;
+  }
+
+  console.log("No NIP-65 relays found, using defaults");
+  return DEFAULT_RELAYS;
+}
+
+/**
+ * Clear relay cache (call on logout)
+ */
+export function clearRelayCache(): void {
+  userRelayCache.clear();
+}
+
+/**
  * Get count of connected relays
  */
 export function getConnectedRelayCount(): number {
@@ -349,6 +518,8 @@ export function disconnect(): void {
     currentUser = null;
     ndkInstance.signer = undefined;
   }
+  // Clear relay cache on disconnect
+  clearRelayCache();
 }
 
 /**

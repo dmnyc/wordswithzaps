@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import qrcode from "qrcode-generator";
+import { QRCodeSVG } from "qrcode.react";
 import {
   getZapNudgeDefaultAmount,
   setZapNudgeDefaultAmount,
@@ -66,12 +66,6 @@ export function CreatorZapModal({
   }, [customAmountValue, selectedAmount]);
 
   const qrValue = useMemo(() => `lightning:${CREATOR_LIGHTNING_ADDRESS}`, []);
-  const qrDataUrl = useMemo(() => {
-    const qr = qrcode(0, "M");
-    qr.addData(qrValue);
-    qr.make();
-    return qr.createDataURL(6, 2);
-  }, [qrValue]);
 
   const handleSend = async () => {
     if (!walletConnected || customAmountInvalid || resolvedAmount <= 0) return;
@@ -106,7 +100,19 @@ export function CreatorZapModal({
     >
       <div className="creator-zap-body">
         <div className="creator-qr">
-          <img src={qrDataUrl} alt="Zap the creator" />
+          <QRCodeSVG
+            value={qrValue}
+            size={160}
+            level="M"
+            bgColor="#ffffff"
+            fgColor="#000000"
+            imageSettings={{
+              src: "/favicon.svg",
+              height: 32,
+              width: 32,
+              excavate: true,
+            }}
+          />
         </div>
         <div className="creator-address">{CREATOR_LIGHTNING_ADDRESS}</div>
         <p className="creator-hint">

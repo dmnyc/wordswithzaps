@@ -161,6 +161,11 @@
     justify-content: center;
 }
 
+.profile-avatar-upload-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
 .profile-avatar-upload-btn:hover {
     background: #ffe066;
 }

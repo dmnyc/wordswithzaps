@@ -842,7 +842,6 @@ export function GameView({
         }
         isLoading={isLoading}
         pendingScore={validation?.score}
-        walletConnected={walletState.connected}
         onPlay={handlePlay}
         onPass={handlePass}
         onExchange={handleExchange}

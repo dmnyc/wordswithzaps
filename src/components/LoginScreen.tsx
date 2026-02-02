@@ -2,6 +2,13 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import { QRCodeSVG } from "qrcode.react";
 import type { NostrConnectSession } from "../hooks/useNostr";
+import {
+  BoltIcon,
+  LockIcon,
+  KeyIcon,
+  CameraIcon,
+  ClipboardIcon,
+} from "./icons/LoginIcons";
 import "./LoginScreen.css";
 
 type LoginView =
@@ -262,7 +269,9 @@ WARNING: Never share your private key. Store this file securely.`;
               onClick={handleExtensionConnect}
               disabled={isConnecting}
             >
-              <div className="login-option-icon">⚡</div>
+              <div className="login-option-icon icon-yellow">
+                <BoltIcon />
+              </div>
               <div className="login-option-content">
                 <div className="login-option-title">
                   {isConnecting ? "Connecting..." : "Browser Extension"}
@@ -279,7 +288,9 @@ WARNING: Never share your private key. Store this file securely.`;
               onClick={() => setView("nip46-options")}
               disabled={isConnecting}
             >
-              <div className="login-option-icon">🔐</div>
+              <div className="login-option-icon icon-purple">
+                <LockIcon />
+              </div>
               <div className="login-option-content">
                 <div className="login-option-title">Remote Signer</div>
                 <div className="login-option-desc">
@@ -294,7 +305,9 @@ WARNING: Never share your private key. Store this file securely.`;
               onClick={handleCreateAccount}
               disabled={isConnecting}
             >
-              <div className="login-option-icon">🔑</div>
+              <div className="login-option-icon icon-green">
+                <KeyIcon />
+              </div>
               <div className="login-option-content">
                 <div className="login-option-title">Create New Account</div>
                 <div className="login-option-desc">
@@ -309,13 +322,17 @@ WARNING: Never share your private key. Store this file securely.`;
         {view === "nip46-options" && (
           <div className="login-expanded">
             <div className="login-expanded-header">
-              <div className="login-option-icon">🔐</div>
+              <div className="login-option-icon icon-purple">
+                <LockIcon />
+              </div>
               <div className="login-option-title">Remote Signer</div>
             </div>
 
             <div className="login-suboptions">
               <button className="login-suboption" onClick={handleShowQRCode}>
-                <span className="login-suboption-icon">📷</span>
+                <span className="login-suboption-icon icon-blue">
+                  <CameraIcon />
+                </span>
                 <div>
                   <div className="login-suboption-title">Scan QR Code</div>
                   <div className="login-suboption-desc">
@@ -328,7 +345,9 @@ WARNING: Never share your private key. Store this file securely.`;
                 className="login-suboption"
                 onClick={() => setView("nip46-bunker")}
               >
-                <span className="login-suboption-icon">📋</span>
+                <span className="login-suboption-icon icon-orange">
+                  <ClipboardIcon />
+                </span>
                 <div>
                   <div className="login-suboption-title">Paste Bunker URL</div>
                   <div className="login-suboption-desc">
@@ -348,7 +367,9 @@ WARNING: Never share your private key. Store this file securely.`;
         {view === "nip46-qr" && (
           <div className="login-expanded">
             <div className="login-expanded-header">
-              <span className="login-suboption-icon">📷</span>
+              <span className="login-suboption-icon icon-blue">
+                <CameraIcon />
+              </span>
               <div className="login-option-title">Scan with Remote Signer</div>
             </div>
 
@@ -360,7 +381,13 @@ WARNING: Never share your private key. Store this file securely.`;
                     size={200}
                     bgColor="#ffffff"
                     fgColor="#000000"
-                    level="M"
+                    level="H"
+                    imageSettings={{
+                      src: "/favicon.svg",
+                      height: 28,
+                      width: 28,
+                      excavate: true,
+                    }}
                   />
                 </div>
 
@@ -400,7 +427,9 @@ WARNING: Never share your private key. Store this file securely.`;
         {view === "nip46-bunker" && (
           <div className="login-expanded">
             <div className="login-expanded-header">
-              <span className="login-suboption-icon">📋</span>
+              <span className="login-suboption-icon icon-orange">
+                <ClipboardIcon />
+              </span>
               <div className="login-option-title">Paste Bunker URL</div>
             </div>
 
@@ -458,7 +487,9 @@ WARNING: Never share your private key. Store this file securely.`;
         {view === "create-keys" && generatedKeys && (
           <div className="login-expanded">
             <div className="login-expanded-header">
-              <span className="login-suboption-icon">🔑</span>
+              <span className="login-suboption-icon icon-green">
+                <KeyIcon />
+              </span>
               <div className="login-option-title">Your New Keys</div>
             </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getCurrentUser } from "../nostr/client";
 import { fetchProfileMetadata, updateProfile } from "../nostr/profiles";
 import { uploadImage } from "../nostr/imageUpload";
+import { CameraIcon } from "./icons/LoginIcons";
 import "./ProfileSettings.css";
 
 interface ProfileSettingsProps {
@@ -60,7 +61,9 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
         const metadata = await fetchProfileMetadata(user.pubkey);
         if (metadata) {
           setFormState({
-            displayName: String(metadata.display_name || metadata.displayName || ""),
+            displayName: String(
+              metadata.display_name || metadata.displayName || "",
+            ),
             name: String(metadata.name || ""),
             about: String(metadata.about || ""),
             picture: String(metadata.picture || ""),
@@ -82,16 +85,18 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
   }, [user?.pubkey]);
 
   const handleInputChange = useCallback(
-    (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const value = e.target.value;
+    (field: keyof FormState) =>
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const value = e.target.value;
 
-      // Enforce character limits
-      if (field === "displayName" && value.length > DISPLAY_NAME_LIMIT) return;
-      if (field === "name" && value.length > NAME_LIMIT) return;
+        // Enforce character limits
+        if (field === "displayName" && value.length > DISPLAY_NAME_LIMIT)
+          return;
+        if (field === "name" && value.length > NAME_LIMIT) return;
 
-      setFormState((prev) => ({ ...prev, [field]: value }));
-      setError(null);
-    },
+        setFormState((prev) => ({ ...prev, [field]: value }));
+        setError(null);
+      },
     [],
   );
 
@@ -126,19 +131,20 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
   }, []);
 
   const handleFileChange = useCallback(
-    (type: "picture" | "banner") => (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+    (type: "picture" | "banner") =>
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-      if (type === "picture") {
-        handlePictureUpload(file);
-      } else {
-        handleBannerUpload(file);
-      }
+        if (type === "picture") {
+          handlePictureUpload(file);
+        } else {
+          handleBannerUpload(file);
+        }
 
-      // Reset input so same file can be selected again
-      e.target.value = "";
-    },
+        // Reset input so same file can be selected again
+        e.target.value = "";
+      },
     [handlePictureUpload, handleBannerUpload],
   );
 
@@ -166,7 +172,8 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
       onToast?.("Profile updated!", "success");
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save profile";
+      const message =
+        err instanceof Error ? err.message : "Failed to save profile";
       setError(message);
     } finally {
       setSaving(false);
@@ -182,7 +189,8 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
     [onClose],
   );
 
-  const displayNameForPreview = formState.displayName || formState.name || "You";
+  const displayNameForPreview =
+    formState.displayName || formState.name || "You";
 
   return (
     <div className="profile-settings-overlay" onClick={handleOverlayClick}>
@@ -196,7 +204,9 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
         {error && <div className="profile-error">{error}</div>}
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "40px", color: "#7a7a7a" }}>
+          <div
+            style={{ textAlign: "center", padding: "40px", color: "#7a7a7a" }}
+          >
             Loading profile...
           </div>
         ) : (
@@ -205,7 +215,11 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
             <div className="profile-banner-section">
               <div
                 className={`profile-banner-preview ${formState.banner ? "has-image" : ""}`}
-                style={formState.banner ? { backgroundImage: `url(${formState.banner})` } : undefined}
+                style={
+                  formState.banner
+                    ? { backgroundImage: `url(${formState.banner})` }
+                    : undefined
+                }
               >
                 {!formState.banner && (
                   <div className="profile-banner-placeholder">
@@ -235,9 +249,15 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
               <div className="profile-avatar-container">
                 <div
                   className={`profile-avatar-preview ${formState.picture ? "has-image" : ""}`}
-                  style={formState.picture ? { backgroundImage: `url(${formState.picture})` } : undefined}
+                  style={
+                    formState.picture
+                      ? { backgroundImage: `url(${formState.picture})` }
+                      : undefined
+                  }
                 >
-                  {!formState.picture && <span className="profile-avatar-placeholder">👤</span>}
+                  {!formState.picture && (
+                    <span className="profile-avatar-placeholder">👤</span>
+                  )}
                 </div>
                 <button
                   className="profile-avatar-upload-btn"
@@ -245,12 +265,20 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                   disabled={uploadingPicture}
                   title="Upload picture"
                 >
-                  {uploadingPicture ? <span className="profile-spinner" /> : "📷"}
+                  {uploadingPicture ? (
+                    <span className="profile-spinner" />
+                  ) : (
+                    <CameraIcon />
+                  )}
                 </button>
               </div>
               <div className="profile-avatar-info">
-                <span className="profile-avatar-info-name">{displayNameForPreview}</span>
-                <span className="profile-avatar-info-hint">Click camera to change picture</span>
+                <span className="profile-avatar-info-name">
+                  {displayNameForPreview}
+                </span>
+                <span className="profile-avatar-info-hint">
+                  Click camera to change picture
+                </span>
               </div>
             </div>
 
@@ -340,7 +368,11 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                     onClick={() => pictureInputRef.current?.click()}
                     disabled={uploadingPicture}
                   >
-                    {uploadingPicture ? <span className="profile-spinner" /> : "Upload"}
+                    {uploadingPicture ? (
+                      <span className="profile-spinner" />
+                    ) : (
+                      "Upload"
+                    )}
                   </button>
                 </div>
               </div>
@@ -362,7 +394,11 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                     onClick={() => bannerInputRef.current?.click()}
                     disabled={uploadingBanner}
                   >
-                    {uploadingBanner ? <span className="profile-spinner" /> : "Upload"}
+                    {uploadingBanner ? (
+                      <span className="profile-spinner" />
+                    ) : (
+                      "Upload"
+                    )}
                   </button>
                 </div>
               </div>
@@ -378,7 +414,9 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                   onChange={handleInputChange("nip05")}
                   placeholder="you@example.com"
                 />
-                <span className="profile-form-hint">Nostr verification identifier</span>
+                <span className="profile-form-hint">
+                  Nostr verification identifier
+                </span>
               </div>
 
               <div className="profile-form-group">
@@ -411,7 +449,11 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
 
             {/* Actions */}
             <div className="profile-actions">
-              <button className="profile-btn secondary" onClick={onClose} disabled={saving}>
+              <button
+                className="profile-btn secondary"
+                onClick={onClose}
+                disabled={saving}
+              >
                 Cancel
               </button>
               <button
