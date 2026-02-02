@@ -34,7 +34,7 @@ interface ZapNudgeModalProps {
   onOpenWalletSettings?: () => void;
 }
 
-const PRESET_AMOUNTS = [50, 100, 500, 1000];
+const PRESET_AMOUNTS = [21, 50, 100, 500];
 const SHARE_OPTIONS: ShareOption[] = [
   { value: "none", label: "Don't share" },
   { value: "public", label: "Public note (kind 1)" },

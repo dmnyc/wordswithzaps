@@ -9,6 +9,7 @@ import Rack from "./Rack";
 import ScoreBoard from "./ScoreBoard";
 import GameControls from "./GameControls";
 import BlankTilePicker from "./BlankTilePicker";
+import ExchangeTilesModal from "./ExchangeTilesModal";
 import { shuffleArray } from "../engine/constants";
 import {
   getDisableGameplayZaps,
@@ -40,7 +41,6 @@ type WordScorePop = {
 
 const WORD_SCORE_POP_DURATION_MS = 900;
 const POST_MOVE_MODAL_DELAY_MS = 1000;
-
 export function GameView({
   gameId,
   opponentPubkey,
@@ -435,7 +435,7 @@ export function GameView({
       if (!zapsDisabled && options.zapAmount > 0) {
         if (walletState.connected && opponentPubkey) {
           try {
-            const message = `Words With Zaps: your turn -> ${gameLink}`;
+            const message = "It's your turn on #WordsWithZaps!";
             await zapUser({
               recipientPubkey: opponentPubkey,
               amountSats: options.zapAmount,
@@ -645,11 +645,10 @@ export function GameView({
   );
 
   const handleAchievementZap = useCallback(
-    async (amount: number) => {
+    async (amount: number, message: string) => {
       if (!walletState.connected || !opponentPubkey || !pendingAchievement)
         return;
       try {
-        const message = `Words With Zaps: Congrats on "${pendingAchievement.word}"! ${gameLink}`;
         await zapUser({
           recipientPubkey: opponentPubkey,
           amountSats: amount,
@@ -665,7 +664,6 @@ export function GameView({
     },
     [
       gameId,
-      gameLink,
       onToast,
       opponentPubkey,
       pendingAchievement,
@@ -851,10 +849,16 @@ export function GameView({
         onClear={handleClear}
         onShuffle={handleShuffle}
         scorePop={wordScorePop}
-        exchangeMode={exchangeMode}
-        exchangeCount={exchangeSelection.length}
-        onCancelExchange={handleCancelExchange}
-        onConfirmExchange={handleConfirmExchange}
+      />
+
+      <ExchangeTilesModal
+        open={exchangeMode}
+        tiles={availableRack}
+        exchangeSelection={exchangeSelection}
+        isLoading={isLoading}
+        onToggleExchangeSelect={handleToggleExchangeSelect}
+        onCancel={handleCancelExchange}
+        onConfirm={handleConfirmExchange}
       />
 
       {pendingBlankPosition && (

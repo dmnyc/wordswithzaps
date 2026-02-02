@@ -92,7 +92,9 @@
         transparent 360deg
     );
     border-radius: 50%;
-    animation: burstSpin 8s linear infinite, burstPulse 2s ease-in-out infinite;
+    animation:
+        burstSpin 8s linear infinite,
+        burstPulse 2s ease-in-out infinite;
 }
 
 @keyframes burstSpin {
@@ -171,10 +173,14 @@
 @keyframes glowPulse {
     0%,
     100% {
-        box-shadow: 0 0 20px rgba(255, 204, 0, 0.2), 0 0 40px rgba(255, 204, 0, 0.1);
+        box-shadow:
+            0 0 20px rgba(255, 204, 0, 0.2),
+            0 0 40px rgba(255, 204, 0, 0.1);
     }
     50% {
-        box-shadow: 0 0 30px rgba(255, 204, 0, 0.4), 0 0 60px rgba(255, 204, 0, 0.2);
+        box-shadow:
+            0 0 30px rgba(255, 204, 0, 0.4),
+            0 0 60px rgba(255, 204, 0, 0.2);
     }
 }
 
@@ -250,6 +256,42 @@
     margin-bottom: 20px;
 }
 
+.achievement-message {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.achievement-message-label {
+    color: #9a9a9a;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.achievement-message-input {
+    width: 100%;
+    border-radius: 8px;
+    border: none;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 13px;
+    resize: vertical;
+    min-height: 72px;
+}
+
+.achievement-message-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.achievement-message-hint {
+    color: #7a7a7a;
+    font-size: 12px;
+    margin: 0;
+}
+
 .achievement-custom-input {
     flex: 1;
     border-radius: 8px;
@@ -303,6 +345,10 @@
 
 .achievement-btn.zap:hover {
     background: linear-gradient(180deg, #ffdd33, #ffcc00);
+}
+
+.achievement-btn.zap:active {
+    transform: translateY(1px);
 }
 
 .achievement-btn.zap:disabled {

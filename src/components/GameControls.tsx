@@ -6,17 +6,12 @@ interface GameControlsProps {
   canExchange: boolean;
   isLoading: boolean;
   pendingScore?: number;
-  walletConnected?: boolean;
   scorePop?: { id: number; points: number } | null;
-  exchangeMode?: boolean;
-  exchangeCount?: number;
   onPlay: () => void;
   onPass: () => void;
   onExchange: () => void;
   onClear: () => void;
   onShuffle: () => void;
-  onCancelExchange?: () => void;
-  onConfirmExchange?: () => void;
 }
 
 export function GameControls({
@@ -25,52 +20,13 @@ export function GameControls({
   canExchange,
   isLoading,
   pendingScore,
-  walletConnected: _walletConnected = false,
   scorePop = null,
-  exchangeMode = false,
-  exchangeCount = 0,
   onPlay,
   onPass,
   onExchange,
   onClear,
   onShuffle,
-  onCancelExchange,
-  onConfirmExchange,
 }: GameControlsProps) {
-  void _walletConnected; // Reserved for future use
-
-  // Exchange mode UI
-  if (exchangeMode) {
-    return (
-      <div className="game-controls exchange-mode">
-        <div className="exchange-info">
-          <span className="exchange-label">Select tiles to exchange</span>
-          {exchangeCount > 0 && (
-            <span className="exchange-count">{exchangeCount} selected</span>
-          )}
-        </div>
-        <div className="exchange-actions">
-          <button
-            className="control-btn secondary"
-            onClick={onCancelExchange}
-            disabled={isLoading}
-          >
-            Cancel
-          </button>
-          <button
-            className="control-btn exchange-confirm"
-            onClick={onConfirmExchange}
-            disabled={exchangeCount === 0 || isLoading}
-          >
-            {isLoading
-              ? "Exchanging..."
-              : `Exchange ${exchangeCount} tile${exchangeCount === 1 ? "" : "s"}`}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="game-controls">
       <div className="controls-left">

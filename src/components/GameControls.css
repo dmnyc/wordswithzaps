@@ -122,49 +122,6 @@
     margin: 0 2px;
 }
 
-/* Exchange mode styling */
-.game-controls.exchange-mode {
-    flex-direction: column;
-    gap: 10px;
-    background: rgba(255, 107, 107, 0.08);
-    box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.2);
-}
-
-.exchange-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.exchange-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text);
-}
-
-.exchange-count {
-    font-size: 13px;
-    font-weight: 600;
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.15);
-    padding: 4px 10px;
-    border-radius: 12px;
-}
-
-.exchange-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.control-btn.exchange-confirm {
-    background: linear-gradient(180deg, #ff6b6b, #e55a5a);
-    color: #fff;
-}
-
-.control-btn.exchange-confirm:not(:disabled):hover {
-    background: linear-gradient(180deg, #ff7b7b, #f06a6a);
-}
-
 /* Mobile responsive breakpoints */
 @media (max-width: 520px) {
     .game-controls {
