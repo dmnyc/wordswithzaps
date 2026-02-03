@@ -29,7 +29,9 @@ export function GameRulesModal({ open, onClose }: GameRulesModalProps) {
             <li>
               New words must connect to existing tiles (except first move)
             </li>
-            <li>First word must cover the center bolt</li>
+            <li>
+              First word must cover the center bolt (the glowing yellow square)
+            </li>
           </ul>
         </section>
 

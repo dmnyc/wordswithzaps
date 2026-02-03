@@ -12,7 +12,8 @@ export interface Achievement {
 }
 
 // ZAP bonus squares on the board (+21 points)
-const ZAP_SQUARES = new Set(["0,0", "0,14", "7,7", "14,0", "14,14"]);
+// Excludes center (7,7) since first move always starts there
+const ZAP_SQUARES = new Set(["0,0", "0,14", "14,0", "14,14"]);
 
 // Double Word squares on the board
 const DW_SQUARES = new Set([

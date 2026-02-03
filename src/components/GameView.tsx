@@ -898,6 +898,7 @@ export function GameView({
         onRemoveTile={handleRemoveTile}
         onMoveTile={handleMoveTile}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
+        isFirstMove={(gameState.turn.index ?? 0) === 0}
       />
 
       <Rack

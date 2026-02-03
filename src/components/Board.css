@@ -124,6 +124,33 @@
     filter: drop-shadow(0 0 6px rgba(255, 204, 0, 0.45));
 }
 
+/* Center cell - inverted (yellow background, dark bolt) */
+.cell-center.cell-zap {
+    background: linear-gradient(145deg, #f5c518, #d4a912);
+}
+.cell-center.cell-zap:hover {
+    background: linear-gradient(145deg, #ffd633, #e5b915);
+}
+.cell-center .cell-bolt {
+    filter: brightness(0) saturate(100%);
+}
+
+/* Center cell glow for first move */
+.cell-center-glow {
+    animation: centerGlow 1.5s ease-in-out infinite;
+    box-shadow: 0 0 12px 4px rgba(245, 197, 24, 0.6);
+}
+
+@keyframes centerGlow {
+    0%,
+    100% {
+        box-shadow: 0 0 12px 4px rgba(245, 197, 24, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 20px 8px rgba(245, 197, 24, 0.9);
+    }
+}
+
 /* Mobile responsive breakpoints */
 @media (max-width: 650px) {
     .board {

@@ -1,6 +1,11 @@
 import { useState, useCallback } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { BOARD_SIZE, getMultiplier, MultiplierType } from "../engine/constants";
+import {
+  BOARD_SIZE,
+  CENTER_POSITION,
+  getMultiplier,
+  MultiplierType,
+} from "../engine/constants";
 import type { TilePlacement } from "../types/game";
 import Tile from "./Tile";
 import "./Board.css";
@@ -18,6 +23,7 @@ interface BoardProps {
   onRemoveTile: (x: number, y: number) => void;
   onMoveTile: (fromX: number, fromY: number, toX: number, toY: number) => void;
   disabled?: boolean;
+  isFirstMove?: boolean;
 }
 
 function getCellClass(multiplier: MultiplierType): string {
@@ -65,6 +71,7 @@ export function Board({
   onRemoveTile,
   onMoveTile,
   disabled = false,
+  isFirstMove = false,
 }: BoardProps) {
   const [dragOver, setDragOver] = useState<string | null>(null);
   const boardStyle = {
@@ -179,7 +186,7 @@ export function Board({
     return (
       <div
         key={coord}
-        className={`board-cell ${getCellClass(multiplier)} ${isDraggedOver ? "drag-over" : ""} ${isTapTarget ? "tap-target" : ""}`}
+        className={`board-cell ${getCellClass(multiplier)} ${x === CENTER_POSITION.x && y === CENTER_POSITION.y ? "cell-center" : ""} ${x === CENTER_POSITION.x && y === CENTER_POSITION.y && isFirstMove ? "cell-center-glow" : ""} ${isDraggedOver ? "drag-over" : ""} ${isTapTarget ? "tap-target" : ""}`}
         onDragOver={(e) => handleDragOver(e, x, y)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, x, y)}
