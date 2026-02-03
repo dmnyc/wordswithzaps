@@ -139,6 +139,8 @@
 .cell-center-glow {
     animation: centerGlow 1.5s ease-in-out infinite;
     box-shadow: 0 0 12px 4px rgba(245, 197, 24, 0.6);
+    z-index: 10;
+    position: relative;
 }
 
 @keyframes centerGlow {

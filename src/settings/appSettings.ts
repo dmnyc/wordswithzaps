@@ -1,3 +1,5 @@
+import { updateSetting } from "./nostrSettings";
+
 const DISABLE_GAMEPLAY_ZAPS_KEY = "wordswithzaps_disable_gameplay_zaps";
 const DEFAULT_DISABLE_GAMEPLAY_ZAPS = false;
 const SHARE_TO_NOSTR_DEFAULT_KEY = "wordswithzaps_share_to_nostr_default";
@@ -54,6 +56,8 @@ export function setDisableGameplayZaps(disabled: boolean): void {
     localStorage.setItem(DISABLE_GAMEPLAY_ZAPS_KEY, String(disabled));
     if (current !== disabled) {
       notifyListeners();
+      // Sync to relays
+      updateSetting("disableGameplayZaps", disabled);
     }
   } catch {
     // Ignore storage errors
@@ -77,6 +81,8 @@ export function setShareToNostrDefault(enabled: boolean): void {
     localStorage.setItem(SHARE_TO_NOSTR_DEFAULT_KEY, String(enabled));
     if (current !== enabled) {
       notifyListeners();
+      // Sync to relays
+      updateSetting("shareToNostrDefault", enabled);
     }
   } catch {
     // Ignore storage errors
@@ -97,6 +103,8 @@ export function getShareMethodDefault(): ShareMethod {
 export function setShareMethodDefault(method: ShareMethod): void {
   try {
     localStorage.setItem(SHARE_METHOD_DEFAULT_KEY, method);
+    // Sync to relays
+    updateSetting("shareMethodDefault", method);
   } catch {
     // Ignore storage errors
   }
@@ -116,6 +124,8 @@ export function getSaveShareSettingDefault(): boolean {
 export function setSaveShareSettingDefault(enabled: boolean): void {
   try {
     localStorage.setItem(SAVE_SHARE_SETTING_KEY, String(enabled));
+    // Sync to relays
+    updateSetting("saveShareSetting", enabled);
   } catch {
     // Ignore storage errors
   }
@@ -141,6 +151,8 @@ export function getZapNudgeDefaultAmount(): number {
 export function setZapNudgeDefaultAmount(amount: number): void {
   try {
     localStorage.setItem(ZAP_NUDGE_DEFAULT_AMOUNT_KEY, String(amount));
+    // Sync to relays
+    updateSetting("zapNudgeDefaultAmount", amount);
   } catch {
     // Ignore storage errors
   }

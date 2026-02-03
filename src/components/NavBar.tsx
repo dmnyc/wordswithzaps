@@ -8,9 +8,10 @@ import {
   BitcoinConnectLogo,
   EyeIcon,
 } from "./icons/WalletIcons";
+import { updateSetting } from "../settings/nostrSettings";
 import "./NavBar.css";
 
-const BALANCE_HIDDEN_KEY = "wordswithzaps_wallet_balance_hidden";
+const BALANCE_HIDDEN_KEY = "wordswithzaps_balance_hidden";
 
 interface NavBarProps {
   user: NDKUser | null;
@@ -92,6 +93,8 @@ export function NavBar({
   useEffect(() => {
     try {
       localStorage.setItem(BALANCE_HIDDEN_KEY, String(hideBalance));
+      // Sync to relays
+      updateSetting("balanceHidden", hideBalance);
     } catch {
       // Ignore storage errors
     }

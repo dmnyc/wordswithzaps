@@ -15,6 +15,10 @@ import {
   getConnectedRelayUrls,
   disconnect,
 } from "../nostr/client";
+import {
+  syncSettingsOnLogin,
+  clearSettingsCache,
+} from "../settings/nostrSettings";
 
 export type AuthMethod = "nip07" | "private-key" | "nip46" | null;
 
@@ -138,6 +142,19 @@ export function useNostr(): UseNostrReturn {
       cancelled = true;
     };
   }, []);
+
+  // Sync settings when user logs in or out
+  useEffect(() => {
+    if (user) {
+      // User logged in - sync settings from relays
+      syncSettingsOnLogin().catch((err) => {
+        console.warn("[useNostr] Failed to sync settings:", err);
+      });
+    } else {
+      // User logged out - clear settings cache
+      clearSettingsCache();
+    }
+  }, [user]);
 
   const connect = useCallback(async () => {
     setConnecting(true);
