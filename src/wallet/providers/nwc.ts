@@ -286,6 +286,18 @@ export function getNwcConnectionUrl(): string | null {
   return currentConnectionUrl;
 }
 
+// Timeout configuration for different NIP-47 methods
+const NIP47_TIMEOUTS: Record<string, number> = {
+  pay_invoice: 60000, // 60 seconds for payments (route finding + payment)
+  get_balance: 10000, // 10 seconds for balance queries
+  make_invoice: 15000, // 15 seconds for invoice creation
+  lookup_invoice: 10000, // 10 seconds for invoice lookup
+  get_info: 10000, // 10 seconds for wallet info
+  list_transactions: 15000, // 15 seconds for transaction history
+};
+
+const DEFAULT_TIMEOUT = 10000; // 10 seconds default
+
 /**
  * Execute a NIP-47 request
  */
@@ -295,6 +307,17 @@ async function executeNip47Request(
 ): Promise<Record<string, unknown>> {
   if (!nwcSecret || !nwcWalletPubkey || !nwcRelay) {
     throw new Error("NWC not connected");
+  }
+
+  // Verify relay is connected, attempt reconnect if needed
+  if (nwcRelay.status !== 1) {
+    console.log("[NWC] Relay disconnected, attempting reconnect...");
+    try {
+      await waitForRelayConnection(nwcRelay, 5000);
+      console.log("[NWC] Relay reconnected");
+    } catch (e) {
+      throw new Error("NWC relay disconnected and reconnect failed");
+    }
   }
 
   const ndkInstance = getNDK();
@@ -340,13 +363,15 @@ async function executeNip47Request(
     relaySet,
   );
 
+  // Use method-specific timeout
+  const timeoutMs = NIP47_TIMEOUTS[method] || DEFAULT_TIMEOUT;
+
   const responsePromise = new Promise<Record<string, unknown>>(
     (resolve, reject) => {
-      // 10 second timeout
       const timeout = setTimeout(() => {
         sub.stop();
-        reject(new Error("NWC request timeout"));
-      }, 10000);
+        reject(new Error(`NWC ${method} timeout after ${timeoutMs / 1000}s`));
+      }, timeoutMs);
 
       sub.on("event", async (responseEvent: NDKEvent) => {
         try {

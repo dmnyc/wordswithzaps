@@ -13,6 +13,35 @@ import { loadMnemonic } from "./storage";
 import { sha256 } from "@noble/hashes/sha2";
 import { bytesToHex } from "@noble/hashes/utils";
 
+// Timeout configuration
+const NIP07_OPERATION_TIMEOUT = 30000; // 30 seconds for NIP-07 signer operations
+const RELAY_FETCH_TIMEOUT = 15000; // 15 seconds for relay fetches
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+
+    promise
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 const BACKUP_EVENT_KIND = 30078;
 // Compatible with jumble-spark and zapcooking
 const BACKUP_D_TAG = "spark-wallet-backup";
@@ -104,7 +133,11 @@ async function encrypt(pubkey: string, plaintext: string): Promise<string> {
       };
     }
   ).nip44;
-  return await nip44.encrypt(pubkey, plaintext);
+  return await withTimeout(
+    nip44.encrypt(pubkey, plaintext),
+    NIP07_OPERATION_TIMEOUT,
+    "NIP-44 encryption",
+  );
 }
 
 /**
@@ -122,7 +155,11 @@ async function decrypt(pubkey: string, ciphertext: string): Promise<string> {
       };
     }
   ).nip44;
-  return await nip44.decrypt(pubkey, ciphertext);
+  return await withTimeout(
+    nip44.decrypt(pubkey, ciphertext),
+    NIP07_OPERATION_TIMEOUT,
+    "NIP-44 decryption",
+  );
 }
 
 /**
@@ -175,10 +212,14 @@ export async function backupSparkToNostr(
   ];
 
   console.log("[Spark Backup] Signing backup event...");
-  await ndkEvent.sign();
+  await withTimeout(ndkEvent.sign(), NIP07_OPERATION_TIMEOUT, "Event signing");
 
   console.log("[Spark Backup] Publishing backup to Nostr relays...");
-  await ndkEvent.publish();
+  await withTimeout(
+    ndkEvent.publish(),
+    RELAY_FETCH_TIMEOUT,
+    "Event publishing",
+  );
 
   console.log("[Spark Backup] Mnemonic backed up to Nostr successfully");
   return ndkEvent;
@@ -205,7 +246,11 @@ export async function listSparkBackups(
     authors: [pubkey],
   };
 
-  const events = await ndk.fetchEvents(filter, { closeOnEose: true });
+  const events = await withTimeout(
+    ndk.fetchEvents(filter, { closeOnEose: true }),
+    RELAY_FETCH_TIMEOUT,
+    "Relay fetch for Spark backups",
+  );
 
   if (!events || events.size === 0) {
     console.log("[Spark Backup] No backup events found");
@@ -375,8 +420,12 @@ export async function deleteSparkBackupFromNostr(
     ["deleted", "true"],
   ];
 
-  await ndkEvent.sign();
-  await ndkEvent.publish();
+  await withTimeout(ndkEvent.sign(), NIP07_OPERATION_TIMEOUT, "Event signing");
+  await withTimeout(
+    ndkEvent.publish(),
+    RELAY_FETCH_TIMEOUT,
+    "Event publishing",
+  );
 
   console.log("[Spark Backup] Backup deleted (replaced with empty event)");
 }
