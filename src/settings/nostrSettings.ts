@@ -14,7 +14,7 @@ const KIND_APP_DATA = 30078;
 export interface UserSettings {
   disableGameplayZaps: boolean;
   shareToNostrDefault: boolean;
-  shareMethodDefault: "public" | "private";
+  shareMethodDefault: "public" | "public-reply" | "private" | "private-dm";
   saveShareSetting: boolean;
   zapNudgeDefaultAmount: number;
   balanceHidden: boolean;
@@ -197,7 +197,9 @@ function getLocalSettings(): UserSettings {
       shareMethodDefault:
         (localStorage.getItem("wordswithzaps_share_method_default") as
           | "public"
-          | "private") || "public",
+          | "public-reply"
+          | "private"
+          | "private-dm") || "public",
       saveShareSetting:
         localStorage.getItem("wordswithzaps_save_share_setting") !== "false",
       zapNudgeDefaultAmount:

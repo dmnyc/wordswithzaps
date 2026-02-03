@@ -10,7 +10,30 @@ import {
   getZapNudgeDefaultAmount,
   setZapNudgeDefaultAmount,
 } from "../settings/appSettings";
+import { nip19 } from "nostr-tools";
 import "./ZapNudgeModal.css";
+
+const HEX_64_RE = /^[0-9a-f]{64}$/i;
+
+function validateNoteId(input: string): string | null {
+  if (!input) return null;
+  try {
+    if (input.startsWith("note1")) {
+      const decoded = nip19.decode(input);
+      if (decoded.type !== "note") return "Not a valid note identifier.";
+      return null;
+    }
+    if (input.startsWith("nevent1")) {
+      const decoded = nip19.decode(input);
+      if (decoded.type !== "nevent") return "Not a valid nevent identifier.";
+      return null;
+    }
+    if (HEX_64_RE.test(input)) return null;
+    return "Enter a note1..., nevent1..., or 64-char hex event ID.";
+  } catch {
+    return "Invalid identifier.";
+  }
+}
 
 type ShareMode = "none" | ShareMethod;
 type ShareOption = { value: ShareMode; label: string };
@@ -29,6 +52,7 @@ interface ZapNudgeModalProps {
   onConfirm: (options: {
     zapAmount: number;
     shareMode: ShareMode;
+    replyTo?: string;
   }) => void | Promise<void>;
   onClose: () => void;
   onOpenWalletSettings?: () => void;
@@ -37,8 +61,10 @@ interface ZapNudgeModalProps {
 const PRESET_AMOUNTS = [21, 50, 100, 500];
 const SHARE_OPTIONS: ShareOption[] = [
   { value: "none", label: "Don't share" },
-  { value: "public", label: "Public note (kind 1)" },
-  { value: "private", label: "Private DM (kind 4)" },
+  { value: "public", label: "Public Nostr post (kind 1)" },
+  { value: "public-reply", label: "Public Nostr reply (kind 1)" },
+  { value: "private", label: "Standard DM (kind 4: More compatible)" },
+  { value: "private-dm", label: "Giftwrap DM (NIP-17: More secure)" },
 ];
 
 export function ZapNudgeModal({
@@ -67,6 +93,7 @@ export function ZapNudgeModal({
     if (!getShareToNostrDefault()) return "none";
     return getShareMethodDefault();
   });
+  const [replyTo, setReplyTo] = useState("");
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement | null>(null);
   const [saveShareSetting, setSaveShareSetting] = useState(() =>
@@ -79,6 +106,7 @@ export function ZapNudgeModal({
     if (open) {
       setShareMenuOpen(false);
       setIsSubmitting(false);
+      setReplyTo("");
       const saved = getZapNudgeDefaultAmount();
       setSelectedAmount(
         saved > 0 && !PRESET_AMOUNTS.includes(saved) ? "custom" : saved,
@@ -120,7 +148,16 @@ export function ZapNudgeModal({
     return "Done";
   }, [hasShare, hasZap]);
   const sharePreviewText =
-    shareMode === "private" ? sharePreviewTextPrivate : sharePreviewTextPublic;
+    shareMode === "private" || shareMode === "private-dm"
+      ? sharePreviewTextPrivate
+      : sharePreviewTextPublic;
+  const isPublicMode = shareMode === "public" || shareMode === "public-reply";
+  const replyToError = useMemo(
+    () => (shareMode === "public-reply" ? validateNoteId(replyTo) : null),
+    [shareMode, replyTo],
+  );
+  const replyInvalid =
+    shareMode === "public-reply" && (!replyTo || replyToError !== null);
 
   useEffect(() => {
     if (!saveShareSetting) return;
@@ -322,9 +359,28 @@ export function ZapNudgeModal({
         {shareMode !== "none" && (
           <div className="zap-preview">
             <div className="zap-preview-title">
-              {shareMode === "private" ? "DM preview" : "Public note preview"}
+              {isPublicMode ? "Public note preview" : "DM preview"}
             </div>
             <pre className="zap-preview-content">{sharePreviewText}</pre>
+            {shareMode === "public-reply" && (
+              <div className="zap-reply-to">
+                <label className="zap-reply-to-label" htmlFor="reply-to-input">
+                  Reply to note ID
+                </label>
+                <input
+                  id="reply-to-input"
+                  className={`zap-reply-to-input${replyTo && replyToError ? " invalid" : ""}`}
+                  type="text"
+                  placeholder="note1..., nevent1..., or hex event ID"
+                  value={replyTo}
+                  onChange={(e) => setReplyTo(e.target.value.trim())}
+                  disabled={isSubmitting}
+                />
+                {replyTo && replyToError && (
+                  <span className="zap-reply-to-error">{replyToError}</span>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -354,14 +410,18 @@ export function ZapNudgeModal({
           </label>
           <button
             className="zap-btn primary"
-            disabled={isSubmitting}
+            disabled={isSubmitting || replyInvalid}
             onClick={() => {
-              if (isSubmitting) return;
+              if (isSubmitting || replyInvalid) return;
               setIsSubmitting(true);
               Promise.resolve(
                 onConfirm({
                   zapAmount: customAmountInvalid ? 0 : resolvedZapAmount,
                   shareMode,
+                  replyTo:
+                    shareMode === "public-reply" && replyTo
+                      ? replyTo
+                      : undefined,
                 }),
               )
                 .catch(() => {

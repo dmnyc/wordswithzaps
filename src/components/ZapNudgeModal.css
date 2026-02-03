@@ -286,6 +286,51 @@
     line-height: 1.4;
 }
 
+.zap-reply-to {
+    margin-top: 8px;
+}
+
+.zap-reply-to-label {
+    display: block;
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 4px;
+}
+
+.zap-reply-to-input {
+    width: 100%;
+    padding: 6px 8px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #eaeaea;
+    font-size: 13px;
+    font-family:
+        "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        monospace;
+    box-sizing: border-box;
+}
+
+.zap-reply-to-input::placeholder {
+    color: #666;
+}
+
+.zap-reply-to-input:focus {
+    outline: none;
+    border-color: #555;
+}
+
+.zap-reply-to-input.invalid {
+    border-color: #cc4444;
+}
+
+.zap-reply-to-error {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #cc4444;
+}
+
 .zap-actions {
     display: flex;
     justify-content: space-between;

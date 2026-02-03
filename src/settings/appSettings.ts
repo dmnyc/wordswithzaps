@@ -12,7 +12,7 @@ const ZAP_NUDGE_DEFAULT_AMOUNT_KEY = "wordswithzaps_zap_nudge_default_amount";
 const DEFAULT_ZAP_NUDGE_AMOUNT = 0;
 
 type SettingsListener = () => void;
-export type ShareMethod = "public" | "private";
+export type ShareMethod = "public" | "public-reply" | "private" | "private-dm";
 const listeners: Set<SettingsListener> = new Set();
 
 function migrateGameplayZapsSetting(): void {
@@ -93,7 +93,13 @@ export function getShareMethodDefault(): ShareMethod {
   if (typeof window === "undefined") return DEFAULT_SHARE_METHOD;
   try {
     const stored = localStorage.getItem(SHARE_METHOD_DEFAULT_KEY);
-    if (stored === "public" || stored === "private") return stored;
+    if (
+      stored === "public" ||
+      stored === "public-reply" ||
+      stored === "private" ||
+      stored === "private-dm"
+    )
+      return stored;
     return DEFAULT_SHARE_METHOD;
   } catch {
     return DEFAULT_SHARE_METHOD;

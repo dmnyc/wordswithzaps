@@ -13,18 +13,18 @@ interface AchievementModalProps {
 
 const PRESET_AMOUNTS = [21, 50, 100, 500];
 
-const ACHIEVEMENT_ICONS: Record<Achievement["type"], string> = {
+const ACHIEVEMENT_ICONS: Record<Achievement["type"], string | null> = {
   bingo: "7",
   "zap-bonus": "⚡",
   "double-word": "2x",
-  "high-score": "!",
+  "high-score": null,
 };
 
 const ACHIEVEMENT_ZAP_MESSAGES: Record<Achievement["type"], string> = {
-  bingo: "Nice job on the Bingo! #WordsWithZaps",
-  "zap-bonus": "Nice job hitting the ZAP square! #WordsWithZaps",
-  "double-word": "Nice job on the Double Word Score! #WordsWithZaps",
-  "high-score": "Nice job on the High Score! #WordsWithZaps",
+  bingo: "Nice job on the Zapathon! ⚡️ #WordsWithZaps",
+  "zap-bonus": "Nice job hitting the Zap Square! ⚡️ #WordsWithZaps",
+  "double-word": "Nice job on the Double Word Score! ⚡️ #WordsWithZaps",
+  "high-score": "Nice word score! ⚡️ #WordsWithZaps",
 };
 
 export function AchievementModal({
@@ -77,12 +77,14 @@ export function AchievementModal({
           <div
             className={`achievement-badge-icon ${achievement.type === "bingo" ? "bingo" : ""}`}
           >
-            {ACHIEVEMENT_ICONS[achievement.type]}
+            {ACHIEVEMENT_ICONS[achievement.type] ?? (
+              <img src="/wow.svg" alt="Wow" className="achievement-badge-img" />
+            )}
           </div>
         </div>
 
         <p className="achievement-intro">
-          <strong>{opponentName}</strong> played an amazing word!
+          <strong>{opponentName}</strong> played an awesome word!
         </p>
 
         <div className="achievement-word-display">
@@ -121,7 +123,12 @@ export function AchievementModal({
                     type="button"
                     disabled={isSending}
                   >
-                    {amount} sats
+                    <img
+                      src="/assets/bolt-yellow.svg"
+                      alt=""
+                      className="achievement-bolt"
+                    />
+                    {amount}
                   </button>
                 ))}
               </div>
@@ -179,9 +186,21 @@ export function AchievementModal({
               onClick={handleZap}
               disabled={resolvedAmount <= 0 || isSending}
             >
-              {isSending
-                ? "Sending..."
-                : `Send ${resolvedAmount > 0 ? `${resolvedAmount} sats` : "Zap"}`}
+              {isSending ? (
+                "Sending..."
+              ) : resolvedAmount > 0 ? (
+                <>
+                  Send{" "}
+                  <img
+                    src="/assets/bolt.svg"
+                    alt=""
+                    className="achievement-bolt"
+                  />
+                  {resolvedAmount}
+                </>
+              ) : (
+                "Zap"
+              )}
             </button>
           )}
         </div>
