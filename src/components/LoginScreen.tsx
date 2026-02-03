@@ -261,7 +261,10 @@ WARNING: Never share your private key. Store this file securely.`;
                 <p className="login-pubkey">{profileName}</p>
               </>
             ) : (
-              <p>Connecting...</p>
+              <div className="login-connecting-state">
+                <ZTileLoader />
+                <p>Connecting...</p>
+              </div>
             )}
             <button className="login-btn" onClick={onConnected}>
               Continue

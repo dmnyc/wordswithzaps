@@ -40,41 +40,12 @@
 
 @keyframes ztileFlip {
     0% {
-        transform: translateY(0) rotateX(0deg);
-    }
-    25% {
-        transform: translateY(-8px) rotateX(-90deg);
+        transform: rotateX(0deg);
     }
     50% {
-        transform: translateY(-10px) rotateX(-180deg);
-    }
-    75% {
-        transform: translateY(-8px) rotateX(-270deg);
+        transform: rotateX(-180deg);
     }
     100% {
-        transform: translateY(0) rotateX(-360deg);
-    }
-}
-
-.ztile-loader[data-size="xs"] .ztile-loader-inner,
-.ztile-loader[data-size="sm"] .ztile-loader-inner {
-    animation-name: ztileFlipSmall;
-}
-
-@keyframes ztileFlipSmall {
-    0% {
-        transform: translateY(0) rotateX(0deg);
-    }
-    25% {
-        transform: translateY(-3px) rotateX(-90deg);
-    }
-    50% {
-        transform: translateY(-4px) rotateX(-180deg);
-    }
-    75% {
-        transform: translateY(-3px) rotateX(-270deg);
-    }
-    100% {
-        transform: translateY(0) rotateX(-360deg);
+        transform: rotateX(-360deg);
     }
 }

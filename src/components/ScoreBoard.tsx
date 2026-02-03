@@ -46,16 +46,23 @@ export function ScoreBoard({
 
   useEffect(() => {
     const pubkeys = [player1.pubkey, player2.pubkey];
+    let cancelled = false;
     pubkeys.forEach(async (pubkey) => {
-      if (profiles[pubkey] !== undefined) return;
       try {
         const profile = await fetchProfile(pubkey);
-        setProfiles((prev) => ({ ...prev, [pubkey]: profile }));
+        if (!cancelled) {
+          setProfiles((prev) => ({ ...prev, [pubkey]: profile }));
+        }
       } catch {
-        setProfiles((prev) => ({ ...prev, [pubkey]: null }));
+        if (!cancelled) {
+          setProfiles((prev) => ({ ...prev, [pubkey]: null }));
+        }
       }
     });
-  }, [player1.pubkey, player2.pubkey, profiles]);
+    return () => {
+      cancelled = true;
+    };
+  }, [player1.pubkey, player2.pubkey]);
 
   const getDisplayName = (pubkey: string) => {
     if (pubkey === currentUserPubkey) return "You";

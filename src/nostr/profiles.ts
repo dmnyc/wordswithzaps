@@ -3,6 +3,7 @@ import type { NostrProfile } from "../types/nostr";
 import {
   fetchEvents,
   getCurrentUser,
+  getNDK,
   createEvent,
   publishEvent,
 } from "./client";
@@ -220,19 +221,28 @@ export function normalizePubkey(input: string): string | null {
 export async function fetchProfile(
   pubkey: string,
 ): Promise<NostrProfile | null> {
-  const events = await fetchEvents({
-    kinds: [PROFILE_KIND],
-    authors: [pubkey],
-    limit: 5,
-  });
+  try {
+    const ndk = getNDK();
+    const ndkUser = ndk.getUser({ pubkey });
+    await ndkUser.fetchProfile();
 
-  if (events.length === 0) return null;
+    const p = ndkUser.profile;
+    if (!p) return null;
 
-  const sorted = events.sort(
-    (a, b) => (b.created_at || 0) - (a.created_at || 0),
-  );
-  const latest = sorted[0];
-  return parseProfile(pubkey, latest.content);
+    return {
+      pubkey,
+      name: stringOrUndefined(p.name),
+      displayName:
+        stringOrUndefined(p.displayName) ||
+        stringOrUndefined((p as Record<string, unknown>)["display_name"]),
+      picture: stringOrUndefined(p.image),
+      nip05: stringOrUndefined(p.nip05),
+      lud16: stringOrUndefined(p.lud16),
+      lud06: stringOrUndefined((p as Record<string, unknown>)["lud06"]),
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**

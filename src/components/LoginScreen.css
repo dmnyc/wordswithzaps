@@ -584,6 +584,18 @@
     margin-bottom: 8px;
 }
 
+.login-connecting-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 0;
+}
+
+.login-connecting-state p {
+    margin: 0;
+}
+
 .login-pubkey {
     font-family: monospace;
     color: #68d391 !important;

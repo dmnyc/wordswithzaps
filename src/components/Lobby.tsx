@@ -109,16 +109,14 @@ export function Lobby({
       }
     }
 
-    const missing = Array.from(pubkeys).filter(
-      (pubkey) => profiles[pubkey] === undefined,
-    );
-    if (missing.length === 0) return;
+    const toFetch = Array.from(pubkeys);
+    if (toFetch.length === 0) return;
 
     let cancelled = false;
 
     const loadProfiles = async () => {
       const results = await Promise.all(
-        missing.map(async (pubkey) => {
+        toFetch.map(async (pubkey) => {
           try {
             return await fetchProfile(pubkey);
           } catch {
@@ -131,7 +129,7 @@ export function Lobby({
 
       setProfiles((prev) => {
         const next = { ...prev };
-        missing.forEach((pubkey, index) => {
+        toFetch.forEach((pubkey, index) => {
           next[pubkey] = results[index];
         });
         return next;
@@ -143,7 +141,7 @@ export function Lobby({
     return () => {
       cancelled = true;
     };
-  }, [user?.pubkey, games, profiles]);
+  }, [user?.pubkey, games]);
 
   const handleOpponentSelect = (profile: NostrProfile) => {
     setSelectedOpponent(profile);
