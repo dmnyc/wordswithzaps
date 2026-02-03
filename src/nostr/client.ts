@@ -414,6 +414,13 @@ export function getCurrentUser(): NDKUser | null {
 }
 
 /**
+ * Set the current user (for fast session restore)
+ */
+export function setCurrentUser(user: NDKUser | null): void {
+  currentUser = user;
+}
+
+/**
  * Check if user is connected
  */
 export function isConnected(): boolean {

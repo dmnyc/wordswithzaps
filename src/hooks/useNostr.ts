@@ -10,6 +10,7 @@ import {
   generateNostrConnectURI as clientGenerateNostrConnectURI,
   waitForNostrConnect as clientWaitForNostrConnect,
   getCurrentUser,
+  setCurrentUser,
   isConnected,
   getConnectedRelayCount,
   getRelayUrls,
@@ -95,6 +96,9 @@ export function useNostr(): UseNostrReturn {
         // Create user from stored pubkey immediately
         const ndk = getNDK();
         const quickUser = ndk.getUser({ pubkey: storedPubkey });
+
+        // Set currentUser in client module so isConnected() returns true
+        setCurrentUser(quickUser);
 
         if (!cancelled) {
           setUser(quickUser);
