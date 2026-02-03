@@ -3,6 +3,7 @@ import { getCurrentUser } from "../nostr/client";
 import { fetchProfileMetadata, updateProfile } from "../nostr/profiles";
 import { uploadImage } from "../nostr/imageUpload";
 import { CameraIcon } from "./icons/LoginIcons";
+import { ZTileLoader } from "./ZTileLoader";
 import "./ProfileSettings.css";
 
 interface ProfileSettingsProps {
@@ -234,7 +235,7 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                 >
                   {uploadingBanner ? (
                     <>
-                      <span className="profile-spinner" />
+                      <ZTileLoader size="xs" />
                       Uploading...
                     </>
                   ) : (
@@ -266,7 +267,7 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                   title="Upload picture"
                 >
                   {uploadingPicture ? (
-                    <span className="profile-spinner" />
+                    <ZTileLoader size="xs" />
                   ) : (
                     <CameraIcon />
                   )}
@@ -368,11 +369,7 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                     onClick={() => pictureInputRef.current?.click()}
                     disabled={uploadingPicture}
                   >
-                    {uploadingPicture ? (
-                      <span className="profile-spinner" />
-                    ) : (
-                      "Upload"
-                    )}
+                    {uploadingPicture ? <ZTileLoader size="xs" /> : "Upload"}
                   </button>
                 </div>
               </div>
@@ -394,11 +391,7 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                     onClick={() => bannerInputRef.current?.click()}
                     disabled={uploadingBanner}
                   >
-                    {uploadingBanner ? (
-                      <span className="profile-spinner" />
-                    ) : (
-                      "Upload"
-                    )}
+                    {uploadingBanner ? <ZTileLoader size="xs" /> : "Upload"}
                   </button>
                 </div>
               </div>
@@ -463,7 +456,7 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
               >
                 {saving ? (
                   <>
-                    <span className="profile-spinner" /> Saving...
+                    <ZTileLoader size="xs" /> Saving...
                   </>
                 ) : (
                   "Save Profile"

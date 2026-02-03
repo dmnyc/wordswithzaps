@@ -21,6 +21,7 @@ import AchievementModal from "./AchievementModal";
 import GameRulesModal from "./GameRulesModal";
 import Modal from "./Modal";
 import ZapAnimation from "./ZapAnimation";
+import { ZTileLoader } from "./ZTileLoader";
 import { detectAchievement, type Achievement } from "../utils/achievements";
 import { nip19 } from "nostr-tools";
 import { fetchProfile } from "../nostr/profiles";
@@ -257,6 +258,18 @@ export function GameView({
     }
     return rack;
   }, [localRack, pendingPlacements]);
+
+  // Coords of the opponent's last-placed tiles (highlight when it's our turn)
+  const highlightCoords = useMemo(() => {
+    if (!gameState || !isMyTurn) return new Set<string>();
+    const history = gameState.scoring.history;
+    if (history.length === 0) return new Set<string>();
+    const lastMove = history[history.length - 1];
+    if (lastMove.player !== myPubkey && lastMove.coords.length > 0) {
+      return new Set(lastMove.coords);
+    }
+    return new Set<string>();
+  }, [gameState, isMyTurn, myPubkey]);
 
   // Validate current pending move
   const validation = useMemo(() => {
@@ -833,6 +846,7 @@ export function GameView({
   if (!gameState) {
     return (
       <div className="game-view loading">
+        <ZTileLoader />
         <p>Loading game...</p>
         {error && <p className="error">{error}</p>}
       </div>
@@ -899,6 +913,7 @@ export function GameView({
         onMoveTile={handleMoveTile}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
         isFirstMove={(gameState.turn.index ?? 0) === 0}
+        highlightCoords={highlightCoords}
       />
 
       <Rack

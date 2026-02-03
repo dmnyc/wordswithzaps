@@ -384,23 +384,6 @@
     display: none;
 }
 
-/* Loading spinner */
-.profile-spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid currentColor;
-    border-right-color: transparent;
-    border-radius: 50%;
-    animation: profile-spin 0.75s linear infinite;
-}
-
-@keyframes profile-spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
 /* Mobile responsive */
 @media (max-width: 520px) {
     .profile-settings-modal {

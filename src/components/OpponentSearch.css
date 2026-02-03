@@ -38,15 +38,6 @@
     gap: 8px;
 }
 
-.opponent-search-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #ffcc00;
-    border-radius: 50%;
-    animation: opponent-spin 0.9s linear infinite;
-}
-
 .opponent-search-clear {
     border: none;
     background: transparent;
@@ -168,13 +159,4 @@
 .opponent-search-hint {
     font-size: 11px;
     color: #7a7a7a;
-}
-
-@keyframes opponent-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
 }

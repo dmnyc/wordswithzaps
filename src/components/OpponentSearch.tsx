@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { NostrProfile } from "../types/nostr";
 import { normalizePubkey, searchProfiles } from "../nostr/profiles";
+import { ZTileLoader } from "./ZTileLoader";
 import "./OpponentSearch.css";
 
 interface OpponentSearchProps {
@@ -162,7 +163,7 @@ export function OpponentSearch({
           placeholder="Search by name, npub, or NIP-05"
         />
         <div className="opponent-search-icons">
-          {loading && <span className="opponent-search-spinner" />}
+          {loading && <ZTileLoader size="xs" />}
           {value && (
             <button
               type="button"

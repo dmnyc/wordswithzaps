@@ -7,6 +7,7 @@ import { fetchUserGames, type GameSummary } from "../nostr/games";
 import { GAME_KIND } from "../types/nostr";
 import type { NostrProfile } from "../types/nostr";
 import OpponentSearch from "./OpponentSearch";
+import { ZTileLoader } from "./ZTileLoader";
 import "./Lobby.css";
 
 interface LobbyProps {
@@ -257,11 +258,13 @@ export function Lobby({
 
         {visibleGames.length === 0 ? (
           <div className="games-empty">
-            {isLoadingGames
-              ? "Loading..."
-              : games.length === 0
-                ? "No games yet"
-                : "No active games"}
+            {isLoadingGames ? (
+              <ZTileLoader />
+            ) : games.length === 0 ? (
+              "No games yet"
+            ) : (
+              "No active games"
+            )}
           </div>
         ) : (
           <div className="games-list">

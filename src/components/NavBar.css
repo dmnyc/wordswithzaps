@@ -255,6 +255,18 @@
     font-weight: 600;
 }
 
+.relay-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.relay-wifi-icon {
+    width: 14px;
+    height: 14px;
+    color: #9a9a9a;
+}
+
 .menu-link {
     background: transparent;
     border: none;
