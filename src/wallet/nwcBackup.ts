@@ -8,6 +8,35 @@
 import { NDKEvent } from "@nostr-dev-kit/ndk";
 import { getNDK } from "../nostr/client";
 
+// Timeout configuration
+const NIP07_OPERATION_TIMEOUT = 30000; // 30 seconds for NIP-07 signer operations
+const RELAY_FETCH_TIMEOUT = 15000; // 15 seconds for relay fetches
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+
+    promise
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 const NWC_BACKUP_EVENT_KIND = 30078;
 // Support multiple d-tags for cross-app compatibility
 const NWC_BACKUP_D_TAGS = [
@@ -84,13 +113,17 @@ async function encrypt(
       }
     ).nip44
   ) {
-    const ciphertext = await (
-      window.nostr as {
-        nip44: {
-          encrypt: (pubkey: string, plaintext: string) => Promise<string>;
-        };
-      }
-    ).nip44.encrypt(pubkey, plaintext);
+    const ciphertext = await withTimeout(
+      (
+        window.nostr as {
+          nip44: {
+            encrypt: (pubkey: string, plaintext: string) => Promise<string>;
+          };
+        }
+      ).nip44.encrypt(pubkey, plaintext),
+      NIP07_OPERATION_TIMEOUT,
+      "NIP-44 encryption",
+    );
     return { ciphertext, method: "nip44" };
   }
 
@@ -103,13 +136,17 @@ async function encrypt(
       }
     ).nip04
   ) {
-    const ciphertext = await (
-      window.nostr as {
-        nip04: {
-          encrypt: (pubkey: string, plaintext: string) => Promise<string>;
-        };
-      }
-    ).nip04.encrypt(pubkey, plaintext);
+    const ciphertext = await withTimeout(
+      (
+        window.nostr as {
+          nip04: {
+            encrypt: (pubkey: string, plaintext: string) => Promise<string>;
+          };
+        }
+      ).nip04.encrypt(pubkey, plaintext),
+      NIP07_OPERATION_TIMEOUT,
+      "NIP-04 encryption",
+    );
     return { ciphertext, method: "nip04" };
   }
 
@@ -134,13 +171,17 @@ async function decrypt(
       }
     ).nip44
   ) {
-    return await (
-      window.nostr as {
-        nip44: {
-          decrypt: (pubkey: string, ciphertext: string) => Promise<string>;
-        };
-      }
-    ).nip44.decrypt(pubkey, ciphertext);
+    return await withTimeout(
+      (
+        window.nostr as {
+          nip44: {
+            decrypt: (pubkey: string, ciphertext: string) => Promise<string>;
+          };
+        }
+      ).nip44.decrypt(pubkey, ciphertext),
+      NIP07_OPERATION_TIMEOUT,
+      "NIP-44 decryption",
+    );
   }
 
   if (
@@ -152,13 +193,17 @@ async function decrypt(
       }
     ).nip04
   ) {
-    return await (
-      window.nostr as {
-        nip04: {
-          decrypt: (pubkey: string, ciphertext: string) => Promise<string>;
-        };
-      }
-    ).nip04.decrypt(pubkey, ciphertext);
+    return await withTimeout(
+      (
+        window.nostr as {
+          nip04: {
+            decrypt: (pubkey: string, ciphertext: string) => Promise<string>;
+          };
+        }
+      ).nip04.decrypt(pubkey, ciphertext),
+      NIP07_OPERATION_TIMEOUT,
+      "NIP-04 decryption",
+    );
   }
 
   throw new Error("Decryption failed - no compatible method available");
@@ -203,10 +248,14 @@ export async function backupNwcToNostr(
   ];
 
   console.log("[NWC Backup] Signing backup event...");
-  await ndkEvent.sign();
+  await withTimeout(ndkEvent.sign(), NIP07_OPERATION_TIMEOUT, "Event signing");
 
   console.log("[NWC Backup] Publishing backup to Nostr relays...");
-  await ndkEvent.publish();
+  await withTimeout(
+    ndkEvent.publish(),
+    RELAY_FETCH_TIMEOUT,
+    "Event publishing",
+  );
 
   console.log("[NWC Backup] NWC connection backed up to Nostr successfully");
   return ndkEvent;
@@ -247,9 +296,18 @@ export async function restoreNwcFromNostr(
       authors: [pubkey],
       "#d": [dTag],
     };
-    const events = await ndk.fetchEvents(filter, { closeOnEose: true });
-    if (events) {
-      allEvents.push(...Array.from(events));
+    try {
+      const events = await withTimeout(
+        ndk.fetchEvents(filter, { closeOnEose: true }),
+        RELAY_FETCH_TIMEOUT,
+        "Relay fetch for NWC backup",
+      );
+      if (events) {
+        allEvents.push(...Array.from(events));
+      }
+    } catch (e) {
+      console.warn(`[NWC Restore] Failed to fetch with d-tag ${dTag}:`, e);
+      // Continue trying other d-tags
     }
   }
   console.log("[NWC Restore] Found", allEvents.length, "events");
@@ -337,15 +395,24 @@ export async function hasNwcBackupOnNostr(pubkey: string): Promise<boolean> {
         "#d": [dTag],
       };
 
-      const events = await ndk.fetchEvents(filter, { closeOnEose: true });
+      try {
+        const events = await withTimeout(
+          ndk.fetchEvents(filter, { closeOnEose: true }),
+          RELAY_FETCH_TIMEOUT,
+          "Relay fetch for NWC backup check",
+        );
 
-      // Check if any event has actual content (not deleted)
-      if (events && events.size > 0) {
-        for (const event of events) {
-          if (event.content && !event.tags?.some((t) => t[0] === "deleted")) {
-            return true;
+        // Check if any event has actual content (not deleted)
+        if (events && events.size > 0) {
+          for (const event of events) {
+            if (event.content && !event.tags?.some((t) => t[0] === "deleted")) {
+              return true;
+            }
           }
         }
+      } catch (e) {
+        console.warn(`[NWC Backup] Timeout checking d-tag ${dTag}:`, e);
+        // Continue trying other d-tags
       }
     }
 
@@ -377,8 +444,12 @@ export async function deleteNwcBackupFromNostr(_pubkey: string): Promise<void> {
     ["deleted", "true"],
   ];
 
-  await ndkEvent.sign();
-  await ndkEvent.publish();
+  await withTimeout(ndkEvent.sign(), NIP07_OPERATION_TIMEOUT, "Event signing");
+  await withTimeout(
+    ndkEvent.publish(),
+    RELAY_FETCH_TIMEOUT,
+    "Event publishing",
+  );
 
   console.log("[NWC Backup] Backup deleted (replaced with empty event)");
 }
