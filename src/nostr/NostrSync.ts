@@ -135,7 +135,10 @@ export class NostrSync {
       ["p", state.meta.playerTwo],
     ]);
 
-    await publishEvent(event);
+    const relays = await publishEvent(event);
+    console.log(
+      `[game] state confirmed by ${relays.size} relay(s) for game ${this.gameId}`,
+    );
 
     return event.id;
   }
@@ -190,7 +193,10 @@ export class NostrSync {
       ["d", this.getRackDTag()],
     ]);
 
-    await publishEvent(event);
+    const relays = await publishEvent(event);
+    console.log(
+      `[game] rack confirmed by ${relays.size} relay(s) for game ${this.gameId}`,
+    );
   }
 
   /**

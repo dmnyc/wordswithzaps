@@ -346,19 +346,23 @@ export function useGame(): UseGameReturn {
             ? GameEngine.endGame(newState, p1Rack, p2Rack)
             : newState;
 
-        // Publish to Nostr
+        // Publish game state to Nostr (critical - failure means move is lost)
         const eventId = await syncRef.current.publishGameState(
           finalState,
           lastEventId || "",
         );
 
-        // Save updated rack
-        await syncRef.current.savePlayerRack({ rack: newRack });
-
-        // Update local state
+        // Game state confirmed on relay(s). Update local state.
         setGameState(finalState);
-        setPlayerRack(newRack);
         setLastEventId(eventId);
+
+        // Save rack (non-critical - can be re-derived on reload)
+        try {
+          await syncRef.current.savePlayerRack({ rack: newRack });
+        } catch (rackErr) {
+          console.error("Failed to save rack after successful move:", rackErr);
+        }
+        setPlayerRack(newRack);
 
         return {
           valid: true,
@@ -462,15 +466,23 @@ export function useGame(): UseGameReturn {
         const newRack = playerRack.filter((t) => !tiles.includes(t));
         newRack.push(...newTiles);
 
+        // Publish game state (critical - failure means exchange is lost)
         const eventId = await syncRef.current.publishGameState(
           newState,
           lastEventId || "",
         );
-        await syncRef.current.savePlayerRack({ rack: newRack });
 
+        // Game state confirmed on relay(s). Update local state.
         setGameState(newState);
-        setPlayerRack(newRack);
         setLastEventId(eventId);
+
+        // Save rack (non-critical - can be re-derived on reload)
+        try {
+          await syncRef.current.savePlayerRack({ rack: newRack });
+        } catch (rackErr) {
+          console.error("Failed to save rack after exchange:", rackErr);
+        }
+        setPlayerRack(newRack);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to exchange";
