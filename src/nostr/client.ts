@@ -18,7 +18,6 @@ import { bytesToHex } from "@noble/hashes/utils";
 import { DEFAULT_RELAYS, RELAY_LIST_KIND } from "../types/nostr";
 
 // Timeout configuration
-const NDK_CONNECT_TIMEOUT = 15000; // 15 seconds for NDK relay connection
 const NIP07_SIGNER_TIMEOUT = 30000; // 30 seconds for NIP-07 signer operations
 
 /**
@@ -63,7 +62,7 @@ export interface NostrClientOptions {
 export async function initializeNDK(
   options: NostrClientOptions = {},
 ): Promise<NDK> {
-  // Return existing instance if already initialized and connected
+  // Return existing instance if already initialized
   if (ndkInstance) {
     return ndkInstance;
   }
@@ -75,11 +74,11 @@ export async function initializeNDK(
   });
 
   if (options.autoConnect !== false) {
-    await withTimeout(
-      ndkInstance.connect(),
-      NDK_CONNECT_TIMEOUT,
-      "NDK relay connection",
-    );
+    // Connect in background - don't block on relay connections
+    // Signers work independently of relay connections
+    ndkInstance.connect().catch((err) => {
+      console.warn("[NDK] Background relay connection failed:", err);
+    });
   }
 
   return ndkInstance;
