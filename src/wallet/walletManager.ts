@@ -474,8 +474,9 @@ export async function zapUser(params: ZapParams): Promise<string> {
       [
         "relays",
         "wss://relay.damus.io",
-        "wss://nos.lol",
         "wss://relay.primal.net",
+        "wss://nos.lol",
+        "wss://relay.snort.social",
       ],
       ["amount", (amountSats * 1000).toString()],
       ["p", recipientPubkey],

@@ -52,9 +52,9 @@ export const DEFAULT_RELAYS = [
   "wss://relay.damus.io",
   "wss://relay.primal.net",
   "wss://nos.lol",
+  "wss://relay.snort.social",
+  "wss://purplepag.es",
   "wss://relay.nostr.net",
-  "wss://nostr.wine",
-  "wss://relay.noswhere.com",
 ];
 
 // NIP-65 relay list kind
