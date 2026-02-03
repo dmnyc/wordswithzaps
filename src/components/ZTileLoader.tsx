@@ -18,6 +18,7 @@ export function ZTileLoader({ size = "md", className = "" }: ZTileLoaderProps) {
   return (
     <span
       className={`ztile-loader ${className}`}
+      data-size={size}
       style={{ width: px, height: px }}
       role="status"
       aria-label="Loading"

@@ -294,6 +294,21 @@
     gap: 10px;
     color: #9a9a9a;
     font-size: 13px;
+    min-height: 28px;
+}
+
+.login-qr-waiting .ztile-loader {
+    flex-shrink: 0;
+}
+
+.login-qr-timeout-hint {
+    font-size: 12px;
+    color: #ffcc00;
+    background: rgba(255, 204, 0, 0.1);
+    border-radius: 6px;
+    padding: 8px 12px;
+    text-align: center;
+    line-height: 1.4;
 }
 
 .login-qr-loading {

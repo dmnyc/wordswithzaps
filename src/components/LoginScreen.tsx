@@ -66,14 +66,19 @@ export function LoginScreen({
   const [nip46Timeout, setNip46Timeout] = useState(60);
   const [copied, setCopied] = useState<string | null>(null);
   const [nostrConnectUri, setNostrConnectUri] = useState<string | null>(null);
+  const [qrTimedOut, setQrTimedOut] = useState(false);
   const nostrConnectSessionRef = useRef<NostrConnectSession | null>(null);
   const timeoutRef = useRef<number | null>(null);
+  const qrTimeoutRef = useRef<number | null>(null);
 
-  // Clean up timeout on unmount
+  // Clean up timeouts on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);
+      }
+      if (qrTimeoutRef.current) {
+        clearTimeout(qrTimeoutRef.current);
       }
     };
   }, []);
@@ -169,10 +174,15 @@ WARNING: Never share your private key. Store this file securely.`;
 
   const handleShowQRCode = useCallback(async () => {
     setView("nip46-qr");
+    setQrTimedOut(false);
     try {
       const session = await startNostrConnect();
       setNostrConnectUri(session.uri);
       nostrConnectSessionRef.current = session;
+      qrTimeoutRef.current = window.setTimeout(
+        () => setQrTimedOut(true),
+        30000,
+      );
 
       // Start waiting for connection in background
       waitForNostrConnect(session)
@@ -191,6 +201,11 @@ WARNING: Never share your private key. Store this file securely.`;
     cancelNostrConnect();
     setNostrConnectUri(null);
     nostrConnectSessionRef.current = null;
+    setQrTimedOut(false);
+    if (qrTimeoutRef.current) {
+      clearTimeout(qrTimeoutRef.current);
+      qrTimeoutRef.current = null;
+    }
     setView("nip46-options");
   }, [cancelNostrConnect]);
 
@@ -418,6 +433,12 @@ WARNING: Never share your private key. Store this file securely.`;
                   <ZTileLoader size="sm" />
                   <span>Waiting for connection...</span>
                 </div>
+                {qrTimedOut && (
+                  <div className="login-qr-timeout-hint">
+                    If your connection is taking too long, try resetting your
+                    signer.
+                  </div>
+                )}
               </div>
             ) : (
               <div className="login-qr-loading">

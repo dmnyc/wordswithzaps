@@ -111,6 +111,7 @@
 .rules-btn,
 .share-btn,
 .relay-btn,
+.refresh-btn,
 .forfeit-btn {
     display: flex;
     align-items: center;
@@ -119,28 +120,33 @@
     height: 32px;
     border: none;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.08);
     cursor: pointer;
     transition: background 0.15s;
 }
 
-.rules-btn:hover,
-.share-btn:hover,
-.relay-btn:hover,
-.forfeit-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.14);
-}
-
-.rules-icon,
-.share-icon,
-.relay-icon {
+.action-icon {
     width: 16px;
     height: 16px;
-    color: var(--text-muted);
+}
+
+.rules-btn {
+    background: rgba(255, 204, 0, 0.15);
+}
+
+.rules-btn:hover {
+    background: rgba(255, 204, 0, 0.25);
+}
+
+.rules-btn .action-icon {
+    color: #ffcc00;
 }
 
 .forfeit-btn {
     background: rgba(255, 91, 91, 0.15);
+}
+
+.forfeit-btn:hover:not(:disabled) {
+    background: rgba(255, 91, 91, 0.25);
 }
 
 .forfeit-btn:disabled {
@@ -154,6 +160,42 @@
     color: #ff9b9b;
 }
 
+.relay-btn {
+    background: rgba(180, 130, 255, 0.15);
+}
+
+.relay-btn:hover {
+    background: rgba(180, 130, 255, 0.25);
+}
+
+.relay-btn .action-icon {
+    color: #b482ff;
+}
+
+.refresh-btn {
+    background: rgba(100, 180, 255, 0.15);
+}
+
+.refresh-btn:hover {
+    background: rgba(100, 180, 255, 0.25);
+}
+
+.refresh-btn .action-icon {
+    color: #64b4ff;
+}
+
+.share-btn {
+    background: rgba(104, 211, 145, 0.15);
+}
+
+.share-btn:hover {
+    background: rgba(104, 211, 145, 0.25);
+}
+
+.share-btn .action-icon {
+    color: #68d391;
+}
+
 /* Mobile responsive breakpoints */
 @media (max-width: 520px) {
     .scoreboard {
@@ -162,17 +204,21 @@
         padding: 10px 14px;
     }
 
-    /* One row split 50/50 for scores */
+    /* Score row: score | tiles-bag | score */
     .scoreboard-scores {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
         gap: 8px;
         width: 100%;
+        align-items: center;
     }
 
-    /* Hide desktop tiles/actions, show mobile */
-    .tiles-desktop {
-        display: none;
+    /* Tile bag centered between scores on mobile */
+    .tiles-center {
+        border-left: none;
+        border-right: none;
+        padding: 0 6px;
+        gap: 4px;
+        justify-content: center;
     }
 
     .actions-desktop {
@@ -181,9 +227,10 @@
 
     /* Player scores - fill each half */
     .player-score {
+        flex: 0 1 auto;
         flex-direction: row;
         justify-content: space-between;
-        width: 100%;
+        width: auto;
         padding: 6px 10px;
         border-radius: 6px;
         min-width: 0;
@@ -191,10 +238,10 @@
 
     .player-name {
         font-size: 14px;
-        max-width: 100%;
+        max-width: 140px;
         min-width: 0;
         font-weight: 500;
-        flex: 1;
+        flex: 0 1 auto;
     }
 
     .player-points {
@@ -213,13 +260,6 @@
         width: 100%;
         padding-top: 4px;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .tiles-mobile {
-        display: flex;
-        border: none;
-        padding: 0;
-        gap: 4px;
     }
 
     .turn-indicator {
@@ -253,7 +293,7 @@
 
     .player-name {
         font-size: 11px;
-        max-width: 100%;
+        max-width: 110px;
     }
 
     .player-points {
@@ -283,7 +323,7 @@
 
     .player-name {
         font-size: 10px;
-        max-width: 100%;
+        max-width: 90px;
     }
 
     .player-points {

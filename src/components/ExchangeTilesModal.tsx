@@ -26,7 +26,7 @@ export function ExchangeTilesModal({
   const selectionCount = exchangeSelection.length;
 
   return (
-    <Modal open={open} title="Exchange tiles" onClose={onCancel}>
+    <Modal open={open} title="Swap tiles" onClose={onCancel}>
       <div className="exchange-modal-content">
         <p className="exchange-modal-hint">Select up to 7 tiles to swap.</p>
         <div className="exchange-modal-rack">
@@ -40,9 +40,7 @@ export function ExchangeTilesModal({
             disabled={isLoading}
           />
         </div>
-        <div className="exchange-modal-count">
-          {selectionCount} selected
-        </div>
+        <div className="exchange-modal-count">{selectionCount} selected</div>
       </div>
       <div className="wwz-modal-actions exchange-modal-actions">
         <button
@@ -60,8 +58,8 @@ export function ExchangeTilesModal({
           disabled={selectionCount === 0 || isLoading}
         >
           {isLoading
-            ? "Exchanging..."
-            : `Exchange ${selectionCount} tile${selectionCount === 1 ? "" : "s"}`}
+            ? "Swapping..."
+            : `Swap ${selectionCount} tile${selectionCount === 1 ? "" : "s"}`}
         </button>
       </div>
     </Modal>
