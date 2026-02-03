@@ -261,7 +261,7 @@ export function Lobby({
               onClick={loadGames}
               disabled={isLoadingGames}
             >
-              {isLoadingGames ? "..." : "Refresh"}
+              Refresh
             </button>
           </div>
         </div>
