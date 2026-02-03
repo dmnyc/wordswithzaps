@@ -2,8 +2,15 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { TilePlacement } from "../types/game";
 import { useGame } from "../hooks/useGame";
 import { useWallet } from "../hooks/useWallet";
-import { getCurrentUser, createEvent, publishEvent } from "../nostr/client";
+import {
+  getCurrentUser,
+  getNDK,
+  createEvent,
+  publishEvent,
+} from "../nostr/client";
 import { encryptDirectMessage } from "../nostr/encryption";
+import { NDKEvent, NDKUser, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { generateSecretKey } from "nostr-tools";
 import Board from "./Board";
 import Rack from "./Rack";
 import ScoreBoard from "./ScoreBoard";
@@ -456,7 +463,8 @@ export function GameView({
   const handleConfirmPlay = useCallback(
     async (options: {
       zapAmount: number;
-      shareMode: "none" | "public" | "private";
+      shareMode: "none" | "public" | "public-reply" | "private" | "private-dm";
+      replyTo?: string;
     }) => {
       const word = pendingMoveSummary?.word || "Your move";
       const points = pendingMoveSummary?.points ?? 0;
@@ -543,6 +551,87 @@ export function GameView({
             ]);
             await publishEvent(event);
             onToast?.("Shared publicly!", "success");
+          } else if (options.shareMode === "public-reply") {
+            if (!options.replyTo) {
+              throw new Error("No note ID provided for reply.");
+            }
+            // Decode note1.../nevent1... to hex, or use raw hex
+            let eventId = options.replyTo;
+            if (eventId.startsWith("note1")) {
+              const decoded = nip19.decode(eventId);
+              if (decoded.type !== "note") throw new Error("Invalid note ID.");
+              eventId = decoded.data;
+            } else if (eventId.startsWith("nevent1")) {
+              const decoded = nip19.decode(eventId);
+              if (decoded.type !== "nevent")
+                throw new Error("Invalid nevent ID.");
+              eventId = decoded.data.id;
+            }
+            const replyEvent = createEvent(1, shareText, [
+              ["e", eventId, "", "root"],
+              ["t", "wordswithzaps"],
+              ...(opponentPubkey ? [["p", opponentPubkey]] : []),
+            ]);
+            await publishEvent(replyEvent);
+            onToast?.("Replied publicly!", "success");
+          } else if (options.shareMode === "private-dm") {
+            if (!opponentPubkey) {
+              throw new Error("Opponent pubkey not available for DM.");
+            }
+            const ndk = getNDK();
+            const signer = ndk.signer;
+            if (!signer) throw new Error("No signer available.");
+            const sender = await signer.user();
+            const recipient = new NDKUser({ pubkey: opponentPubkey });
+            recipient.ndk = ndk;
+
+            // Randomize timestamp up to 2 days (NIP-17)
+            const now = Math.floor(Date.now() / 1000);
+            const twoDays = 2 * 24 * 60 * 60;
+            const randomTs = () => now - Math.floor(Math.random() * twoDays);
+
+            // Rumor (unsigned kind 14) — real timestamp for display
+            const rumor = {
+              kind: 14,
+              content: shareText,
+              tags: [["p", opponentPubkey]],
+              created_at: now,
+              pubkey: sender.pubkey,
+            };
+
+            // Seal (kind 13) - encrypt rumor to recipient
+            const sealContent = await signer.encrypt(
+              recipient,
+              JSON.stringify(rumor),
+              "nip44",
+            );
+            const seal = new NDKEvent(ndk);
+            seal.kind = 13;
+            seal.content = sealContent;
+            seal.created_at = randomTs();
+            await seal.sign(signer);
+
+            // Gift wrap (kind 1059) with ephemeral key
+            const ephemeralSigner = new NDKPrivateKeySigner(
+              generateSecretKey(),
+            );
+            const wrapContent = await ephemeralSigner.encrypt(
+              recipient,
+              JSON.stringify(seal.rawEvent()),
+              "nip44",
+            );
+            const wrap = new NDKEvent(ndk);
+            wrap.kind = 1059;
+            wrap.content = wrapContent;
+            wrap.tags = [["p", opponentPubkey]];
+            wrap.created_at = randomTs();
+            await wrap.sign(ephemeralSigner);
+
+            // Publish with timeout so slow relays don't block
+            const pub = wrap.publish();
+            const timeout = new Promise<void>((r) => setTimeout(r, 3000));
+            await Promise.race([pub, timeout]);
+            onToast?.("Shared privately!", "success");
           } else if (options.shareMode === "private") {
             if (!opponentPubkey) {
               throw new Error("Opponent pubkey not available for DM.");

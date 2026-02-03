@@ -120,13 +120,18 @@
 
 .achievement-badge {
     text-align: center;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .achievement-badge-icon {
     font-size: 48px;
     line-height: 1;
-    margin-bottom: 8px;
+    margin-bottom: 0;
+}
+
+.achievement-badge-img {
+    width: 192px;
+    height: auto;
 }
 
 .achievement-badge-icon.bingo {
@@ -247,6 +252,13 @@
     background: rgba(255, 204, 0, 0.2);
     color: #ffcc00;
     border: 1px solid rgba(255, 204, 0, 0.4);
+}
+
+.achievement-bolt {
+    width: 14px;
+    height: 14px;
+    vertical-align: -1px;
+    margin-right: 2px;
 }
 
 .achievement-custom-row {

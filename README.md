@@ -9,16 +9,17 @@ Words With Zaps is a serverless, censorship-resistant word game where game state
 - **Game state** is stored as encrypted addressable events on Nostr relays (Kind 30078 / NIP-78)
 - **Identity** uses Nostr keys with multiple login options (NIP-07, NIP-46, or local keypair)
 - **Privacy** is ensured via NIP-44 encrypted game state between players
-- **Notifications** can be sent as Lightning zaps (NIP-57) or shared as public/private notes
+- **Notifications** can be sent as Lightning zaps (NIP-57) or shared as public notes, public replies, standard DMs (NIP-04), or gift-wrapped DMs (NIP-17)
 - **Relay discovery** uses NIP-65 relay lists merged with default relays
 
 ## Features
 
 - Full crossword-style mechanics on a 15x15 board with letter values, multipliers, and bonus squares
-- Custom scoring: 42-point bingo bonus for using all 7 tiles, 21-point zap bonus squares at corners and center
+- Custom scoring: 42-point Zapathon bonus for using all 7 tiles, 21-point Zap Square bonus at corners and center
 - End-to-end encrypted game state (NIP-44 with NIP-04 fallback)
 - Lightning zaps as move notifications via NWC, Breez SDK (Spark), or WebLN
-- Post-move sharing as public notes (Kind 1) or private DMs (Kind 4)
+- Post-move sharing: public note, public reply (kind 1), standard DM (kind 4), or gift-wrapped DM (NIP-17/kind 14)
+- Achievement system: Zapathon (all 7 tiles), Zap Square bonus, Double Word Score, High Score
 - Pass, swap tiles, or forfeit
 - Last-move tile highlighting with animated glow
 - Relay confirmation with retry logic for reliable event publishing
@@ -65,8 +66,10 @@ npm run test
 
 ## Dictionary
 
-Place a word list in `public/dictionaries/` for full validation. The app tries these in order:
-`sowpods.txt`, `csw21.txt`, `nwl2023.txt`, `twl06.txt`, `enable1.txt`.
+The app ships with `wwzwords1.txt`, a custom word list that includes standard dictionary words plus game-specific additions (e.g. YOLO, FOMO, PUBKEY).
+
+For alternative dictionaries, place a word list in `public/dictionaries/`. The app tries these in order:
+`wwzwords1.txt`, `sowpods.txt`, `csw21.txt`, `nwl2023.txt`, `twl06.txt`.
 
 You can also set `VITE_DICTIONARY_URL` to load a custom file.
 A minimal fallback dictionary is included for testing when none are found.
@@ -122,8 +125,11 @@ src/
 | Kind | NIP | Purpose |
 |------|-----|---------|
 | 0 | NIP-01 | User profiles |
-| 1 | NIP-01 | Public move share notes |
-| 4 | NIP-04 | Private move share DMs |
+| 1 | NIP-01 | Public move share notes and replies |
+| 4 | NIP-04 | Standard private move share DMs |
+| 13 | NIP-59 | Seal (gift wrap intermediate layer) |
+| 14 | NIP-17 | Private DM rumor (unsigned, inside seal) |
+| 1059 | NIP-59 | Gift wrap (outer encryption layer) |
 | 9734 | NIP-57 | Zap requests (move notifications) |
 | 10002 | NIP-65 | Relay lists |
 | 30078 | NIP-78 | Game state, player racks, settings |
@@ -131,12 +137,15 @@ src/
 ### NIPs
 
 - **NIP-01**: Events, profiles, subscriptions
-- **NIP-04**: Encrypted direct messages (fallback)
+- **NIP-04**: Encrypted direct messages (standard/compatible DMs)
 - **NIP-07**: Browser extension signing
-- **NIP-44**: Encrypted payloads (primary encryption for game state)
+- **NIP-10**: Reply threading (e tags with root marker)
+- **NIP-17**: Private direct messages (gift-wrapped, secure DMs)
+- **NIP-44**: Encrypted payloads (primary encryption for game state and NIP-17)
 - **NIP-46**: Nostr Connect / remote signing
 - **NIP-47**: Nostr Wallet Connect
 - **NIP-57**: Lightning zaps
+- **NIP-59**: Gift wrap (seals and wraps for NIP-17)
 - **NIP-65**: Relay list metadata
 - **NIP-78**: Arbitrary custom app data
 

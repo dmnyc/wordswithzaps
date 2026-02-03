@@ -180,7 +180,6 @@ function App() {
             "/dictionaries/csw21.txt",
             "/dictionaries/nwl2023.txt",
             "/dictionaries/twl06.txt",
-            "/dictionaries/enable1.txt",
           ].filter(Boolean) as string[];
 
           let loadedFrom: string | null = null;
@@ -252,7 +251,7 @@ function App() {
         ]);
         setDictionaryLoaded(true);
         setDictionaryError(
-          "Using limited dictionary. Add a word list file to /public/dictionaries/ (sowpods.txt, csw21.txt, nwl2023.txt, twl06.txt, or enable1.txt).",
+          "Using limited dictionary. Add a word list file to /public/dictionaries/ (sowpods.txt, csw21.txt, nwl2023.txt, or twl06.txt).",
         );
       }
     };

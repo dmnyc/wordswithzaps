@@ -666,7 +666,7 @@ export function subscribeToEvents(
 /**
  * Fetch events matching a filter (one-time query)
  */
-const FETCH_EVENTS_TIMEOUT_MS = 6000;
+const FETCH_EVENTS_TIMEOUT_MS = 10000;
 
 /**
  * Fetch events matching a filter (one-time query)
@@ -688,7 +688,7 @@ export async function fetchEvents(filter: NDKFilter): Promise<NDKEvent[]> {
     };
 
     const timeoutId = setTimeout(() => {
-      console.warn("fetchEvents timed out, returning partial results", filter);
+      // Timed out waiting for EOSE — return whatever we have
       finalize();
     }, FETCH_EVENTS_TIMEOUT_MS);
 

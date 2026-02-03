@@ -47,7 +47,7 @@ export function detectAchievement(
       type: "bingo",
       word,
       score,
-      message: "BINGO! All 7 tiles played!",
+      message: "ZAPATHON! All 7 tiles played!",
     };
   }
 
