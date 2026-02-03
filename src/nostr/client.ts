@@ -1,6 +1,7 @@
 import NDK, {
   NDKEvent,
   NDKFilter,
+  NDKRelay,
   NDKUser,
   NDKNip07Signer,
   NDKPrivateKeySigner,
@@ -707,13 +708,48 @@ export async function fetchEvents(filter: NDKFilter): Promise<NDKEvent[]> {
 }
 
 /**
- * Publish an event to relays
+ * Publish an event to relays with confirmation and retry.
+ * Returns the set of relays that acknowledged the event.
+ * Throws if no relay acknowledges after all retry attempts.
  */
-export async function publishEvent(event: NDKEvent): Promise<void> {
+export async function publishEvent(
+  event: NDKEvent,
+  options: { maxRetries?: number; retryDelayMs?: number } = {},
+): Promise<Set<NDKRelay>> {
+  const { maxRetries = 2, retryDelayMs = 1500 } = options;
   const ndk = getNDK();
   event.ndk = ndk;
   await event.sign();
-  await event.publish();
+
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      console.warn(
+        `[publish] retry ${attempt}/${maxRetries} for event ${event.id}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+
+    try {
+      const relays = await event.publish();
+      if (relays.size > 0) {
+        if (attempt > 0) {
+          console.log(
+            `[publish] succeeded on retry ${attempt} with ${relays.size} relay(s)`,
+          );
+        }
+        return relays;
+      }
+      lastError = new Error("Event published but no relay acknowledged it");
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+  }
+
+  throw new Error(
+    `Failed to publish event after ${maxRetries + 1} attempts: ${lastError?.message ?? "unknown error"}`,
+  );
 }
 
 /**
