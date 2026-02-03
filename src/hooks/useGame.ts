@@ -21,6 +21,7 @@ export interface UseGameReturn {
   pass: () => Promise<void>;
   exchange: (tiles: string[]) => Promise<void>;
   resign: () => Promise<void>;
+  declareAbandoned: () => Promise<void>;
   deleteGame: () => Promise<void>;
 
   // Validation
@@ -522,6 +523,34 @@ export function useGame(): UseGameReturn {
     }
   }, [gameState, myPubkey, lastEventId]);
 
+  // Declare abandoned (opponent idle 14+ days, no winner)
+  const declareAbandoned = useCallback(async () => {
+    if (!gameState || !syncRef.current || !myPubkey) {
+      throw new Error("Game not ready");
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const newState = GameEngine.declareAbandoned(gameState, myPubkey);
+      const eventId = await syncRef.current.publishGameState(
+        newState,
+        lastEventId || "",
+      );
+
+      setGameState(newState);
+      setLastEventId(eventId);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to declare abandoned";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [gameState, myPubkey, lastEventId]);
+
   // Delete game (creator only)
   const deleteGame = useCallback(async () => {
     if (!gameState || !syncRef.current || !myPubkey) {
@@ -585,6 +614,7 @@ export function useGame(): UseGameReturn {
     pass,
     exchange,
     resign,
+    declareAbandoned,
     deleteGame,
     validateMove: validateMoveAction,
   };

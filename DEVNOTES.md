@@ -2,6 +2,73 @@
 
 Implementation notes, gotchas, and design decisions for contributors.
 
+## Game Design
+
+Words With Zaps is **not** Scrabble. It is a unique crossword-style word game with its own rules, board layout, scoring, and special squares designed around Bitcoin Lightning and Nostr.
+
+### Board & Squares
+
+15x15 board with four square types (no Triple Word or Triple Letter squares):
+
+| Square | Meaning | Count | Locations |
+|--------|---------|-------|-----------|
+| **DL** | Double Letter Score | 12 | Scattered inner ring |
+| **QL** | Quadruple Letter Score | 12 | Edge and mid positions |
+| **DW** | Double Word Score | 8 | Inner diagonal positions |
+| **ZAP** | +21 bonus points per word | 5 | Four corners + center |
+
+The center square is a ZAP square (not a star). The first word must cover it.
+
+### Scoring
+
+- **Letter values** are unique to this game (e.g. Z=11, Q=10, X=9, K=7, J=8)
+- **Zap Square bonus**: +21 points per word that includes a newly placed tile on a ZAP square
+- **Zapathon bonus**: +42 points for playing all 7 tiles in one turn
+- **Blank tiles**: Worth 0 points, can represent any letter, locked once played
+- **99 tiles total** with 4 blanks
+
+### Game End
+
+- Both players pass consecutively
+- One player uses all tiles
+- A player forfeits (opponent wins)
+- A game is declared abandoned after 14 days idle (no winner)
+
+## Game Decay & Abandonment
+
+Games where the opponent hasn't moved are tracked with a decay tier system. Decay is computed from the existing `updatedAt` (Lobby) or `turn.timestamp` (GameView) — no schema changes needed.
+
+### Decay Tiers
+
+| Tier | Time Idle | Badge | Card Border |
+|------|-----------|-------|-------------|
+| Fresh | < 1 day | Gray "Waiting" | None |
+| Stale | 1–3 days | Orange "1d"/"2d"/"3d" | Orange left border |
+| Cold | 3–7 days | Red "3d"–"7d" | Red left border |
+| Dormant | 7+ days | Dark red "1w+"/"2w+" | Dark red border, dimmed |
+
+Decay badges only appear when it's the **opponent's** turn. When it's your turn the badge stays gold "Your turn" as usual.
+
+### Nudge Zaps
+
+Stale, cold, and dormant games show a bolt icon in the Lobby that opens a NudgeModal. This lets you send a reminder zap (21/50/100/500 sats) to the opponent with the message "Your turn on #WordsWithZaps!" — using the existing `zapUser` infrastructure.
+
+### Abandonment
+
+After **14 days** of opponent inactivity, the game can be declared abandoned:
+
+- From **GameView**: a subtle "Declare abandoned" button appears below the game controls
+- `GameEngine.declareAbandoned()` sets `status: "abandoned"` with **no winner** — neither player wins or loses
+- This is distinct from forfeit/resign (`GameEngine.abandonGame()`) where the resigning player loses and the opponent wins
+- Only the waiting player (not the active player) can declare abandonment
+
+### Utility
+
+`src/utils/gameDecay.ts` exports:
+- `getDecayTier(updatedAt, now?)` — returns `{ tier, label, ageDays }`
+- `canDeclareAbandoned(updatedAt, now?)` — true if idle ≥ 14 days
+- `ABANDON_THRESHOLD_DAYS = 14`
+
 ## NIP-17 Gift-Wrapped DMs
 
 Gift-wrapped DMs use manual NIP-59 wrapping rather than NDK's built-in `giftWrap()` helper. This is because `giftWrap()` checks `signer.encryptionEnabled("nip44")` which not all signer wrappers implement (notably our `BunkerSignerWrapper` for NIP-46). The manual approach calls `signer.encrypt()` directly, which works with all signer types (NIP-07, NIP-46, local keypair).
@@ -14,11 +81,11 @@ Gift-wrapped DMs use manual NIP-59 wrapping rather than NDK's built-in `giftWrap
 
 ### Timestamp Gotcha
 
-Per NIP-17, only the seal and gift wrap timestamps should be randomized for privacy. The **rumor must use the real timestamp** — this is what the recipient's client displays as the message time. If you randomize the rumor timestamp, the DM will appear with a wrong/old date in the recipient's inbox. This was a bug we hit and fixed.
+Per NIP-17, only the seal and gift wrap timestamps should be randomized for privacy. The **rumor must use the real timestamp** -- this is what the recipient's client displays as the message time. If you randomize the rumor timestamp, the DM will appear with a wrong/old date in the recipient's inbox. This was a bug we hit and fixed.
 
 ### Reference Implementation
 
-See `/Users/daniel/GitHub/ghostr/src/lib/nostr/nip59.ts` for a similar approach used in Ghostr.
+The Ghostr project uses the same manual wrapping approach. See its `src/lib/nostr/nip59.ts` for reference.
 
 ## NIP-10 Reply Threading
 
@@ -63,9 +130,9 @@ The dictionary loads in priority order: `VITE_DICTIONARY_URL` > `wwzwords1.txt` 
 
 | Type | Trigger | Badge |
 |------|---------|-------|
-| Zapathon | All 7 tiles played | "7" |
-| Zap Square | Tile placed on ZAP bonus square | "⚡" |
-| Double Word | Word on double-word multiplier (25+ pts) | "2x" |
+| Zapathon | All 7 tiles played in one turn | "7" |
+| Zap Square | Tile placed on a ZAP bonus square | bolt icon |
+| Double Word | Word on DW multiplier scoring 25+ points | "2x" |
 | High Score | Single word scores 40+ points | wow.svg |
 
 ## Fetch Timeout
@@ -74,4 +141,4 @@ The dictionary loads in priority order: `VITE_DICTIONARY_URL` > `wwzwords1.txt` 
 
 ## Signer Compatibility
 
-The `BunkerSignerWrapper` in `client.ts` wraps NIP-46 bunker signers for NDK compatibility. It implements `encrypt`/`decrypt` using `nip44Encrypt`/`nip44Decrypt` but does **not** implement `encryptionEnabled()`. This is why NIP-17 uses manual wrapping instead of NDK's `giftWrap()` — see the NIP-17 section above.
+The `BunkerSignerWrapper` in `client.ts` wraps NIP-46 bunker signers for NDK compatibility. It implements `encrypt`/`decrypt` using `nip44Encrypt`/`nip44Decrypt` but does **not** implement `encryptionEnabled()`. This is why NIP-17 uses manual wrapping instead of NDK's `giftWrap()` -- see the NIP-17 section above.

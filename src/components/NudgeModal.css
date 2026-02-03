@@ -1,0 +1,168 @@
+.nudge-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.nudge-waiting {
+    font-size: 14px;
+    color: #ccc;
+    margin: 0;
+    text-align: center;
+}
+
+.nudge-time {
+    font-weight: 600;
+}
+
+.nudge-time.stale {
+    color: #ffa000;
+}
+
+.nudge-time.cold {
+    color: #ff5050;
+}
+
+.nudge-time.dormant {
+    color: #b43232;
+}
+
+.nudge-hint {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    margin: 0;
+}
+
+.nudge-wallet-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.nudge-amounts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.nudge-amount-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #eaeaea;
+    padding: 10px 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.nudge-amount-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.nudge-amount-btn.active {
+    background: rgba(255, 204, 0, 0.2);
+    color: #ffcc00;
+    border: 1px solid rgba(255, 204, 0, 0.4);
+}
+
+.nudge-bolt {
+    width: 14px;
+    height: 14px;
+    vertical-align: -1px;
+}
+
+.nudge-custom-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nudge-custom-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #eaeaea;
+    font-size: 14px;
+}
+
+.nudge-custom-input:focus {
+    outline: none;
+    border-color: rgba(255, 204, 0, 0.4);
+}
+
+.nudge-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.nudge-btn.primary {
+    background: linear-gradient(180deg, #ffcc00, #e6b800);
+    color: #0b0b0b;
+    width: 100%;
+}
+
+.nudge-btn.primary:hover {
+    background: linear-gradient(180deg, #ffdd33, #ffcc00);
+}
+
+.nudge-btn.primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nudge-btn.secondary {
+    background: rgba(255, 204, 0, 0.15);
+    color: #ffcc00;
+    border: 1px solid rgba(255, 204, 0, 0.3);
+}
+
+.nudge-btn.secondary:hover {
+    background: rgba(255, 204, 0, 0.25);
+}
+
+.nudge-abandon {
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nudge-abandon-hint {
+    font-size: 12px;
+    color: #888;
+    margin: 0;
+    text-align: center;
+}
+
+.nudge-btn.abandon {
+    background: rgba(180, 50, 50, 0.15);
+    color: #b43232;
+    border: 1px solid rgba(180, 50, 50, 0.3);
+    width: 100%;
+}
+
+.nudge-btn.abandon:hover {
+    background: rgba(180, 50, 50, 0.25);
+}
+
+.nudge-btn.abandon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
