@@ -420,6 +420,19 @@ export async function createInvoice(
   }
 }
 
+const ZAP_FETCH_TIMEOUT = 10000; // 10s timeout for LNURL fetches
+
+function fetchWithTimeout(
+  input: string | URL,
+  timeoutMs: number = ZAP_FETCH_TIMEOUT,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(input.toString(), { signal: controller.signal }).finally(() =>
+    clearTimeout(timer),
+  );
+}
+
 /**
  * Zap a user (game move notification)
  */
@@ -445,7 +458,7 @@ export async function zapUser(params: ZapParams): Promise<string> {
   }
 
   // Fetch LNURL pay info
-  const lnurlResponse = await fetch(lnurlPayUrl);
+  const lnurlResponse = await fetchWithTimeout(lnurlPayUrl);
   const lnurlData = await lnurlResponse.json();
 
   let invoice: string;
@@ -481,7 +494,7 @@ export async function zapUser(params: ZapParams): Promise<string> {
       JSON.stringify(zapRequest.rawEvent()),
     );
 
-    const invoiceResponse = await fetch(callbackUrl.toString());
+    const invoiceResponse = await fetchWithTimeout(callbackUrl);
     const invoiceData = await invoiceResponse.json();
 
     if (!invoiceData.pr) {
@@ -495,7 +508,7 @@ export async function zapUser(params: ZapParams): Promise<string> {
     callbackUrl.searchParams.set("amount", (amountSats * 1000).toString());
     callbackUrl.searchParams.set("comment", moveDescription);
 
-    const invoiceResponse = await fetch(callbackUrl.toString());
+    const invoiceResponse = await fetchWithTimeout(callbackUrl);
     const invoiceData = await invoiceResponse.json();
 
     if (!invoiceData.pr) {

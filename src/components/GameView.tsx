@@ -460,78 +460,77 @@ export function GameView({
       const word = pendingMoveSummary?.word || "Your move";
       const points = pendingMoveSummary?.points ?? 0;
 
-      if (!zapsDisabled && options.zapAmount > 0) {
-        if (isWalletConnected && opponentPubkey) {
-          try {
-            const message = "It's your turn on #WordsWithZaps!";
-            await zapUser({
+      // Close modal immediately - zap and share run in the background
+      setShowZapModal(false);
+      setPendingMoveSummary(null);
+
+      // Build zap promise (if applicable)
+      const zapPromise =
+        !zapsDisabled &&
+        options.zapAmount > 0 &&
+        isWalletConnected &&
+        opponentPubkey
+          ? zapUser({
               recipientPubkey: opponentPubkey,
               amountSats: options.zapAmount,
               gameId,
-              moveDescription: message,
-            });
-            triggerZapAnimation();
-            onToast?.(
-              `Sent ${options.zapAmount} sat${
-                options.zapAmount === 1 ? "" : "s"
-              }!`,
-              "success",
-            );
-          } catch (err) {
-            console.warn("Zap failed:", err);
-            const errorMsg = err instanceof Error ? err.message : String(err);
-            onToast?.(`Zap failed: ${errorMsg}`, "error");
-          }
-        } else if (!isWalletConnected) {
-          console.log("Wallet not ready, skipping zap");
-        }
-      } else if (zapsDisabled) {
-        console.log("[Zap] Gameplay zaps disabled");
-      }
+              moveDescription: "It's your turn on #WordsWithZaps!",
+            }).then(() => {
+              triggerZapAnimation();
+              onToast?.(
+                `Sent ${options.zapAmount} sat${
+                  options.zapAmount === 1 ? "" : "s"
+                }!`,
+                "success",
+              );
+            })
+          : null;
 
+      // Build share promise (if applicable)
+      let sharePromise: Promise<void> | null = null;
       if (options.shareMode !== "none") {
-        try {
-          let shareText = "";
-          if (pendingMoveSummary?.kind === "skip") {
-            let opponentRef = "";
-            if (opponentPubkey) {
-              try {
-                opponentRef = `nostr:${opponentNpub}`;
-              } catch {
-                opponentRef = opponentPubkey;
-              }
+        let shareText = "";
+        if (pendingMoveSummary?.kind === "skip") {
+          let opponentRef = "";
+          if (opponentPubkey) {
+            try {
+              opponentRef = `nostr:${opponentNpub}`;
+            } catch {
+              opponentRef = opponentPubkey;
             }
-            const turnLine = opponentRef
-              ? `It's your turn, ${opponentRef}!`
-              : "It's your turn!";
-            shareText = `I just completed my turn in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
-          } else if (pendingMoveSummary?.isFirstMove) {
-            const challengeTarget =
-              options.shareMode === "public"
-                ? opponentLabel
-                  ? `@${opponentLabel}`
-                  : "you"
-                : "you";
-            const joinLine =
-              options.shareMode === "public"
-                ? "Join or start a new game here:"
-                : "Join the game here:";
-            shareText = `I'm challenging ${challengeTarget} to play #WordsWithZaps.\n\nI just played ${word} for ${points} point${points === 1 ? "" : "s"}.\n\n${joinLine}\n\n${gameLink}`;
-          } else {
-            let opponentRef = "";
-            if (opponentPubkey) {
-              try {
-                opponentRef = `nostr:${opponentNpub}`;
-              } catch {
-                opponentRef = opponentPubkey;
-              }
-            }
-            const turnLine = opponentRef
-              ? `It's your turn, ${opponentRef}!`
-              : "It's your turn!";
-            shareText = `I just played ${word} for ${points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
           }
+          const turnLine = opponentRef
+            ? `It's your turn, ${opponentRef}!`
+            : "It's your turn!";
+          shareText = `I just completed my turn in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+        } else if (pendingMoveSummary?.isFirstMove) {
+          const challengeTarget =
+            options.shareMode === "public"
+              ? opponentLabel
+                ? `@${opponentLabel}`
+                : "you"
+              : "you";
+          const joinLine =
+            options.shareMode === "public"
+              ? "Join or start a new game here:"
+              : "Join the game here:";
+          shareText = `I'm challenging ${challengeTarget} to play #WordsWithZaps.\n\nI just played ${word} for ${points} point${points === 1 ? "" : "s"}.\n\n${joinLine}\n\n${gameLink}`;
+        } else {
+          let opponentRef = "";
+          if (opponentPubkey) {
+            try {
+              opponentRef = `nostr:${opponentNpub}`;
+            } catch {
+              opponentRef = opponentPubkey;
+            }
+          }
+          const turnLine = opponentRef
+            ? `It's your turn, ${opponentRef}!`
+            : "It's your turn!";
+          shareText = `I just played ${word} for ${points} points in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+        }
 
+        sharePromise = (async () => {
           if (options.shareMode === "public") {
             const event = createEvent(1, shareText, [
               ["t", "wordswithzaps"],
@@ -551,14 +550,30 @@ export function GameView({
             await publishEvent(event);
             onToast?.("Shared directly!", "success");
           }
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : String(err);
-          onToast?.(`Sharing failed: ${errorMsg}`, "error");
-        }
+        })();
       }
 
-      setShowZapModal(false);
-      setPendingMoveSummary(null);
+      // Fire both in parallel - neither blocks the other
+      const promises: Promise<void>[] = [];
+      if (zapPromise)
+        promises.push(
+          zapPromise.catch((err) => {
+            console.warn("Zap failed:", err);
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            onToast?.(`Zap failed: ${errorMsg}`, "error");
+          }),
+        );
+      if (sharePromise)
+        promises.push(
+          sharePromise.catch((err) => {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            onToast?.(`Sharing failed: ${errorMsg}`, "error");
+          }),
+        );
+
+      if (promises.length > 0) {
+        await Promise.allSettled(promises);
+      }
     },
     [
       gameId,
@@ -568,6 +583,7 @@ export function GameView({
       opponentNpub,
       opponentPubkey,
       pendingMoveSummary?.isFirstMove,
+      pendingMoveSummary?.kind,
       pendingMoveSummary?.points,
       pendingMoveSummary?.word,
       triggerZapAnimation,
