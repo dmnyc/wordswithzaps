@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import {
   initializeNDK,
+  getNDK,
   connectWithNip07,
   connectWithPrivateKey as clientConnectWithPrivateKey,
   connectWithBunker as clientConnectWithBunker,
@@ -9,6 +10,7 @@ import {
   generateNostrConnectURI as clientGenerateNostrConnectURI,
   waitForNostrConnect as clientWaitForNostrConnect,
   getCurrentUser,
+  setCurrentUser,
   isConnected,
   getConnectedRelayCount,
   getRelayUrls,
@@ -83,6 +85,46 @@ export function useNostr(): UseNostrReturn {
       const storedAuthMethod = window.localStorage.getItem(
         AUTH_METHOD_KEY,
       ) as AuthMethod;
+      const storedPubkey = window.localStorage.getItem(LAST_PUBKEY_KEY);
+
+      // For NIP-07: Use stored pubkey immediately for fast UI, verify in background
+      // This prevents waiting for extension response on page reload
+      if (storedAuthMethod === "nip07" && storedPubkey && window.nostr) {
+        // Initialize NDK (non-blocking)
+        await initializeNDK();
+
+        // Create user from stored pubkey immediately
+        const ndk = getNDK();
+        const quickUser = ndk.getUser({ pubkey: storedPubkey });
+
+        // Set currentUser in client module so isConnected() returns true
+        setCurrentUser(quickUser);
+
+        if (!cancelled) {
+          setUser(quickUser);
+          setAuthMethod("nip07");
+          setConnecting(false);
+        }
+
+        // Verify with extension in background (don't block UI)
+        connectWithNip07()
+          .then((verifiedUser) => {
+            if (!cancelled && verifiedUser.pubkey !== storedPubkey) {
+              // Pubkey changed (different extension account), update
+              setUser(verifiedUser);
+              window.localStorage.setItem(LAST_PUBKEY_KEY, verifiedUser.pubkey);
+            }
+          })
+          .catch((err) => {
+            console.warn(
+              "[useNostr] Background NIP-07 verification failed:",
+              err,
+            );
+            // Don't logout - keep using stored pubkey
+          });
+
+        return;
+      }
 
       setConnecting(true);
       try {
