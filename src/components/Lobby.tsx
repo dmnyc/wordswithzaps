@@ -33,6 +33,7 @@ export function Lobby({
   const [games, setGames] = useState<GameSummary[]>([]);
   const [isLoadingGames, setIsLoadingGames] = useState(false);
   const [showEndedGames, setShowEndedGames] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState(10);
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
     {},
   );
@@ -209,9 +210,11 @@ export function Lobby({
     game.status === "abandoned" ||
     game.status === "deleted";
 
-  const visibleGames = showEndedGames
+  const filteredGames = showEndedGames
     ? games
     : games.filter((game) => !isGameEnded(game));
+  const visibleGames = filteredGames.slice(0, visibleLimit);
+  const hasMore = filteredGames.length > visibleLimit;
 
   const handleGameClick = (game: GameSummary) => {
     const opponent =
@@ -350,6 +353,14 @@ export function Lobby({
                 </div>
               );
             })}
+            {hasMore && (
+              <button
+                className="show-more-btn"
+                onClick={() => setVisibleLimit((prev) => prev + 10)}
+              >
+                Show more ({filteredGames.length - visibleLimit} remaining)
+              </button>
+            )}
           </div>
         )}
       </div>
