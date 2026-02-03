@@ -49,41 +49,53 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
 
   const user = getCurrentUser();
 
-  // Load profile on mount
-  useEffect(() => {
-    async function loadProfile() {
-      if (!user?.pubkey) {
-        setError("Not logged in");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const metadata = await fetchProfileMetadata(user.pubkey);
-        if (metadata) {
-          setFormState({
-            displayName: String(
-              metadata.display_name || metadata.displayName || "",
-            ),
-            name: String(metadata.name || ""),
-            about: String(metadata.about || ""),
-            picture: String(metadata.picture || ""),
-            banner: String(metadata.banner || ""),
-            nip05: String(metadata.nip05 || ""),
-            website: String(metadata.website || ""),
-            lud16: String(metadata.lud16 || ""),
-          });
-        }
-      } catch (err) {
-        console.error("[ProfileSettings] Failed to load profile:", err);
-        setError("Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
+  const loadProfile = useCallback(async () => {
+    if (!user?.pubkey) {
+      setError("Not logged in");
+      setLoading(false);
+      return;
     }
 
+    setLoading(true);
+    setError(null);
+
+    try {
+      // First try NDK's fetchProfile (same as NavBar, reliably fresh)
+      await user.fetchProfile();
+      const ndkProfile = user.profile as Record<string, unknown> | undefined;
+
+      // Fall back to relay query if NDK profile is empty
+      const metadata =
+        ndkProfile && Object.keys(ndkProfile).length > 0
+          ? ndkProfile
+          : await fetchProfileMetadata(user.pubkey);
+
+      if (metadata) {
+        setFormState({
+          displayName: String(
+            metadata.display_name || metadata.displayName || "",
+          ),
+          name: String(metadata.name || ""),
+          about: String(metadata.about || ""),
+          picture: String(metadata.picture || ""),
+          banner: String(metadata.banner || ""),
+          nip05: String(metadata.nip05 || ""),
+          website: String(metadata.website || ""),
+          lud16: String(metadata.lud16 || ""),
+        });
+      }
+    } catch (err) {
+      console.error("[ProfileSettings] Failed to load profile:", err);
+      setError("Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Load profile on mount
+  useEffect(() => {
     loadProfile();
-  }, [user?.pubkey]);
+  }, [loadProfile]);
 
   const handleInputChange = useCallback(
     (field: keyof FormState) =>
