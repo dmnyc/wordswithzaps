@@ -1,0 +1,57 @@
+.ztile-loader {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    perspective: 600px;
+    vertical-align: middle;
+}
+
+.ztile-loader-inner {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    animation: ztileFlip 1s ease-in-out infinite;
+}
+
+.ztile-loader-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.ztile-loader-front img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.ztile-loader-back {
+    background: linear-gradient(145deg, #2b2f36, #1f2329);
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: rotateX(180deg);
+    border-radius: 2px;
+}
+
+@keyframes ztileFlip {
+    0% {
+        transform: translateY(0) rotateX(0deg);
+    }
+    25% {
+        transform: translateY(-8px) rotateX(-90deg);
+    }
+    50% {
+        transform: translateY(-10px) rotateX(-180deg);
+    }
+    75% {
+        transform: translateY(-8px) rotateX(-270deg);
+    }
+    100% {
+        transform: translateY(0) rotateX(-360deg);
+    }
+}

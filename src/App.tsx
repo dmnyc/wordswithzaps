@@ -15,6 +15,7 @@ import CreatorZapModal from "./components/CreatorZapModal";
 import AboutModal from "./components/AboutModal";
 import RelayListModal from "./components/RelayListModal";
 import ZapAnimation from "./components/ZapAnimation";
+import WelcomeModal from "./components/WelcomeModal";
 import { sendPayment } from "./wallet/walletManager";
 import "./index.css";
 
@@ -60,6 +61,7 @@ function App() {
     state: walletState,
     isReady: walletReady,
     activeWallet,
+    wallets,
     bitcoinConnectConnected,
     refreshBalance,
   } = useWallet();
@@ -69,6 +71,7 @@ function App() {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showRelayListModal, setShowRelayListModal] = useState(false);
   const [showZapAnimation, setShowZapAnimation] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const creatorZapReturnRef = useRef<null | (() => void)>(null);
   const walletType = activeWallet
     ? activeWallet.kind === WalletKind.SPARK
@@ -275,6 +278,27 @@ function App() {
       refreshBalance().catch(() => {});
     }
   }, [isConnected, refreshBalance, user?.pubkey]);
+
+  // Show welcome modal for first-time users with no wallet
+  useEffect(() => {
+    if (
+      isConnected &&
+      screen === "lobby" &&
+      wallets.length === 0 &&
+      !bitcoinConnectConnected &&
+      !walletState.loading &&
+      !localStorage.getItem("wwz_welcome_shown")
+    ) {
+      localStorage.setItem("wwz_welcome_shown", "1");
+      setShowWelcomeModal(true);
+    }
+  }, [
+    isConnected,
+    screen,
+    wallets.length,
+    bitcoinConnectConnected,
+    walletState.loading,
+  ]);
 
   // Read gameId from URL on first load
   useEffect(() => {
@@ -485,6 +509,12 @@ function App() {
         relays={relayUrls}
         connectedRelays={connectedRelayUrls}
         onClose={handleCloseRelayList}
+      />
+
+      <WelcomeModal
+        open={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        onOpenWalletSettings={handleOpenWalletSettings}
       />
 
       {showZapAnimation && (

@@ -306,15 +306,6 @@
     margin: 16px 0 0;
 }
 
-.login-spinner-small {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 204, 0, 0.2);
-    border-top-color: #ffcc00;
-    border-radius: 50%;
-    animation: login-spin 1s linear infinite;
-}
-
 /* Buttons */
 .login-btn {
     padding: 14px 24px;
@@ -437,22 +428,6 @@
 .login-waiting {
     text-align: center;
     padding: 20px 0;
-}
-
-.login-spinner {
-    width: 48px;
-    height: 48px;
-    border: 3px solid rgba(255, 204, 0, 0.2);
-    border-top-color: #ffcc00;
-    border-radius: 50%;
-    animation: login-spin 1s linear infinite;
-    margin: 0 auto 16px;
-}
-
-@keyframes login-spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 .login-waiting-text {

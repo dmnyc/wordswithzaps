@@ -6,6 +6,7 @@ interface TileProps {
   isBlank?: boolean;
   isDragging?: boolean;
   isPlaced?: boolean;
+  isHighlighted?: boolean;
   onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragEnd?: (event: React.DragEvent<HTMLDivElement>) => void;
 }
@@ -15,6 +16,7 @@ export function Tile({
   isBlank = false,
   isDragging = false,
   isPlaced = false,
+  isHighlighted = false,
   onDragStart,
   onDragEnd,
 }: TileProps) {
@@ -30,7 +32,7 @@ export function Tile({
 
   return (
     <div
-      className={`tile ${isDragging ? "dragging" : ""} ${isPlaced ? "placed" : ""} ${isBlank ? "blank" : ""}`}
+      className={`tile ${isDragging ? "dragging" : ""} ${isPlaced ? "placed" : ""} ${isBlank ? "blank" : ""} ${isHighlighted ? "highlighted" : ""}`}
       draggable={!!onDragStart}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}

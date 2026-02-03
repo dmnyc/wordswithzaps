@@ -8,6 +8,7 @@ import {
   BitcoinConnectLogo,
   EyeIcon,
 } from "./icons/WalletIcons";
+import { WifiIcon } from "./icons/RelayIcons";
 import { updateSetting } from "../settings/nostrSettings";
 import "./NavBar.css";
 
@@ -328,7 +329,10 @@ export function NavBar({
                 </span>
               </div>
               <div className="menu-info-row">
-                <span>Relays</span>
+                <span className="relay-label">
+                  <WifiIcon className="relay-wifi-icon" />
+                  Relays
+                </span>
                 {onOpenRelayList ? (
                   <button
                     className="menu-link"

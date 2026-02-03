@@ -70,6 +70,31 @@
     pointer-events: none;
 }
 
+/* Highlighted tile (opponent's last move) */
+.tile.highlighted {
+    box-shadow:
+        0 0 8px 2px rgba(255, 204, 0, 0.6),
+        0 0 2px 0 rgba(255, 204, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    animation: tileGlow 3s ease-in-out 4;
+}
+
+@keyframes tileGlow {
+    0%,
+    100% {
+        box-shadow:
+            0 0 8px 2px rgba(255, 204, 0, 0.6),
+            0 0 2px 0 rgba(255, 204, 0, 0.8),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    50% {
+        box-shadow:
+            0 0 14px 4px rgba(255, 204, 0, 0.8),
+            0 0 4px 1px rgba(255, 204, 0, 1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+}
+
 /* Blank tile styling */
 .tile.blank .tile-letter {
     color: #666;

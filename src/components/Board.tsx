@@ -24,6 +24,7 @@ interface BoardProps {
   onMoveTile: (fromX: number, fromY: number, toX: number, toY: number) => void;
   disabled?: boolean;
   isFirstMove?: boolean;
+  highlightCoords?: Set<string>;
 }
 
 function getCellClass(multiplier: MultiplierType): string {
@@ -72,6 +73,7 @@ export function Board({
   onMoveTile,
   disabled = false,
   isFirstMove = false,
+  highlightCoords,
 }: BoardProps) {
   const [dragOver, setDragOver] = useState<string | null>(null);
   const boardStyle = {
@@ -193,7 +195,12 @@ export function Board({
         onClick={() => handleCellClick(x, y)}
       >
         {letter ? (
-          <Tile letter={letter} isBlank={isPlacedBlank} isPlaced />
+          <Tile
+            letter={letter}
+            isBlank={isPlacedBlank}
+            isPlaced
+            isHighlighted={highlightCoords?.has(coord)}
+          />
         ) : pending ? (
           <Tile
             letter={pending.letter}

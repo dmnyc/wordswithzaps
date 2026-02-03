@@ -9,6 +9,7 @@ import {
   CameraIcon,
   ClipboardIcon,
 } from "./icons/LoginIcons";
+import { ZTileLoader } from "./ZTileLoader";
 import "./LoginScreen.css";
 
 type LoginView =
@@ -226,6 +227,10 @@ WARNING: Never share your private key. Store this file securely.`;
 
   // If user is connected, show continue button
   if (user) {
+    const profileName =
+      user.profile?.displayName ||
+      user.profile?.display_name ||
+      user.profile?.name;
     return (
       <div className="login-screen">
         <div className="login-card">
@@ -235,10 +240,14 @@ WARNING: Never share your private key. Store this file securely.`;
             className="login-logo"
           />
           <div className="login-connected">
-            <p>Connected as:</p>
-            <p className="login-pubkey">
-              {user.profile?.name || user.pubkey.slice(0, 16)}...
-            </p>
+            {profileName ? (
+              <>
+                <p>Connected as:</p>
+                <p className="login-pubkey">{profileName}</p>
+              </>
+            ) : (
+              <p>Connecting...</p>
+            )}
             <button className="login-btn" onClick={onConnected}>
               Continue
             </button>
@@ -406,13 +415,13 @@ WARNING: Never share your private key. Store this file securely.`;
                 </div>
 
                 <div className="login-qr-waiting">
-                  <div className="login-spinner-small" />
+                  <ZTileLoader size="sm" />
                   <span>Waiting for connection...</span>
                 </div>
               </div>
             ) : (
               <div className="login-qr-loading">
-                <div className="login-spinner" />
+                <ZTileLoader />
                 <p>Generating QR code...</p>
               </div>
             )}
@@ -465,7 +474,7 @@ WARNING: Never share your private key. Store this file securely.`;
               </>
             ) : (
               <div className="login-waiting">
-                <div className="login-spinner" />
+                <ZTileLoader />
                 <p className="login-waiting-text">
                   Waiting for approval from remote signer...
                 </p>
