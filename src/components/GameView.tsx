@@ -94,6 +94,7 @@ export function GameView({
     opponentScore: number;
     isFirstMove: boolean;
     kind: "move" | "skip";
+    skipReason?: "pass" | "swap";
   } | null>(null);
   const [opponentDisplayName, setOpponentDisplayName] = useState<string | null>(
     null,
@@ -491,6 +492,10 @@ export function GameView({
       if (options.shareMode !== "none") {
         let shareText = "";
         if (pendingMoveSummary?.kind === "skip") {
+          const action =
+            pendingMoveSummary.skipReason === "swap"
+              ? "swapped tiles"
+              : "passed my turn";
           let opponentRef = "";
           if (opponentPubkey) {
             try {
@@ -500,9 +505,9 @@ export function GameView({
             }
           }
           const turnLine = opponentRef
-            ? `It's your turn, ${opponentRef}!`
-            : "It's your turn!";
-          shareText = `I just completed my turn in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
+            ? `Over to you, ${opponentRef}!`
+            : "Over to you!";
+          shareText = `I just ${action} in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
         } else if (pendingMoveSummary?.isFirstMove) {
           const challengeTarget =
             options.shareMode === "public"
@@ -585,6 +590,7 @@ export function GameView({
       pendingMoveSummary?.isFirstMove,
       pendingMoveSummary?.kind,
       pendingMoveSummary?.points,
+      pendingMoveSummary?.skipReason,
       pendingMoveSummary?.word,
       triggerZapAnimation,
       isWalletConnected,
@@ -612,13 +618,17 @@ export function GameView({
       return { public: "", private: "" };
     }
     if (pendingMoveSummary.kind === "skip") {
+      const action =
+        pendingMoveSummary.skipReason === "swap"
+          ? "swapped tiles"
+          : "passed my turn";
       const publicTurnLine = opponentLabel
-        ? `It's your turn, @${opponentLabel}!`
-        : "It's your turn!";
-      const privateTurnLine = "It's your turn!";
+        ? `Over to you, @${opponentLabel}!`
+        : "Over to you!";
+      const privateTurnLine = "Over to you!";
       return {
-        public: `I just completed my turn in #WordsWithZaps.\n\n${publicTurnLine}\n\n${gameLink}`,
-        private: `I just completed my turn in #WordsWithZaps.\n\n${privateTurnLine}\n\n${gameLink}`,
+        public: `I just ${action} in #WordsWithZaps.\n\n${publicTurnLine}\n\n${gameLink}`,
+        private: `I just ${action} in #WordsWithZaps.\n\n${privateTurnLine}\n\n${gameLink}`,
       };
     }
     const points = pendingMoveSummary.points;
@@ -678,6 +688,7 @@ export function GameView({
         opponentScore: gameState?.scoring.p2Score || 0,
         isFirstMove: false,
         kind: "skip",
+        skipReason: "swap",
       });
       setShowZapModal(true);
     } catch (err) {
@@ -817,6 +828,7 @@ export function GameView({
           opponentScore: gameState?.scoring.p2Score || 0,
           isFirstMove: false,
           kind: "skip",
+          skipReason: "pass",
         });
         setShowZapModal(true);
       }
@@ -891,6 +903,7 @@ export function GameView({
           onShare={handleCopyLink}
           onShowRules={() => setShowRulesModal(true)}
           onShowRelays={onOpenRelayList}
+          onRefresh={() => loadGame(gameId, opponentPubkey)}
           onForfeit={
             gameState.meta.status === "active" ? handleForfeit : undefined
           }

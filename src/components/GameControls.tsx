@@ -71,19 +71,19 @@ export function GameControls({
       <div className="controls-right">
         <button
           className="control-btn secondary"
+          onClick={onExchange}
+          disabled={!canExchange || isLoading}
+          title="Swap tiles from rack"
+        >
+          Swap
+        </button>
+        <button
+          className="control-btn secondary"
           onClick={onPass}
           disabled={!canPass || isLoading}
           title="Skip your turn"
         >
           Pass
-        </button>
-        <button
-          className="control-btn secondary"
-          onClick={onExchange}
-          disabled={!canExchange || isLoading}
-          title="Exchange selected tiles"
-        >
-          Exchange
         </button>
       </div>
     </div>
