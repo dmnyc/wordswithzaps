@@ -547,6 +547,7 @@ export function GameView({
           if (options.shareMode === "public") {
             const event = createEvent(1, shareText, [
               ["t", "wordswithzaps"],
+              ["client", "Words With Zaps"],
               ...(opponentPubkey ? [["p", opponentPubkey]] : []),
             ]);
             await publishEvent(event);
@@ -570,6 +571,7 @@ export function GameView({
             const replyEvent = createEvent(1, shareText, [
               ["e", eventId, "", "root"],
               ["t", "wordswithzaps"],
+              ["client", "Words With Zaps"],
               ...(opponentPubkey ? [["p", opponentPubkey]] : []),
             ]);
             await publishEvent(replyEvent);
