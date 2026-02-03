@@ -17,6 +17,35 @@ import {
 import { bytesToHex } from "@noble/hashes/utils";
 import { DEFAULT_RELAYS, RELAY_LIST_KIND } from "../types/nostr";
 
+// Timeout configuration
+const NDK_CONNECT_TIMEOUT = 15000; // 15 seconds for NDK relay connection
+const NIP07_SIGNER_TIMEOUT = 30000; // 30 seconds for NIP-07 signer operations
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+
+    promise
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 let ndkInstance: NDK | null = null;
 let currentUser: NDKUser | null = null;
 
@@ -34,6 +63,11 @@ export interface NostrClientOptions {
 export async function initializeNDK(
   options: NostrClientOptions = {},
 ): Promise<NDK> {
+  // Return existing instance if already initialized and connected
+  if (ndkInstance) {
+    return ndkInstance;
+  }
+
   const relays = options.relays || DEFAULT_RELAYS;
 
   ndkInstance = new NDK({
@@ -41,7 +75,11 @@ export async function initializeNDK(
   });
 
   if (options.autoConnect !== false) {
-    await ndkInstance.connect();
+    await withTimeout(
+      ndkInstance.connect(),
+      NDK_CONNECT_TIMEOUT,
+      "NDK relay connection",
+    );
   }
 
   return ndkInstance;
@@ -70,8 +108,20 @@ export async function connectWithNip07(): Promise<NDKUser> {
   const signer = new NDKNip07Signer();
   ndk.signer = signer;
 
-  const user = await signer.user();
-  await user.fetchProfile();
+  // Add timeout to signer.user() which calls out to NIP-07 extension
+  const user = await withTimeout(
+    signer.user(),
+    NIP07_SIGNER_TIMEOUT,
+    "NIP-07 signer connection",
+  );
+
+  // Fetch profile with timeout (non-critical, can fail gracefully)
+  try {
+    await withTimeout(user.fetchProfile(), 10000, "Profile fetch");
+  } catch (err) {
+    console.warn("Failed to fetch profile:", err);
+    // Continue without profile - not critical for login
+  }
 
   currentUser = user;
 
@@ -118,7 +168,13 @@ export async function connectWithPrivateKey(
   ndk.signer = signer;
 
   const user = await signer.user();
-  await user.fetchProfile();
+
+  // Fetch profile with timeout (non-critical, can fail gracefully)
+  try {
+    await withTimeout(user.fetchProfile(), 10000, "Profile fetch");
+  } catch (err) {
+    console.warn("Failed to fetch profile:", err);
+  }
 
   currentUser = user;
 
@@ -148,15 +204,20 @@ export async function connectWithBunker(
   const nip46Signer = new NDKNip46Signer(ndk, bunkerUri, localSigner);
 
   // Wait for connection with timeout
-  const user = await Promise.race([
+  const user = await withTimeout(
     nip46Signer.blockUntilReady(),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Connection timeout (60s)")), 60000),
-    ),
-  ]);
+    60000,
+    "NIP-46 bunker connection",
+  );
 
   ndk.signer = nip46Signer;
-  await user.fetchProfile();
+
+  // Fetch profile with timeout (non-critical, can fail gracefully)
+  try {
+    await withTimeout(user.fetchProfile(), 10000, "Profile fetch");
+  } catch (err) {
+    console.warn("Failed to fetch profile:", err);
+  }
 
   currentUser = user;
 
