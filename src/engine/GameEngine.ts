@@ -16,7 +16,7 @@ import {
 import { validateMove, applyPlacements, findAllWords } from "./Board";
 
 /**
- * Core game engine - handles all Scrabble game logic
+ * Core game engine - handles all Words With Zaps game logic
  * Stateless pure functions - no side effects
  */
 export class GameEngine {
@@ -381,6 +381,32 @@ export class GameEngine {
         ...state.meta,
         status: "abandoned",
         winner,
+      },
+    };
+  }
+
+  /**
+   * Declare a game abandoned due to opponent inactivity (14+ days idle).
+   * Unlike abandonGame (resign), neither player wins or loses.
+   */
+  static declareAbandoned(
+    state: GameState,
+    declaringPlayer: string,
+  ): GameState {
+    // Only valid when it's the opponent's turn (the declaring player is waiting)
+    if (state.turn.activePlayer === declaringPlayer) {
+      throw new Error("Cannot declare abandoned on your own turn");
+    }
+    if (state.meta.status !== "active") {
+      throw new Error("Game is not active");
+    }
+
+    return {
+      ...state,
+      meta: {
+        ...state.meta,
+        status: "abandoned",
+        winner: undefined,
       },
     };
   }

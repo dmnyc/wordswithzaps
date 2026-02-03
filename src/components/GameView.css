@@ -213,6 +213,35 @@
     }
 }
 
+/* Abandon hint */
+.abandon-hint {
+    text-align: center;
+    margin-top: 4px;
+}
+
+.abandon-hint-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition:
+        color 0.15s,
+        background 0.15s;
+}
+
+.abandon-hint-btn:hover {
+    color: #b43232;
+    background: rgba(180, 50, 50, 0.1);
+}
+
+.abandon-hint-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Bingo celebration overlay */
 .zapathon-celebration {
     position: fixed;

@@ -8,6 +8,9 @@ import { GAME_KIND } from "../types/nostr";
 import type { NostrProfile } from "../types/nostr";
 import OpponentSearch from "./OpponentSearch";
 import { ZTileLoader } from "./ZTileLoader";
+import { NudgeModal } from "./NudgeModal";
+import { getDecayTier, type DecayInfo } from "../utils/gameDecay";
+import { useWallet } from "../hooks/useWallet";
 import "./Lobby.css";
 
 interface LobbyProps {
@@ -37,9 +40,15 @@ export function Lobby({
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
     {},
   );
+  const [nudgeTarget, setNudgeTarget] = useState<{
+    game: GameSummary;
+    decay: DecayInfo;
+  } | null>(null);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { createGame } = useGame();
+  const { zapUser, state: walletState } = useWallet();
+  const isWalletConnected = walletState.connected;
   const user = getCurrentUser();
 
   useEffect(() => {
@@ -277,11 +286,13 @@ export function Lobby({
               const ended = isGameEnded(game);
               const myTurn = isMyTurn(game);
               const scorePreview = getScorePreview(game);
+              const decay =
+                !myTurn && !ended ? getDecayTier(game.updatedAt) : null;
 
               return (
                 <div
                   key={game.gameId}
-                  className={`game-card ${ended ? "ended" : ""} ${myTurn && !ended ? "my-turn" : ""}`}
+                  className={`game-card ${ended ? "ended" : ""} ${myTurn && !ended ? "my-turn" : ""} ${decay && decay.tier !== "fresh" ? `decay-${decay.tier}` : ""}`}
                   onClick={() => handleGameClick(game)}
                 >
                   <div className="opponent-avatar-wrapper">
@@ -323,9 +334,9 @@ export function Lobby({
                       </span>
                       {!ended && (
                         <span
-                          className={`turn-badge ${myTurn ? "your-turn" : "their-turn"}`}
+                          className={`turn-badge ${myTurn ? "your-turn" : decay ? decay.tier : "their-turn"}`}
                         >
-                          {myTurn ? "Your turn" : "Waiting"}
+                          {myTurn ? "Your turn" : (decay?.label ?? "Waiting")}
                         </span>
                       )}
                     </div>
@@ -340,6 +351,23 @@ export function Lobby({
                       )}
                     </div>
                   </div>
+
+                  {!ended && decay && decay.tier !== "fresh" && (
+                    <button
+                      className="nudge-icon-btn"
+                      title="Send a nudge"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNudgeTarget({ game, decay });
+                      }}
+                    >
+                      <img
+                        src="/assets/bolt-yellow.svg"
+                        alt="Nudge"
+                        className="nudge-icon"
+                      />
+                    </button>
+                  )}
 
                   {ended && (
                     <span className={`game-status ${game.status}`}>
@@ -456,6 +484,28 @@ export function Lobby({
           </div>
         )}
       </div>
+
+      {nudgeTarget && (
+        <NudgeModal
+          open={!!nudgeTarget}
+          opponentName={getOpponentName(
+            nudgeTarget.game.opponentPubkey ||
+              nudgeTarget.game.players.find((p) => p !== user?.pubkey) ||
+              "",
+          )}
+          opponentPubkey={
+            nudgeTarget.game.opponentPubkey ||
+            nudgeTarget.game.players.find((p) => p !== user?.pubkey) ||
+            ""
+          }
+          gameId={nudgeTarget.game.gameId}
+          updatedAt={nudgeTarget.game.updatedAt}
+          decay={nudgeTarget.decay}
+          walletConnected={isWalletConnected}
+          onZap={zapUser}
+          onClose={() => setNudgeTarget(null)}
+        />
+      )}
     </div>
   );
 }

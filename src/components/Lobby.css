@@ -181,9 +181,65 @@
     color: #ffcc00;
 }
 
-.turn-badge.their-turn {
+.turn-badge.their-turn,
+.turn-badge.fresh {
     background: rgba(255, 255, 255, 0.08);
     color: #888;
+}
+
+.turn-badge.stale {
+    background: rgba(255, 160, 0, 0.15);
+    color: #ffa000;
+}
+
+.turn-badge.cold {
+    background: rgba(255, 80, 80, 0.15);
+    color: #ff5050;
+}
+
+.turn-badge.dormant {
+    background: rgba(180, 50, 50, 0.2);
+    color: #b43232;
+}
+
+.game-card.decay-stale {
+    border-left: 3px solid rgba(255, 160, 0, 0.4);
+}
+
+.game-card.decay-cold {
+    border-left: 3px solid rgba(255, 80, 80, 0.4);
+}
+
+.game-card.decay-dormant {
+    border-left: 3px solid rgba(180, 50, 50, 0.5);
+    opacity: 0.7;
+}
+
+/* Nudge icon button on game cards */
+.nudge-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 204, 0, 0.12);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+        background 0.15s,
+        transform 0.1s;
+}
+
+.nudge-icon-btn:hover {
+    background: rgba(255, 204, 0, 0.25);
+    transform: scale(1.1);
+}
+
+.nudge-icon {
+    width: 16px;
+    height: 16px;
 }
 
 .game-subtext {

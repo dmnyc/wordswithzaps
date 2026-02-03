@@ -32,6 +32,7 @@ import { ZTileLoader } from "./ZTileLoader";
 import { detectAchievement, type Achievement } from "../utils/achievements";
 import { nip19 } from "nostr-tools";
 import { fetchProfile } from "../nostr/profiles";
+import { canDeclareAbandoned } from "../utils/gameDecay";
 import "./GameView.css";
 
 interface GameViewProps {
@@ -73,6 +74,7 @@ export function GameView({
     exchange,
     validateMove,
     resign,
+    declareAbandoned,
     deleteGame,
   } = useGame();
 
@@ -107,7 +109,7 @@ export function GameView({
     null,
   );
   const [confirmAction, setConfirmAction] = useState<
-    "forfeit" | "delete" | "pass" | null
+    "forfeit" | "delete" | "pass" | "abandon" | null
   >(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
@@ -898,6 +900,16 @@ export function GameView({
         showCancel: true,
       };
     }
+    if (confirmAction === "abandon") {
+      return {
+        title: "Declare abandoned?",
+        message:
+          "This game has been idle for over 2 weeks. Declaring it abandoned ends the game — neither player wins or loses.",
+        confirmLabel: "Declare abandoned",
+        tone: "danger",
+        showCancel: true,
+      };
+    }
     return null;
   }, [confirmAction]);
 
@@ -923,6 +935,10 @@ export function GameView({
         });
         setShowZapModal(true);
       }
+      if (confirmAction === "abandon") {
+        await declareAbandoned();
+        onToast?.("Game declared abandoned.", "info");
+      }
       if (confirmAction === "delete") {
         await deleteGame();
       }
@@ -934,7 +950,15 @@ export function GameView({
     } finally {
       setConfirmBusy(false);
     }
-  }, [confirmAction, deleteGame, onToast, resign, pass, gameState]);
+  }, [
+    confirmAction,
+    declareAbandoned,
+    deleteGame,
+    onToast,
+    resign,
+    pass,
+    gameState,
+  ]);
 
   const handleCloseConfirm = useCallback(() => {
     if (confirmBusy) return;
@@ -1066,6 +1090,20 @@ export function GameView({
         onShuffle={handleShuffle}
         scorePop={wordScorePop}
       />
+
+      {gameState.meta.status === "active" &&
+        !isMyTurn &&
+        canDeclareAbandoned(Math.floor(gameState.turn.timestamp / 1000)) && (
+          <div className="abandon-hint">
+            <button
+              className="abandon-hint-btn"
+              onClick={() => setConfirmAction("abandon")}
+              disabled={isLoading}
+            >
+              Declare abandoned
+            </button>
+          </div>
+        )}
 
       <ExchangeTilesModal
         open={exchangeMode}
