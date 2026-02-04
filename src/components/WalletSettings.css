@@ -148,6 +148,9 @@
 .wallet-item-name {
     color: #fff;
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .wallet-item-type {
@@ -160,6 +163,11 @@
     gap: 8px;
     margin-left: auto;
     align-items: center;
+    flex-shrink: 0;
+}
+
+.wallet-item-actions .btn-icon {
+    display: none;
 }
 
 .wallet-active-badge {
@@ -179,6 +187,7 @@
     border-radius: 4px;
     font-size: 12px;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .wallet-btn-small:hover {
@@ -986,6 +995,25 @@
     .amount-incoming,
     .amount-outgoing {
         font-size: 12px;
+    }
+
+    .wallet-item-actions .btn-label {
+        display: none;
+    }
+
+    .wallet-item-actions .btn-icon {
+        display: inline;
+        font-size: 14px;
+    }
+
+    .wallet-btn-small {
+        padding: 4px 8px;
+        font-size: 14px;
+    }
+
+    .wallet-active-badge {
+        padding: 4px 8px;
+        font-size: 14px;
     }
 }
 
