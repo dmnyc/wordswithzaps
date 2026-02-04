@@ -142,7 +142,6 @@ export function GameOverModal({
   // Title
   let title = "Game Over";
   if (iWon) title = "Victory!";
-  else if (iLost) title = "Good Game";
   else if (isTie) title = "It's a Tie!";
   else if (isAbandoned) title = "Game Abandoned";
 
