@@ -52,6 +52,12 @@ let currentUser: NDKUser | null = null;
 // Cache for user relay lists
 let userRelayCache: Map<string, string[]> = new Map();
 
+// NDK ready state - resolves when at least one pool relay is connected
+let ndkReadyResolve: (() => void) | null = null;
+export const ndkReady: Promise<void> = new Promise((resolve) => {
+  ndkReadyResolve = resolve;
+});
+
 export interface NostrClientOptions {
   relays?: string[];
   autoConnect?: boolean;
@@ -80,6 +86,32 @@ export async function initializeNDK(
     ndkInstance.connect().catch((err) => {
       console.warn("[NDK] Background relay connection failed:", err);
     });
+
+    // Resolve ndkReady when first pool relay connects
+    for (const relay of ndkInstance.pool.relays.values()) {
+      relay.on("connect", () => {
+        if (ndkReadyResolve) {
+          ndkReadyResolve();
+          ndkReadyResolve = null;
+        }
+      });
+    }
+    // Safety timeout — resolve after 5s so operations don't hang forever
+    setTimeout(() => {
+      if (ndkReadyResolve) {
+        console.warn(
+          "[NDK] Ready timeout — resolving without relay connection",
+        );
+        ndkReadyResolve();
+        ndkReadyResolve = null;
+      }
+    }, 5000);
+  } else {
+    // No auto-connect — resolve immediately
+    if (ndkReadyResolve) {
+      ndkReadyResolve();
+      ndkReadyResolve = null;
+    }
   }
 
   return ndkInstance;

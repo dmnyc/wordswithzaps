@@ -5,7 +5,7 @@
  * Adapted from zapcooking's implementation for React.
  */
 
-import { getNDK } from "../../nostr/client";
+import { getNDK, ndkReady } from "../../nostr/client";
 import {
   NDKEvent,
   NDKPrivateKeySigner,
@@ -25,6 +25,54 @@ let pendingBalanceRequest: Promise<number> | null = null;
 
 // Connection mutex to prevent concurrent connection attempts
 let connectionInProgress: Promise<boolean> | null = null;
+
+// Visibility change handler for mobile resume
+let visibilityHandlerRegistered = false;
+
+function registerVisibilityHandler(): void {
+  if (visibilityHandlerRegistered || typeof document === "undefined") return;
+  visibilityHandlerRegistered = true;
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentConnectionUrl) {
+      if (nwcRelay && nwcRelay.status !== 1) {
+        console.log("[NWC] App resumed, relay disconnected — reconnecting...");
+        reconnectRelay().catch((e) =>
+          console.warn("[NWC] Background reconnect failed:", e),
+        );
+      }
+    }
+  });
+}
+
+/**
+ * Reconnect the NWC relay, creating a fresh connection if needed
+ */
+async function reconnectRelay(): Promise<void> {
+  if (!currentConnectionUrl) return;
+
+  // Try reconnecting the existing relay first
+  if (nwcRelay) {
+    try {
+      await waitForRelayConnection(nwcRelay, 10000);
+      console.log("[NWC] Relay reconnected");
+      return;
+    } catch {
+      // Existing relay failed, create a fresh one
+    }
+  }
+
+  // Full reconnect with fresh relay
+  const parsed = parseNwcUrl(currentConnectionUrl);
+  if (!parsed) return;
+
+  let relayUrl = parsed.relay;
+  if (!relayUrl.endsWith("/")) relayUrl = relayUrl + "/";
+  const ndkInstance = getNDK();
+  nwcRelay = new NDKRelay(relayUrl, undefined, ndkInstance);
+  await waitForRelayConnection(nwcRelay, 10000);
+  console.log("[NWC] Relay reconnected (fresh)");
+}
 
 /**
  * Parse NWC connection URL
@@ -165,6 +213,9 @@ async function waitForRelayConnection(
  * Connect to NWC wallet using NDK
  */
 export async function connectNwc(connectionUrl: string): Promise<boolean> {
+  // Wait for NDK pool relays to be ready before connecting NWC relay
+  await ndkReady;
+
   // Already connected to this URL
   if (
     currentConnectionUrl === connectionUrl &&
@@ -218,6 +269,7 @@ export async function connectNwc(connectionUrl: string): Promise<boolean> {
       await waitForRelayConnection(nwcRelay, 15000);
 
       console.log("[NWC] Connected successfully");
+      registerVisibilityHandler();
       return true;
     } catch (e) {
       console.error("[NWC] Connection failed:", e);
@@ -313,8 +365,7 @@ async function executeNip47Request(
   if (nwcRelay.status !== 1) {
     console.log("[NWC] Relay disconnected, attempting reconnect...");
     try {
-      await waitForRelayConnection(nwcRelay, 5000);
-      console.log("[NWC] Relay reconnected");
+      await reconnectRelay();
     } catch (e) {
       throw new Error("NWC relay disconnected and reconnect failed");
     }

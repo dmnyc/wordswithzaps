@@ -54,7 +54,7 @@ import {
   payWithBitcoinConnect,
   initBitcoinConnect,
 } from "./bitcoinConnect";
-import { getCurrentUser } from "../nostr/client";
+import { getCurrentUser, ndkReady } from "../nostr/client";
 import { fetchUserProfile, createEvent, getNDK } from "../nostr/client";
 
 // Environment variable for Breez API key
@@ -642,6 +642,9 @@ export async function initializeWalletManager(): Promise<void> {
   if (initializationPromise) return initializationPromise;
 
   initializationPromise = (async () => {
+    // Wait for NDK pool relays to be ready before restoring wallets
+    await ndkReady;
+
     // Initialize BitcoinConnect if enabled
     if (isBitcoinConnectEnabled()) {
       await initBitcoinConnect();
