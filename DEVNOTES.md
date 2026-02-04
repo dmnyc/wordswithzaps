@@ -180,6 +180,10 @@ Bitcoin Connect uses a WebLN provider interface internally (`WebLNProvider` in `
 
 `fetchEvents` in `client.ts` uses a 10-second timeout. If relays don't send EOSE within that window, partial results are returned silently. This prevents the UI from hanging on slow or unresponsive relays.
 
+## Zap Fetch Timeout
+
+`ZAP_FETCH_TIMEOUT` in `walletManager.ts` is set to **20 seconds** for LNURL fetches during zap sends. This longer timeout accommodates slower mobile networks (5G with variable latency). The zap flow requires two sequential fetches (LNURL pay info + invoice callback), so adequate timeout per request is important. Adjust if users report timeouts or excessive wait times.
+
 ## Signer Compatibility
 
 The `BunkerSignerWrapper` in `client.ts` wraps NIP-46 bunker signers for NDK compatibility. It implements `encrypt`/`decrypt` using `nip44Encrypt`/`nip44Decrypt` but does **not** implement `encryptionEnabled()`. This is why NIP-17 uses manual wrapping instead of NDK's `giftWrap()` -- see the NIP-17 section above.
