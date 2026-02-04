@@ -1,10 +1,9 @@
 // Wallet kind enum for multi-wallet support
 export enum WalletKind {
-  NWC = 3, // Nostr Wallet Connect
   SPARK = 4, // Breez SDK Spark
 }
 
-export type WalletProviderType = "spark" | "nwc" | "bitcoin-connect" | "none";
+export type WalletProviderType = "spark" | "bitcoin-connect" | "none";
 
 // Wallet instance stored in wallet store
 export interface Wallet {
@@ -13,27 +12,9 @@ export interface Wallet {
   name: string;
   active: boolean;
   data?: {
-    // NWC: connection string
-    connectionUrl?: string;
     // Spark: has local mnemonic
     hasMnemonic?: boolean;
   };
-}
-
-// NWC transaction from list_transactions
-export interface NwcTransaction {
-  type: "incoming" | "outgoing";
-  invoice?: string;
-  description?: string;
-  description_hash?: string;
-  preimage?: string;
-  payment_hash: string;
-  amount: number; // millisats
-  fees_paid?: number;
-  created_at: number;
-  expires_at?: number;
-  settled_at?: number;
-  metadata?: Record<string, unknown>;
 }
 
 // Spark payment from SDK
@@ -83,21 +64,6 @@ export interface LnurlPayResponse {
   metadata: string;
   allowsNostr?: boolean;
   nostrPubkey?: string;
-}
-
-// NIP-47 NWC request/response types
-export interface Nip47Request {
-  method: string;
-  params: Record<string, unknown>;
-}
-
-export interface Nip47Response {
-  result_type: string;
-  result?: Record<string, unknown>;
-  error?: {
-    code: string;
-    message: string;
-  };
 }
 
 // BitcoinConnect wallet info

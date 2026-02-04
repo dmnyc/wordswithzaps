@@ -17,7 +17,7 @@ Words With Zaps is a serverless, censorship-resistant word game where game state
 - Full crossword-style mechanics on a 15x15 board with letter values, multipliers, and bonus squares
 - Custom scoring: 42-point Zapathon bonus for using all 7 tiles, 21-point Zap Square bonus at corners and center
 - End-to-end encrypted game state (NIP-44 with NIP-04 fallback)
-- Lightning zaps as move notifications via NWC, Breez SDK (Spark), or WebLN
+- Lightning zaps as move notifications via Breez SDK (Spark) or Bitcoin Connect
 - Post-move sharing: public note, public reply (kind 1), standard DM (kind 4), or gift-wrapped DM (NIP-17/kind 14)
 - Achievement system: Zapathon (all 7 tiles), Zap Square bonus, Double Word Score, High Score
 - Pass, swap tiles, or forfeit
@@ -35,9 +35,8 @@ Words With Zaps is a serverless, censorship-resistant word game where game state
 
 Lightning wallets are optional and used to zap your opponent after each move:
 
-- **NWC (Nostr Wallet Connect)**: Connect via NIP-47 connection string
-- **Breez SDK (Spark)**: Self-custodial Lightning via WebAssembly (requires API key)
-- **WebLN (Bitcoin Connect)**: Browser-based wallet interface
+- **Breez SDK (Spark)**: Self-custodial Lightning wallet via WebAssembly. Full-featured: balance, send, receive, transaction history, lightning address, and encrypted Nostr backup/restore.
+- **Bitcoin Connect**: Connect an external wallet. Shows balance in the header and wallet settings. Used for zap payments only.
 
 ## Quick Start
 
@@ -98,7 +97,8 @@ src/
 │   └── profiles   # Profile fetching and caching
 ├── wallet/        # Lightning wallet integration
 │   ├── walletManager  # Zap flow (LNURL, NIP-57)
-│   └── providers/     # NWC, Breez Spark, WebLN
+│   ├── spark/         # Breez SDK (Spark) self-custodial wallet
+│   └── bitcoinConnect # External wallet via Bitcoin Connect
 ├── components/    # React UI
 └── hooks/         # useNostr, useWallet, useGame
 ```
@@ -143,7 +143,6 @@ src/
 - **NIP-17**: Private direct messages (gift-wrapped, secure DMs)
 - **NIP-44**: Encrypted payloads (primary encryption for game state and NIP-17)
 - **NIP-46**: Nostr Connect / remote signing
-- **NIP-47**: Nostr Wallet Connect
 - **NIP-57**: Lightning zaps
 - **NIP-59**: Gift wrap (seals and wraps for NIP-17)
 - **NIP-65**: Relay list metadata

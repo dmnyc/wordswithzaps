@@ -10,7 +10,6 @@ import {
   isWalletReady,
   getWalletStoreState,
   subscribeToWalletStore,
-  isValidNwcUrl,
   hasSparkMnemonic,
 } from "../wallet/walletManager";
 import {
@@ -31,9 +30,6 @@ export interface UseWalletReturn {
   state: WalletState;
   wallets: Wallet[];
   activeWallet: Wallet | null;
-
-  // NWC
-  connectNWC: (connectionUri: string) => Promise<void>;
 
   // Spark
   createSparkWallet: () => Promise<string>; // returns mnemonic
@@ -56,15 +52,25 @@ export interface UseWalletReturn {
 
 function mapToWalletState(
   storeState: ReturnType<typeof getWalletStoreState>,
+  bcState: ReturnType<typeof getBitcoinConnectState>,
 ): WalletState {
+  // If no embedded wallet but BC is connected, surface BC balance
+  const balance = storeState.activeWallet
+    ? (storeState.balance ?? undefined)
+    : bcState.connected && bcState.balance != null
+      ? bcState.balance
+      : undefined;
+
+  const providerType = storeState.activeWallet
+    ? "spark"
+    : bcState.connected
+      ? "bitcoin-connect"
+      : "none";
+
   return {
-    connected: storeState.connected,
-    providerType: storeState.activeWallet
-      ? storeState.activeWallet.kind === WalletKind.SPARK
-        ? "spark"
-        : "nwc"
-      : "none",
-    balance: storeState.balance ?? undefined,
+    connected: storeState.connected || bcState.connected,
+    providerType,
+    balance,
     loading: storeState.loading,
     activeWallet: storeState.activeWallet,
     wallets: storeState.wallets,
@@ -109,16 +115,6 @@ export function useWallet(): UseWalletReturn {
       setBcState(getBitcoinConnectState());
     });
     return unsubscribe;
-  }, []);
-
-  const handleConnectNWC = useCallback(async (connectionUri: string) => {
-    if (!isValidNwcUrl(connectionUri)) {
-      throw new Error("Invalid NWC connection URI");
-    }
-    const result = await connectWallet(WalletKind.NWC, connectionUri);
-    if (!result.success) {
-      throw new Error(result.error || "Failed to connect NWC wallet");
-    }
   }, []);
 
   const handleCreateSparkWallet = useCallback(async (): Promise<string> => {
@@ -198,11 +194,9 @@ export function useWallet(): UseWalletReturn {
   }, [currentUser?.pubkey, walletStoreState]);
 
   return {
-    state: mapToWalletState(walletStoreState),
+    state: mapToWalletState(walletStoreState, bcState),
     wallets: walletStoreState.wallets,
     activeWallet: walletStoreState.activeWallet,
-
-    connectNWC: handleConnectNWC,
 
     createSparkWallet: handleCreateSparkWallet,
     importSparkWallet: handleImportSparkWallet,

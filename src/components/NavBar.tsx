@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import type { WalletProviderType } from "../types/wallet";
 
-import {
-  SparkLogo,
-  NwcLogo,
-  BitcoinConnectLogo,
-  EyeIcon,
-} from "./icons/WalletIcons";
+import { SparkLogo, BitcoinConnectLogo, EyeIcon } from "./icons/WalletIcons";
 import { WifiIcon } from "./icons/RelayIcons";
 import { updateSetting } from "../settings/nostrSettings";
 import "./NavBar.css";
@@ -35,9 +30,6 @@ interface NavBarProps {
 function WalletTypeIcon({ walletType }: { walletType?: WalletProviderType }) {
   if (walletType === "spark") {
     return <SparkLogo className="wallet-type-icon spark" />;
-  }
-  if (walletType === "nwc") {
-    return <NwcLogo className="wallet-type-icon nwc" />;
   }
   if (walletType === "bitcoin-connect") {
     return <BitcoinConnectLogo className="wallet-type-icon bitcoin-connect" />;
@@ -142,23 +134,17 @@ export function NavBar({
   const picture = profile?.picture || profile?.image;
   const balanceKnown = walletBalance !== undefined && walletBalance !== null;
   const hasWallet = walletConnected || walletType !== "none";
-  const isExternalWallet = walletType === "bitcoin-connect";
-  // External wallets don't show balance text, just the bolt icon
-  const balanceText = isExternalWallet
-    ? null
-    : balanceKnown
-      ? walletBalance.toLocaleString()
-      : hasWallet
-        ? "..."
-        : "Set up";
+  const balanceText = balanceKnown
+    ? walletBalance.toLocaleString()
+    : hasWallet
+      ? "..."
+      : "Set up";
   const walletTypeLabel =
     walletType === "spark"
       ? "Spark Wallet"
-      : walletType === "nwc"
-        ? "NWC Wallet"
-        : walletType === "bitcoin-connect"
-          ? "Bitcoin Connect"
-          : "No wallet connected";
+      : walletType === "bitcoin-connect"
+        ? "Bitcoin Connect"
+        : "No wallet connected";
 
   return (
     <nav className="main-nav">
@@ -181,7 +167,7 @@ export function NavBar({
         {onOpenWalletSettings && (
           <div className="wallet-menu-wrap">
             <button
-              className={`wallet-status-btn ${hideBalance ? "balance-hidden" : ""} ${isExternalWallet ? "external-wallet" : ""}`}
+              className={`wallet-status-btn ${hideBalance ? "balance-hidden" : ""}`}
               onClick={() => {
                 setWalletMenuOpen((prev) => !prev);
                 setMenuOpen(false);
@@ -205,7 +191,7 @@ export function NavBar({
                   )}
                   <span className="wallet-menu-title">{walletTypeLabel}</span>
                 </div>
-                {!isExternalWallet && walletType !== "none" && (
+                {walletType !== "none" && (
                   <button
                     className="menu-item icon-row"
                     onClick={() => {

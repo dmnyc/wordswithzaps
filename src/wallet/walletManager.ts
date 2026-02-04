@@ -1,8 +1,8 @@
 /**
  * Wallet Manager
  *
- * Unified interface for managing multiple wallet types.
- * Routes operations to the appropriate wallet implementation.
+ * Unified interface for managing wallet types.
+ * Routes operations to Spark (embedded) or Bitcoin Connect (external).
  */
 
 import {
@@ -23,20 +23,6 @@ import {
   setWalletLastSync,
 } from "./walletStore";
 import {
-  connectNwc,
-  disconnectNwc,
-  getNwcBalance,
-  payNwcInvoice,
-  payNwcLightningAddress,
-  isLightningAddress,
-  createNwcInvoice,
-  isNwcConnected,
-  isNwcConnectedTo,
-  getNwcDisplayName,
-  getNwcInfo,
-  listNwcTransactions,
-} from "./providers/nwc";
-import {
   connectWallet as connectSparkWallet,
   disconnectWallet as disconnectSparkWallet,
   getSparkBalance,
@@ -54,7 +40,7 @@ import {
   payWithBitcoinConnect,
   initBitcoinConnect,
 } from "./bitcoinConnect";
-import { getCurrentUser, ensureNDK } from "../nostr/client";
+import { getCurrentUser } from "../nostr/client";
 import { fetchUserProfile, createEvent, getNDK } from "../nostr/client";
 
 // Environment variable for Breez API key
@@ -68,11 +54,17 @@ let initializationPromise: Promise<void> | null = null;
 export { getWalletStoreState, subscribeToWalletStore };
 
 /**
+ * Check if input is a Lightning address
+ */
+function isLightningAddress(input: string): boolean {
+  return /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(input.trim());
+}
+
+/**
  * Connect a new wallet
  */
 export async function connectWallet(
   kind: WalletKind,
-  data?: string,
 ): Promise<{ success: boolean; wallet?: Wallet; error?: string }> {
   try {
     setWalletLoading(true);
@@ -80,20 +72,6 @@ export async function connectWallet(
     let name: string;
 
     switch (kind) {
-      case WalletKind.NWC:
-        if (!data) {
-          throw new Error("NWC connection URL required");
-        }
-        await connectNwc(data);
-        // Try to get wallet alias
-        try {
-          const info = await getNwcInfo();
-          name = info.alias || getNwcDisplayName(data);
-        } catch {
-          name = getNwcDisplayName(data);
-        }
-        break;
-
       case WalletKind.SPARK:
         const currentUser = getCurrentUser();
         if (!currentUser?.pubkey) {
@@ -117,7 +95,7 @@ export async function connectWallet(
     }
 
     // Add to wallet store
-    const wallet = addWallet(kind, name, { connectionUrl: data });
+    const wallet = addWallet(kind, name, {});
 
     // Make it active
     setActiveWallet(wallet.id);
@@ -149,10 +127,6 @@ export async function disconnectWallet(walletId?: string): Promise<void> {
 
   try {
     switch (wallet.kind) {
-      case WalletKind.NWC:
-        await disconnectNwc();
-        break;
-
       case WalletKind.SPARK:
         await disconnectSparkWallet();
         // Delete the mnemonic from storage so wallet can be re-added
@@ -184,16 +158,6 @@ export async function disconnectWallet(walletId?: string): Promise<void> {
 async function ensureWalletConnected(wallet: Wallet): Promise<boolean> {
   try {
     switch (wallet.kind) {
-      case WalletKind.NWC:
-        if (wallet.data?.connectionUrl) {
-          if (isNwcConnectedTo(wallet.data.connectionUrl)) {
-            return true;
-          }
-          await connectNwc(wallet.data.connectionUrl);
-          return true;
-        }
-        return false;
-
       case WalletKind.SPARK:
         if (!isSparkInitialized()) {
           const currentUser = getCurrentUser();
@@ -248,15 +212,6 @@ export async function refreshBalance(
     let balance: number | null = null;
 
     switch (wallet.kind) {
-      case WalletKind.NWC:
-        try {
-          balance = await getNwcBalance();
-        } catch (e) {
-          console.warn("[WalletManager] NWC balance fetch failed:", e);
-          balance = null;
-        }
-        break;
-
       case WalletKind.SPARK:
         try {
           balance = await getSparkBalance(forceSync);
@@ -337,25 +292,6 @@ export async function sendPayment(
     let preimage: string;
 
     switch (wallet.kind) {
-      case WalletKind.NWC:
-        if (isLightningAddress(invoice)) {
-          if (!metadata?.amount) {
-            throw new Error(
-              "Amount is required for Lightning address payments",
-            );
-          }
-          const result = await payNwcLightningAddress(
-            invoice,
-            metadata.amount,
-            metadata?.comment,
-          );
-          preimage = result.preimage;
-        } else {
-          const result = await payNwcInvoice(invoice);
-          preimage = result.preimage;
-        }
-        break;
-
       case WalletKind.SPARK:
         const result = await sendSparkPayment(
           invoice,
@@ -406,9 +342,6 @@ export async function createInvoice(
     }
 
     switch (wallet.kind) {
-      case WalletKind.NWC:
-        return await createNwcInvoice(amountSats, description);
-
       case WalletKind.SPARK:
         return await createSparkInvoice(amountSats, description);
 
@@ -557,25 +490,6 @@ export async function getTransactionHistory(
     }
 
     switch (wallet.kind) {
-      case WalletKind.NWC: {
-        const result = await listNwcTransactions({ limit, offset });
-        const transactions: Transaction[] = result.transactions.map((tx) => ({
-          id: tx.payment_hash,
-          type: tx.type,
-          amountSats: Math.floor(tx.amount / 1000), // Convert msats to sats
-          feesSats: tx.fees_paid ? Math.floor(tx.fees_paid / 1000) : undefined,
-          description: tx.description,
-          timestamp: tx.settled_at || tx.created_at,
-          status:
-            tx.settled_at && tx.settled_at > 0
-              ? "succeeded"
-              : tx.expires_at && tx.expires_at < Date.now() / 1000
-                ? "failed"
-                : "pending",
-        }));
-        return { transactions, hasMore: result.hasMore };
-      }
-
       case WalletKind.SPARK: {
         const payments = await listSparkPayments({ limit, offset });
         const transactions: Transaction[] = payments.map((p) => ({
@@ -610,8 +524,6 @@ export function isWalletReady(): boolean {
   }
 
   switch (wallet.kind) {
-    case WalletKind.NWC:
-      return isNwcConnected();
     case WalletKind.SPARK:
       return isSparkInitialized();
     default:
@@ -642,9 +554,6 @@ export async function initializeWalletManager(): Promise<void> {
   if (initializationPromise) return initializationPromise;
 
   initializationPromise = (async () => {
-    // Ensure NDK is initialized and has at least one connected relay
-    await ensureNDK();
-
     // Initialize BitcoinConnect if enabled
     if (isBitcoinConnectEnabled()) {
       await initBitcoinConnect();
@@ -656,12 +565,6 @@ export async function initializeWalletManager(): Promise<void> {
     if (active) {
       try {
         switch (active.kind) {
-          case WalletKind.NWC:
-            if (active.data?.connectionUrl) {
-              await connectNwc(active.data.connectionUrl);
-            }
-            break;
-
           case WalletKind.SPARK:
             const currentUser = getCurrentUser();
             if (
@@ -793,7 +696,6 @@ function decodeLnurl(lnurl: string): string {
 }
 
 // Re-export useful functions
-export { isValidNwcUrl } from "./providers/nwc";
 export { hasSparkMnemonic } from "./spark";
 
 export default {

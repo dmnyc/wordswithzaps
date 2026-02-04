@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNostr } from "./hooks/useNostr";
 import { useWallet } from "./hooks/useWallet";
-import { WalletKind } from "./types/wallet";
 import { getDictionary } from "./engine/Dictionary";
 import { fetchGamePlayers } from "./nostr/games";
 import { getCurrentUser } from "./nostr/client";
@@ -74,9 +73,7 @@ function App() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const creatorZapReturnRef = useRef<null | (() => void)>(null);
   const walletType = activeWallet
-    ? activeWallet.kind === WalletKind.SPARK
-      ? "spark"
-      : "nwc"
+    ? "spark"
     : bitcoinConnectConnected
       ? "bitcoin-connect"
       : "none";

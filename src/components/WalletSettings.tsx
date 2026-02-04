@@ -2,12 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "../hooks/useWallet";
 import { WalletKind, type Transaction } from "../types/wallet";
 import {
-  backupNwcToNostr,
-  restoreNwcFromNostr,
-  hasNwcBackupOnNostr,
-  deleteNwcBackupFromNostr,
-} from "../wallet/nwcBackup";
-import {
   backupSparkToNostr,
   listSparkBackups,
   restoreSparkBackup,
@@ -22,11 +16,10 @@ import {
   refreshSparkLightningAddress,
 } from "../wallet/spark";
 import { loadMnemonic } from "../wallet/spark/storage";
-import { getNwcLud16, getNwcConnectionUrl } from "../wallet/providers/nwc";
 import { getTransactionHistory } from "../wallet/walletManager";
 import { getCurrentUser } from "../nostr/client";
 import { fetchProfile, updateProfileLightningAddress } from "../nostr/profiles";
-import { SparkLogo, NwcLogo, BitcoinConnectLogo } from "./icons/WalletIcons";
+import { SparkLogo, BitcoinConnectLogo } from "./icons/WalletIcons";
 import { QRCodeSVG } from "qrcode.react";
 import { sendPayment, createInvoice } from "../wallet/walletManager";
 import "./WalletSettings.css";
@@ -38,7 +31,6 @@ interface WalletSettingsProps {
 
 type ViewState =
   | "main"
-  | "add-nwc"
   | "spark-options"
   | "spark-restore-phrase"
   | "backup"
@@ -550,7 +542,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const {
     wallets,
     activeWallet,
-    connectNWC,
     createSparkWallet,
     importSparkWallet,
     hasSparkWallet,
@@ -564,7 +555,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   } = useWallet();
 
   const [view, setView] = useState<ViewState>("main");
-  const [nwcUrl, setNwcUrl] = useState("");
   const [sparkMnemonic, setSparkMnemonic] = useState("");
   const [newMnemonic, setNewMnemonic] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -572,10 +562,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
   const [checkingBackup, setCheckingBackup] = useState(false);
   const [sparkBackups, setSparkBackups] = useState<SparkBackupEntry[]>([]);
-
-  // NWC backup state
-  const [checkingNwcBackup, setCheckingNwcBackup] = useState(false);
-  const [hasNwcBackup, setHasNwcBackup] = useState(false);
 
   // Transaction history state
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -592,20 +578,14 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const [clearFromBrowser, setClearFromBrowser] = useState(true);
 
   // Backup deletion confirmation state
-  const [backupToDelete, setBackupToDelete] = useState<"spark" | "nwc" | null>(
-    null,
-  );
+  const [backupToDelete, setBackupToDelete] = useState<"spark" | null>(null);
 
   // View credentials state
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [viewMnemonic, setViewMnemonic] = useState<string | null>(null);
-  const [showNwcString, setShowNwcString] = useState(false);
-  const [copiedNwc, setCopiedNwc] = useState(false);
-
   // Lightning address state
   const [sparkLnAddress, setSparkLnAddress] = useState<string | null>(null);
   const [sparkLnAddressLoading, setSparkLnAddressLoading] = useState(false);
-  const [nwcLnAddress, setNwcLnAddress] = useState<string | null>(null);
   const [profileLnAddress, setProfileLnAddress] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(
@@ -664,24 +644,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
     }
   }, [view]);
 
-  // Check for NWC backup when entering add-nwc view
-  useEffect(() => {
-    if (view === "add-nwc") {
-      const currentUser = getCurrentUser();
-      if (currentUser?.pubkey) {
-        setCheckingNwcBackup(true);
-        setHasNwcBackup(false);
-        hasNwcBackupOnNostr(currentUser.pubkey)
-          .then((hasBackup) => setHasNwcBackup(hasBackup))
-          .catch(() => setHasNwcBackup(false))
-          .finally(() => setCheckingNwcBackup(false));
-      } else {
-        setHasNwcBackup(false);
-        setCheckingNwcBackup(false);
-      }
-    }
-  }, [view]);
-
   // Load lightning addresses when entering lightning-address or funds view
   useEffect(() => {
     if (view === "lightning-address" || view === "funds") {
@@ -705,11 +667,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
             setSparkLnAddressLoading(false);
           });
       }
-
-      // Get NWC lightning address from connection URL
-      const nwcConnectionUrl = getNwcConnectionUrl();
-      const nwcAddr = nwcConnectionUrl ? getNwcLud16(nwcConnectionUrl) : null;
-      setNwcLnAddress(nwcAddr);
 
       // Only load profile and reset form for lightning-address view
       if (view === "lightning-address") {
@@ -755,26 +712,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
     return () => clearTimeout(timer);
   }, [newUsername, view]);
 
-  const hasEmbeddedWallet = wallets.some(
-    (wallet) =>
-      wallet.kind === WalletKind.SPARK || wallet.kind === WalletKind.NWC,
-  );
-  const hasNwcWallet = wallets.some((wallet) => wallet.kind === WalletKind.NWC);
-
-  const handleConnectNWC = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      await connectNWC(nwcUrl.trim());
-      setNwcUrl("");
-      setView("main");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to connect NWC");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreateSpark = async () => {
     try {
       setLoading(true);
@@ -797,54 +734,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
       setView("main");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to import wallet");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBackupNwc = async () => {
-    const currentUser = getCurrentUser();
-    if (!currentUser?.pubkey) {
-      setError("Must be logged in to backup");
-      return;
-    }
-
-    const nwcWallet = wallets.find((w) => w.kind === WalletKind.NWC);
-    if (!nwcWallet?.data?.connectionUrl) {
-      setError("No NWC wallet to backup");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await backupNwcToNostr(currentUser.pubkey, nwcWallet.data.connectionUrl);
-      setBackupStatus("NWC backup saved to Nostr");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Backup failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRestoreNwc = async () => {
-    const currentUser = getCurrentUser();
-    if (!currentUser?.pubkey) {
-      setError("Must be logged in to restore");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const connectionUrl = await restoreNwcFromNostr(currentUser.pubkey);
-      if (connectionUrl) {
-        await connectNWC(connectionUrl);
-        setBackupStatus("NWC wallet restored from Nostr");
-        setView("main");
-      } else {
-        setError("No NWC backup found on Nostr");
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Restore failed");
     } finally {
       setLoading(false);
     }
@@ -880,13 +769,8 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
 
     try {
       setLoading(true);
-      if (backupToDelete === "spark") {
-        await deleteSparkBackupFromNostr(currentUser.pubkey);
-        setBackupStatus("Spark backup deleted from Nostr");
-      } else {
-        await deleteNwcBackupFromNostr(currentUser.pubkey);
-        setBackupStatus("NWC backup deleted from Nostr");
-      }
+      await deleteSparkBackupFromNostr(currentUser.pubkey);
+      setBackupStatus("Spark backup deleted from Nostr");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed");
     } finally {
@@ -968,19 +852,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
     }
   };
 
-  const handleCopyNwcString = async () => {
-    const connectionUrl = getNwcConnectionUrl();
-    if (!connectionUrl) return;
-
-    try {
-      await navigator.clipboard.writeText(connectionUrl);
-      setCopiedNwc(true);
-      setTimeout(() => setCopiedNwc(false), 2000);
-    } catch {
-      setError("Failed to copy to clipboard");
-    }
-  };
-
   // Lightning address handlers
   const handleRegisterLightningAddress = async () => {
     if (!newUsername.trim() || !usernameAvailable) return;
@@ -1037,7 +908,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const getActiveWalletLightningAddress = (): string | null => {
     if (!activeWallet) return null;
     if (activeWallet.kind === WalletKind.SPARK) return sparkLnAddress;
-    if (activeWallet.kind === WalletKind.NWC) return nwcLnAddress;
     return null;
   };
 
@@ -1081,11 +951,9 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
           >
             {isExternalWallet
               ? "You can reconnect anytime."
-              : walletToRemove.kind === WalletKind.SPARK
-                ? clearFromBrowser
-                  ? "Your wallet backup on Nostr relays will remain. You can restore it later."
-                  : "Wallet will stay in browser storage for quick reconnection."
-                : "Your NWC connection will be removed."}
+              : clearFromBrowser
+                ? "Your wallet backup on Nostr relays will remain. You can restore it later."
+                : "Wallet will stay in browser storage for quick reconnection."}
           </p>
 
           <div className="wallet-actions" style={{ marginTop: "20px" }}>
@@ -1139,64 +1007,57 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
               <div className="wallet-success">{backupStatus}</div>
             )}
 
-            {/* Balance - at top */}
-            {activeWallet && state.balance !== undefined && (
-              <>
-                <div className="wallet-balance">
-                  <span className="balance-label">Balance</span>
-                  <span className="balance-amount">
-                    <img
-                      src="/assets/bolt-yellow.svg"
-                      alt=""
-                      className="balance-bolt"
-                    />
-                    {state.balance.toLocaleString()}
-                  </span>
-                </div>
-                <div className="balance-actions-row">
-                  <button
-                    className="balance-action-btn"
-                    onClick={() => setView("funds")}
-                  >
-                    Manage Funds
-                  </button>
-                  <button
-                    className="balance-action-btn"
-                    onClick={() => setView("transactions")}
-                  >
-                    History
-                  </button>
-                </div>
-              </>
-            )}
+            {/* Balance */}
+            {state.balance !== undefined &&
+              (activeWallet || bitcoinConnectConnected) && (
+                <>
+                  <div className="wallet-balance">
+                    <span className="balance-label">Balance</span>
+                    <span className="balance-amount">
+                      <img
+                        src="/assets/bolt-yellow.svg"
+                        alt=""
+                        className="balance-bolt"
+                      />
+                      {state.balance.toLocaleString()}
+                    </span>
+                  </div>
+                  {activeWallet && (
+                    <div className="balance-actions-row">
+                      <button
+                        className="balance-action-btn"
+                        onClick={() => setView("funds")}
+                      >
+                        Manage Funds
+                      </button>
+                      <button
+                        className="balance-action-btn"
+                        onClick={() => setView("transactions")}
+                      >
+                        History
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
 
-            {/* Connected Wallets - show embedded wallets and external wallets */}
+            {/* Connected Wallet */}
             {(wallets.length > 0 || bitcoinConnectConnected) && (
               <div className="wallet-section">
-                <h3>Connected Wallets</h3>
+                <h3>Connected Wallet</h3>
                 <div className="wallet-list">
-                  {/* Embedded wallets (Spark, NWC) */}
+                  {/* Embedded wallets (Spark) */}
                   {wallets.map((wallet) => (
                     <div
                       key={wallet.id}
                       className={`wallet-item ${wallet.active ? "active" : ""}`}
                     >
-                      <div
-                        className={`wallet-item-icon ${wallet.kind === WalletKind.SPARK ? "spark" : "nwc"}`}
-                      >
-                        {wallet.kind === WalletKind.SPARK ? (
-                          <SparkLogo />
-                        ) : (
-                          <NwcLogo />
-                        )}
+                      <div className="wallet-item-icon spark">
+                        <SparkLogo />
                       </div>
                       <div className="wallet-item-info">
                         <span className="wallet-item-name">{wallet.name}</span>
-                        <span className="wallet-item-type">
-                          {wallet.kind === WalletKind.SPARK
-                            ? "Self-custodial"
-                            : "NWC"}
-                        </span>
+                        <span className="wallet-item-type">Self-custodial</span>
                       </div>
                       <div className="wallet-item-actions">
                         {wallet.active ? (
@@ -1252,7 +1113,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                             setWalletToRemove({
                               id: "bitcoin-connect",
                               name: "Bitcoin Connect",
-                              kind: WalletKind.NWC, // Use NWC kind as placeholder for external
+                              kind: WalletKind.SPARK, // placeholder kind for external wallet
                             })
                           }
                           title="Remove wallet"
@@ -1267,8 +1128,8 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
               </div>
             )}
 
-            {/* Lightning Address - show when embedded wallet connected */}
-            {hasEmbeddedWallet && !bitcoinConnectConnected && (
+            {/* Lightning Address - show when Spark wallet connected */}
+            {hasSparkWallet && !bitcoinConnectConnected && (
               <div className="wallet-section">
                 <h3>Lightning Address</h3>
                 <button
@@ -1281,23 +1142,22 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
               </div>
             )}
 
-            {/* Add Wallet - hide when both slots are full */}
-            {bitcoinConnectConnected ? (
-              // Message when external wallet is active
-              <div className="wallet-section">
-                <h3>Add Wallet</h3>
-                <p className="wallet-hint">
-                  Disconnect external wallet to use embedded wallet features.
-                </p>
-              </div>
-            ) : (
-              // Show add wallet options only if there's a slot available
-              (!hasSparkWallet || !hasNwcWallet) && (
-                <div className="wallet-section">
-                  <h3>Add Wallet</h3>
-                  <div className="wallet-options">
-                    {/* Embedded wallet options */}
-                    {!hasSparkWallet && (
+            {/* Add Wallet */}
+            {bitcoinConnectConnected
+              ? // Message when external wallet is active
+                !hasSparkWallet && (
+                  <div className="wallet-section">
+                    <h3>Add Wallet</h3>
+                    <p className="wallet-hint">
+                      Disconnect external wallet to use embedded wallet
+                      features.
+                    </p>
+                  </div>
+                )
+              : !hasSparkWallet && (
+                  <div className="wallet-section">
+                    <h3>Add Wallet</h3>
+                    <div className="wallet-options">
                       <WalletOptionCard
                         icon={<SparkLogo />}
                         iconClass="spark"
@@ -1305,30 +1165,19 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                         subtitle="Breez SDK + Spark"
                         onClick={() => setView("spark-options")}
                       />
-                    )}
-                    {!hasNwcWallet && (
-                      <WalletOptionCard
-                        icon={<NwcLogo />}
-                        iconClass="nwc"
-                        title="Nostr Wallet Connect"
-                        subtitle="Connect external wallet"
-                        onClick={() => setView("add-nwc")}
-                      />
-                    )}
-                    {/* External wallet options - only show if no embedded wallet */}
-                    {!hasEmbeddedWallet && (
-                      <WalletOptionCard
-                        icon={<BitcoinConnectLogo />}
-                        iconClass="bitcoin-connect"
-                        title="Bitcoin Connect"
-                        subtitle="External wallet"
-                        onClick={connectBitcoinConnect}
-                      />
-                    )}
+                      {/* External wallet option - only show if no embedded wallet */}
+                      {wallets.length === 0 && (
+                        <WalletOptionCard
+                          icon={<BitcoinConnectLogo />}
+                          iconClass="bitcoin-connect"
+                          title="Bitcoin Connect"
+                          subtitle="External wallet"
+                          onClick={connectBitcoinConnect}
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            )}
+                )}
 
             {/* Backup - hide when external wallets are connected */}
             {!bitcoinConnectConnected && (
@@ -1351,64 +1200,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
               funds. You manage your own wallet and are responsible for securing
               it properly.
             </p>
-          </>
-        )}
-
-        {view === "add-nwc" && (
-          <>
-            <h2>Connect NWC Wallet</h2>
-            {error && <div className="wallet-error">{error}</div>}
-            <p className="wallet-hint">
-              Connect an external wallet using Nostr Wallet Connect.
-            </p>
-
-            <div className="spark-options-list">
-              {/* Show restore option if backup found */}
-              {!checkingNwcBackup && hasNwcBackup && (
-                <>
-                  <p className="wallet-section-label">Restore from Nostr</p>
-                  <button
-                    className="spark-option-btn highlight"
-                    onClick={handleRestoreNwc}
-                    disabled={loading}
-                  >
-                    {loading ? "Restoring..." : "Restore NWC Backup"}
-                    <span className="backup-found-badge">Backup found</span>
-                  </button>
-                  <div className="wallet-section-divider">
-                    <span>or</span>
-                  </div>
-                </>
-              )}
-              {checkingNwcBackup && (
-                <button className="spark-option-btn" disabled>
-                  Restore from Nostr Backup
-                  <span className="backup-checking-badge">Checking...</span>
-                </button>
-              )}
-
-              <p className="wallet-section-label">Enter Connection String</p>
-              <textarea
-                className="wallet-input"
-                placeholder="nostr+walletconnect://..."
-                value={nwcUrl}
-                onChange={(e) => setNwcUrl(e.target.value)}
-                rows={3}
-                style={{ marginBottom: 0 }}
-              />
-              <p className="wallet-hint" style={{ marginBottom: "12px" }}>
-                Get this from Alby, Mutiny, or another NWC provider.
-              </p>
-            </div>
-
-            <button
-              className="wallet-btn primary"
-              onClick={handleConnectNWC}
-              disabled={!nwcUrl.trim() || loading || checkingNwcBackup}
-              style={{ width: "100%" }}
-            >
-              {loading ? "Connecting..." : "Connect"}
-            </button>
           </>
         )}
 
@@ -1550,60 +1341,11 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
               </div>
             )}
 
-            {wallets.some((w) => w.kind === WalletKind.NWC) && (
-              <div className="wallet-section">
-                <h3>NWC Connection</h3>
-                <div className="backup-actions-column">
-                  <button
-                    className="wallet-btn secondary"
-                    onClick={() => setShowNwcString(!showNwcString)}
-                    disabled={loading}
-                  >
-                    {showNwcString
-                      ? "Hide Connection String"
-                      : "View Connection String"}
-                  </button>
-                  {showNwcString && (
-                    <div className="nwc-string-display">
-                      <code className="nwc-string-text">
-                        {getNwcConnectionUrl() || "No connection URL"}
-                      </code>
-                      <button
-                        className="wallet-btn-small"
-                        onClick={handleCopyNwcString}
-                      >
-                        {copiedNwc ? "Copied!" : "Copy"}
-                      </button>
-                    </div>
-                  )}
-                  <div className="backup-actions">
-                    <button
-                      className="wallet-btn secondary"
-                      onClick={handleBackupNwc}
-                      disabled={loading}
-                    >
-                      Backup to Nostr
-                    </button>
-                    <button
-                      className="wallet-btn danger"
-                      onClick={() => setBackupToDelete("nwc")}
-                      disabled={loading}
-                    >
-                      Delete Backup
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Backup deletion confirmation */}
             {backupToDelete && (
               <div className="backup-confirm-overlay">
                 <div className="backup-confirm-modal">
-                  <p>
-                    Delete {backupToDelete === "spark" ? "Spark wallet" : "NWC"}{" "}
-                    backup from Nostr relays?
-                  </p>
+                  <p>Delete Spark wallet backup from Nostr relays?</p>
                   <p className="wallet-hint">
                     You can create a new backup anytime.
                   </p>
@@ -1657,10 +1399,9 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
               </div>
             )}
 
-            {!hasSparkWallet &&
-              !wallets.some((w) => w.kind === WalletKind.NWC) && (
-                <p className="wallet-hint">No wallets to manage backups for.</p>
-              )}
+            {!hasSparkWallet && (
+              <p className="wallet-hint">No wallets to manage backups for.</p>
+            )}
           </>
         )}
 
@@ -1816,27 +1557,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                   )}
                 </div>
               )}
-
-              {/* NWC wallet address */}
-              {wallets.some((w) => w.kind === WalletKind.NWC) && (
-                <div className="ln-address-item">
-                  <div className="ln-address-wallet">
-                    <div className="wallet-item-icon nwc">
-                      <NwcLogo />
-                    </div>
-                    <span>NWC Wallet</span>
-                  </div>
-                  {nwcLnAddress ? (
-                    <div className="ln-address-value">
-                      <span className="ln-address-text">{nwcLnAddress}</span>
-                    </div>
-                  ) : (
-                    <p className="wallet-hint" style={{ margin: "8px 0 0" }}>
-                      No lightning address in connection string
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Profile Lightning Address */}
@@ -1859,8 +1579,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                 const activeAddr = getActiveWalletLightningAddress();
                 const needsUpdate =
                   activeAddr && activeAddr !== profileLnAddress;
-                const activeWalletName =
-                  activeWallet?.kind === WalletKind.SPARK ? "Spark" : "NWC";
 
                 if (needsUpdate) {
                   return (
@@ -1869,7 +1587,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                         className="wallet-hint"
                         style={{ marginBottom: "8px" }}
                       >
-                        Your active {activeWalletName} wallet has address:{" "}
+                        Your active Spark wallet has address:{" "}
                         <strong>{activeAddr}</strong>
                       </p>
                       <button
