@@ -2,13 +2,13 @@
  * Wallet Store
  *
  * Manages multi-wallet state with localStorage persistence.
- * Supports NWC (kind 3) and Spark (kind 4) wallets.
+ * Supports Spark (kind 4) wallets.
  */
 
-import { WalletKind, type Wallet } from '../types/wallet';
+import { WalletKind, type Wallet } from "../types/wallet";
 
-const STORAGE_KEY = 'wordswithzaps_wallets';
-const CACHED_BALANCE_KEY = 'wordswithzaps_cached_balance';
+const STORAGE_KEY = "wordswithzaps_wallets";
+const CACHED_BALANCE_KEY = "wordswithzaps_cached_balance";
 
 // --- State ---
 let _wallets: Wallet[] = [];
@@ -21,8 +21,12 @@ type StateListener = () => void;
 const stateListeners: Set<StateListener> = new Set();
 
 function notifyListeners() {
-  stateListeners.forEach(listener => {
-    try { listener(); } catch { /* ignore */ }
+  stateListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      /* ignore */
+    }
   });
 }
 
@@ -35,7 +39,7 @@ function loadWallets(): Wallet[] {
       return JSON.parse(stored);
     }
   } catch (e) {
-    console.error('[WalletStore] Failed to load wallets:', e);
+    console.error("[WalletStore] Failed to load wallets:", e);
   }
   return [];
 }
@@ -44,7 +48,7 @@ function saveWallets(wallets: Wallet[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(wallets));
   } catch (e) {
-    console.error('[WalletStore] Failed to save wallets:', e);
+    console.error("[WalletStore] Failed to save wallets:", e);
   }
 }
 
@@ -69,9 +73,9 @@ function setCachedBalance(walletId: string, balance: number): void {
 }
 
 // Initialize from localStorage
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   _wallets = loadWallets();
-  const active = _wallets.find(w => w.active);
+  const active = _wallets.find((w) => w.active);
   if (active) {
     _balance = getCachedBalance(active.id);
   }
@@ -82,11 +86,11 @@ if (typeof window !== 'undefined') {
 export function getWalletStoreState() {
   return {
     wallets: _wallets,
-    activeWallet: _wallets.find(w => w.active) || null,
+    activeWallet: _wallets.find((w) => w.active) || null,
     balance: _balance,
     loading: _loading,
-    connected: _wallets.some(w => w.active),
-    lastSync: _lastSync
+    connected: _wallets.some((w) => w.active),
+    lastSync: _lastSync,
   };
 }
 
@@ -103,14 +107,14 @@ export function subscribeToWalletStore(listener: StateListener): () => void {
 export function addWallet(
   kind: WalletKind,
   name: string,
-  data?: Wallet['data']
+  data?: Wallet["data"],
 ): Wallet {
   const newWallet: Wallet = {
     id: String(Date.now()),
     kind,
     name,
     active: _wallets.length === 0, // First wallet is active by default
-    data
+    data,
   };
 
   _wallets = [..._wallets, newWallet];
@@ -124,11 +128,11 @@ export function addWallet(
  * Remove a wallet by ID
  */
 export function removeWallet(id: string): void {
-  const wasActive = _wallets.find(w => w.id === id)?.active;
-  _wallets = _wallets.filter(w => w.id !== id);
+  const wasActive = _wallets.find((w) => w.id === id)?.active;
+  _wallets = _wallets.filter((w) => w.id !== id);
 
   // If we removed the active wallet, make the first remaining one active
-  if (wasActive && _wallets.length > 0 && !_wallets.some(w => w.active)) {
+  if (wasActive && _wallets.length > 0 && !_wallets.some((w) => w.active)) {
     _wallets[0].active = true;
   }
 
@@ -147,11 +151,11 @@ export function removeWallet(id: string): void {
  * Set the active wallet
  */
 export function setActiveWallet(id: string): void {
-  _wallets = _wallets.map(w => ({ ...w, active: w.id === id }));
+  _wallets = _wallets.map((w) => ({ ...w, active: w.id === id }));
   saveWallets(_wallets);
 
   // Load cached balance for new active wallet
-  const active = _wallets.find(w => w.active);
+  const active = _wallets.find((w) => w.active);
   if (active) {
     _balance = getCachedBalance(active.id);
   } else {
@@ -166,7 +170,7 @@ export function setActiveWallet(id: string): void {
  * Update wallet name
  */
 export function updateWalletName(id: string, name: string): void {
-  _wallets = _wallets.map(w => w.id === id ? { ...w, name } : w);
+  _wallets = _wallets.map((w) => (w.id === id ? { ...w, name } : w));
   saveWallets(_wallets);
   notifyListeners();
 }
@@ -174,8 +178,8 @@ export function updateWalletName(id: string, name: string): void {
 /**
  * Update wallet data
  */
-export function updateWalletData(id: string, data: Wallet['data']): void {
-  _wallets = _wallets.map(w => w.id === id ? { ...w, data } : w);
+export function updateWalletData(id: string, data: Wallet["data"]): void {
+  _wallets = _wallets.map((w) => (w.id === id ? { ...w, data } : w));
   saveWallets(_wallets);
   notifyListeners();
 }
@@ -188,7 +192,7 @@ export function setWalletBalance(balance: number | null): void {
 
   // Cache balance for active wallet
   if (balance !== null) {
-    const active = _wallets.find(w => w.active);
+    const active = _wallets.find((w) => w.active);
     if (active) {
       setCachedBalance(active.id, balance);
     }
@@ -217,21 +221,21 @@ export function setWalletLastSync(timestamp: number | null): void {
  * Get wallet by kind
  */
 export function getWalletByKind(kind: WalletKind): Wallet | undefined {
-  return _wallets.find(w => w.kind === kind);
+  return _wallets.find((w) => w.kind === kind);
 }
 
 /**
  * Check if a specific wallet type is connected
  */
 export function hasWalletKind(kind: WalletKind): boolean {
-  return _wallets.some(w => w.kind === kind);
+  return _wallets.some((w) => w.kind === kind);
 }
 
 /**
  * Get the currently active wallet
  */
 export function getActiveWallet(): Wallet | null {
-  return _wallets.find(w => w.active) || null;
+  return _wallets.find((w) => w.active) || null;
 }
 
 /**
@@ -257,12 +261,10 @@ export function clearAllWallets(): void {
  */
 export function getWalletKindName(kind: WalletKind): string {
   switch (kind) {
-    case WalletKind.NWC:
-      return 'NWC';
     case WalletKind.SPARK:
-      return 'Self-custodial';
+      return "Self-custodial";
     default:
-      return 'Unknown';
+      return "Unknown";
   }
 }
 
@@ -282,5 +284,5 @@ export default {
   getActiveWallet,
   getWallets,
   clearAllWallets,
-  getWalletKindName
+  getWalletKindName,
 };

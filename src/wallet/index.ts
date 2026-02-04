@@ -4,18 +4,6 @@ export * from "./walletManager";
 // Wallet Store
 export * from "./walletStore";
 
-// Providers
-export {
-  connectNwc,
-  disconnectNwc,
-  getNwcBalance,
-  payNwcInvoice,
-  createNwcInvoice,
-  isNwcConnected,
-  isValidNwcUrl,
-  getNwcDisplayName,
-} from "./providers/nwc";
-
 // Spark
 export {
   initializeSdk as initializeSparkSdk,
@@ -39,14 +27,6 @@ export {
   hasSparkBackupOnNostr,
   deleteSparkBackupFromNostr,
 } from "./spark/backup";
-
-// NWC Backup
-export {
-  backupNwcToNostr,
-  restoreNwcFromNostr,
-  hasNwcBackupOnNostr,
-  deleteNwcBackupFromNostr,
-} from "./nwcBackup";
 
 // Bitcoin Connect
 export {

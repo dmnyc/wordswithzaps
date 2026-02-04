@@ -165,6 +165,17 @@ The dictionary loads in priority order: `VITE_DICTIONARY_URL` > `wwzwords1.txt` 
 
 Clicking a player's name in the ScoreBoard opens a `PlayerProfileModal` showing their avatar, display name, nip05, truncated npub, and bio (clamped to 3 lines). A "View on Jumble" link opens `https://jumble.social/{npub}` in a new tab. Profile data comes from the already-fetched profiles in ScoreBoard state.
 
+## Wallet Architecture
+
+The app supports two wallet paths:
+
+- **Spark (Breez SDK)**: Self-custodial embedded Lightning wallet via WebAssembly. Supports balance, send, receive, transaction history, lightning address registration, and encrypted Nostr backup/restore.
+- **Bitcoin Connect**: External wallet connection via `@getalby/bitcoin-connect`. Shows balance in the header and wallet settings page. Used for zap payments only -- no receive, transaction history, or funds management UI.
+
+NWC (Nostr Wallet Connect) was previously supported as a third option but was removed due to persistent connectivity and timeout issues on mobile. The wallet toggle mechanism was also removed since only one embedded wallet type (Spark) remains.
+
+Bitcoin Connect uses a WebLN provider interface internally (`WebLNProvider` in `bitcoinConnect.ts`) -- this is how BC exposes `sendPayment` and `makeInvoice` to the app.
+
 ## Fetch Timeout
 
 `fetchEvents` in `client.ts` uses a 10-second timeout. If relays don't send EOSE within that window, partial results are returned silently. This prevents the UI from hanging on slow or unresponsive relays.

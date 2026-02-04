@@ -122,16 +122,6 @@
     color: #ff9500;
 }
 
-.wallet-item-icon.nwc {
-    background: rgba(168, 85, 247, 0.2);
-    color: #a855f7;
-}
-
-.wallet-item-icon.webln {
-    background: rgba(255, 204, 0, 0.2);
-    color: #ffcc00;
-}
-
 .wallet-item-icon.bitcoin-connect {
     background: rgba(255, 204, 0, 0.2);
     color: #ffcc00;
@@ -284,28 +274,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-.nwc-string-display {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
-    padding: 12px;
-}
-
-.nwc-string-text {
-    color: #9a9a9a;
-    font-size: 11px;
-    word-break: break-all;
-    line-height: 1.4;
-    max-height: 80px;
-    overflow-y: auto;
-}
-
-.nwc-string-display .wallet-btn-small {
-    align-self: flex-end;
 }
 
 .backup-confirm-overlay {
@@ -585,16 +553,6 @@
 }
 
 .wallet-option-icon.spark {
-    background: rgba(255, 149, 0, 0.2);
-    color: #ff9500;
-}
-
-.wallet-option-icon.nwc {
-    background: rgba(168, 85, 247, 0.2);
-    color: #a855f7;
-}
-
-.wallet-option-icon.webln {
     background: rgba(255, 149, 0, 0.2);
     color: #ff9500;
 }
