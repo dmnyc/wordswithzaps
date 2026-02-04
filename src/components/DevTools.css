@@ -1,0 +1,73 @@
+.dev-tools {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 9999;
+}
+
+.dev-tools-toggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 100, 100, 0.6);
+    background: rgba(30, 30, 30, 0.9);
+    color: #ff6464;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.dev-tools-toggle:hover {
+    background: rgba(255, 100, 100, 0.15);
+    border-color: #ff6464;
+}
+
+.dev-tools-panel {
+    position: absolute;
+    bottom: 48px;
+    right: 0;
+    width: 180px;
+    background: rgba(30, 30, 30, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dev-tools-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dev-tools-section-title {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    padding: 0 4px 2px;
+}
+
+.dev-tools-section button {
+    display: block;
+    width: 100%;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    border-radius: 5px;
+    color: #ccc;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+}
+
+.dev-tools-section button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}

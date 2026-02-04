@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   getZapNudgeDefaultAmount,
   setZapNudgeDefaultAmount,
+  getShareToNostrDefault,
 } from "../settings/appSettings";
+import type { GameStatus } from "../types/game";
+import type { GameEndStats } from "../utils/gameStats";
 import Modal from "./Modal";
 import "./GameOverModal.css";
 
@@ -10,9 +13,19 @@ interface GameOverModalProps {
   open: boolean;
   opponentLabel: string;
   walletConnected: boolean;
+  winner: string | undefined;
+  myPubkey: string;
+  gameStatus: GameStatus;
+  scores: { my: number; opponent: number };
+  gameStats: GameEndStats | null;
+  sharePreview?: string;
+  myPicture?: string | null;
+  opponentPicture?: string | null;
   onClose: () => void;
   onSendZap: (amount: number) => Promise<void>;
+  onShareResult: () => Promise<void>;
   onOpenCreatorZap: () => void;
+  onOpenWalletSettings?: () => void;
 }
 
 const PRESET_AMOUNTS = [50, 100, 500, 1000];
@@ -21,10 +34,27 @@ export function GameOverModal({
   open,
   opponentLabel,
   walletConnected,
+  winner,
+  myPubkey,
+  gameStatus,
+  scores,
+  gameStats,
+  sharePreview,
+  myPicture,
+  opponentPicture,
   onClose,
   onSendZap,
+  onShareResult,
   onOpenCreatorZap,
+  onOpenWalletSettings,
 }: GameOverModalProps) {
+  const iWon = winner === myPubkey;
+  const iLost = !!winner && winner !== myPubkey;
+  const isTie = gameStatus === "completed" && !winner;
+  const isAbandoned = gameStatus === "abandoned";
+  const canShare = iWon || isTie;
+
+  // Zap state
   const [selectedAmount, setSelectedAmount] = useState<number | "custom" | 0>(
     getZapNudgeDefaultAmount(),
   );
@@ -33,6 +63,11 @@ export function GameOverModal({
     return saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "";
   });
   const [isSending, setIsSending] = useState(false);
+
+  // Share state
+  const [willShare, setWillShare] = useState(
+    () => canShare && getShareToNostrDefault(),
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -44,7 +79,8 @@ export function GameOverModal({
       saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "",
     );
     setIsSending(false);
-  }, [open]);
+    setWillShare(canShare && getShareToNostrDefault());
+  }, [open, canShare]);
 
   const customAmountValue = useMemo(() => {
     const parsed = parseInt(customAmount, 10);
@@ -68,51 +104,147 @@ export function GameOverModal({
   }, [customAmountValue, selectedAmount]);
 
   const handleSend = async () => {
-    if (!walletConnected || customAmountInvalid || resolvedAmount <= 0) return;
+    if (isSending) return;
     setIsSending(true);
     try {
-      await onSendZap(resolvedAmount);
+      const promises: Promise<void>[] = [];
+
+      // Zap
+      if (walletConnected && resolvedAmount > 0) {
+        promises.push(onSendZap(resolvedAmount));
+      }
+
+      // Share
+      if (canShare && willShare) {
+        promises.push(onShareResult());
+      }
+
+      if (promises.length > 0) {
+        await Promise.allSettled(promises);
+      }
       onClose();
     } finally {
       setIsSending(false);
     }
   };
 
+  // Determine button label
+  const hasZap = !isAbandoned && walletConnected && resolvedAmount > 0;
+  const hasShare = canShare && willShare;
+  let buttonLabel = "Done";
+  if (hasZap && hasShare) buttonLabel = "Zap & Share";
+  else if (hasZap) buttonLabel = "Send GG zap";
+  else if (hasShare) buttonLabel = "Share";
+
+  // Title
+  let title = "Game Over";
+  if (iWon) title = "Victory!";
+  else if (iLost) title = "Good Game";
+  else if (isTie) title = "It's a Tie!";
+  else if (isAbandoned) title = "Game Abandoned";
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      footer={
-        walletConnected ? (
-          <div className="wwz-modal-actions">
-            <button
-              className="wwz-modal-btn primary"
-              type="button"
-              onClick={handleSend}
-              disabled={isSending || customAmountInvalid || resolvedAmount <= 0}
-            >
-              {isSending ? "Sending..." : "Send GG zap"}
-            </button>
-          </div>
-        ) : undefined
-      }
-    >
+    <Modal open={open} title={title} onClose={onClose} footer={null}>
       <div className="gameover-body">
         <img
-          src="/assets/game_over.svg"
-          alt="Game over"
-          className="gameover-graphic"
+          src={iWon ? "/assets/victory.svg" : "/assets/game_over.svg"}
+          alt={iWon ? "Victory" : "Game over"}
+          className={`gameover-graphic ${iWon ? "victory" : ""}`}
         />
+
+        {/* Score display */}
+        {gameStatus === "completed" && (
+          <div className="gameover-scores">
+            <div className={`gameover-score ${iWon || isTie ? "winner" : ""}`}>
+              <span className="gameover-score-name">You</span>
+              <div className="gameover-score-row">
+                {myPicture ? (
+                  <img src={myPicture} alt="" className="gameover-avatar" />
+                ) : (
+                  <div className="gameover-avatar fallback">Y</div>
+                )}
+                <span className="gameover-score-value">{scores.my}</span>
+              </div>
+            </div>
+            <div className="gameover-score-divider" />
+            <div className={`gameover-score ${iLost ? "winner" : ""}`}>
+              <span className="gameover-score-name">{opponentLabel}</span>
+              <div className="gameover-score-row">
+                <span className="gameover-score-value">{scores.opponent}</span>
+                {opponentPicture ? (
+                  <img
+                    src={opponentPicture}
+                    alt=""
+                    className="gameover-avatar"
+                  />
+                ) : (
+                  <div className="gameover-avatar fallback">
+                    {opponentLabel.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stats (winner and tie only) */}
+        {canShare && gameStats && gameStats.highestWord && (
+          <div className="gameover-stats">
+            <div className="gameover-stat">
+              <span className="gameover-stat-label">Best word</span>
+              <span className="gameover-stat-value">
+                {gameStats.highestWord.toUpperCase()} (
+                {gameStats.highestWordScore} pts)
+              </span>
+            </div>
+            <div className="gameover-stat">
+              <span className="gameover-stat-label">Words played</span>
+              <span className="gameover-stat-value">
+                {gameStats.totalWordsPlayed}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Flavor text */}
         <p className="gameover-text">
-          {walletConnected
-            ? `Thanks for playing! Want to send a GG zap to ${opponentLabel}?`
-            : "Thanks for playing!"}
+          {iWon && walletConnected
+            ? `Share your victory or send a GG zap to ${opponentLabel}!`
+            : iWon
+              ? "Share your victory on Nostr!"
+              : iLost && walletConnected
+                ? `Want to send a GG zap to ${opponentLabel}?`
+                : isTie && walletConnected
+                  ? `Share the result or send a GG zap to ${opponentLabel}!`
+                  : isTie
+                    ? "Share the result on Nostr!"
+                    : isAbandoned
+                      ? "This game was abandoned."
+                      : "Thanks for playing!"}
         </p>
       </div>
 
-      {walletConnected && (
+      {/* Share option (winner and tie only) */}
+      {canShare && sharePreview && (
+        <div className="gameover-share">
+          <label className="gameover-share-check">
+            <input
+              type="checkbox"
+              checked={!!willShare}
+              onChange={(e) => setWillShare(e.target.checked)}
+            />
+            Share result to Nostr
+          </label>
+          {willShare && (
+            <div className="gameover-share-preview">{sharePreview}</div>
+          )}
+        </div>
+      )}
+
+      {/* GG zap (not for abandoned) */}
+      {!isAbandoned && walletConnected ? (
         <div className="gameover-zap">
-          <div className="gameover-zap-title">GG zap amount</div>
+          <div className="gameover-section-title">GG zap amount</div>
           <div className="zap-amounts">
             <button
               className={`zap-amount-btn ${selectedAmount === 0 ? "active" : ""}`}
@@ -128,6 +260,11 @@ export function GameOverModal({
                 onClick={() => setSelectedAmount(amount)}
                 type="button"
               >
+                <img
+                  src="/assets/bolt-yellow.svg"
+                  alt=""
+                  className="gameover-bolt"
+                />
                 {amount}
               </button>
             ))}
@@ -155,7 +292,26 @@ export function GameOverModal({
             </div>
           )}
         </div>
-      )}
+      ) : !isAbandoned && onOpenWalletSettings ? (
+        <div className="gameover-wallet-cta">
+          <button
+            className="gameover-wallet-btn"
+            type="button"
+            onClick={onOpenWalletSettings}
+          >
+            Connect wallet to send GG zaps
+          </button>
+        </div>
+      ) : null}
+
+      <button
+        className="gameover-action-btn"
+        type="button"
+        onClick={buttonLabel === "Done" ? onClose : handleSend}
+        disabled={isSending || (hasZap && customAmountInvalid)}
+      >
+        {isSending ? "Sending..." : buttonLabel}
+      </button>
 
       <div className="gameover-creator">
         <button

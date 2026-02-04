@@ -13,9 +13,24 @@ interface AchievementModalProps {
 
 const PRESET_AMOUNTS = [21, 50, 100, 500];
 
-const ACHIEVEMENT_ICONS: Record<Achievement["type"], string | null> = {
-  bingo: "7",
-  "zap-bonus": "⚡",
+const ACHIEVEMENT_ICONS: Record<
+  Achievement["type"],
+  string | JSX.Element | null
+> = {
+  bingo: (
+    <img
+      src="/assets/zapathon.svg"
+      alt="Zapathon"
+      className="achievement-badge-zapathon"
+    />
+  ),
+  "zap-bonus": (
+    <img
+      src="/assets/bolt-yellow.svg"
+      alt=""
+      className="achievement-badge-bolt"
+    />
+  ),
   "double-word": "2x",
   "high-score": null,
 };
@@ -84,7 +99,10 @@ export function AchievementModal({
         </div>
 
         <p className="achievement-intro">
-          <strong>{opponentName}</strong> played an awesome word!
+          <strong>{opponentName}</strong>{" "}
+          {achievement.type === "bingo"
+            ? "played a Zapathon!"
+            : "played an awesome word!"}
         </p>
 
         <div className="achievement-word-display">
@@ -92,7 +110,9 @@ export function AchievementModal({
           <p className="achievement-score">{achievement.score} points</p>
         </div>
 
-        <p className="achievement-type">{achievement.message}</p>
+        {achievement.type !== "bingo" && (
+          <p className="achievement-type">{achievement.message}</p>
+        )}
 
         <div className="achievement-zap-section">
           <h3>Send a congratulatory zap?</h3>
