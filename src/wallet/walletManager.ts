@@ -376,7 +376,7 @@ export async function createInvoice(
   }
 }
 
-const ZAP_FETCH_TIMEOUT = 10000; // 10s timeout for LNURL fetches
+const ZAP_FETCH_TIMEOUT = 20000; // 20s timeout for LNURL fetches (longer for mobile networks)
 
 function fetchWithTimeout(
   input: string | URL,
