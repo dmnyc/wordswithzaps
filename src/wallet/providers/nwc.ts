@@ -5,7 +5,7 @@
  * Adapted from zapcooking's implementation for React.
  */
 
-import { getNDK, ndkReady } from "../../nostr/client";
+import { getNDK, ensureNDK } from "../../nostr/client";
 import {
   NDKEvent,
   NDKPrivateKeySigner,
@@ -213,8 +213,8 @@ async function waitForRelayConnection(
  * Connect to NWC wallet using NDK
  */
 export async function connectNwc(connectionUrl: string): Promise<boolean> {
-  // Wait for NDK pool relays to be ready before connecting NWC relay
-  await ndkReady;
+  // Ensure NDK is initialized and has at least one connected relay
+  await ensureNDK();
 
   // Already connected to this URL
   if (

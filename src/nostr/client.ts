@@ -52,12 +52,6 @@ let currentUser: NDKUser | null = null;
 // Cache for user relay lists
 let userRelayCache: Map<string, string[]> = new Map();
 
-// NDK ready state - resolves when at least one pool relay is connected
-let ndkReadyResolve: (() => void) | null = null;
-export const ndkReady: Promise<void> = new Promise((resolve) => {
-  ndkReadyResolve = resolve;
-});
-
 export interface NostrClientOptions {
   relays?: string[];
   autoConnect?: boolean;
@@ -86,32 +80,6 @@ export async function initializeNDK(
     ndkInstance.connect().catch((err) => {
       console.warn("[NDK] Background relay connection failed:", err);
     });
-
-    // Resolve ndkReady when first pool relay connects
-    for (const relay of ndkInstance.pool.relays.values()) {
-      relay.on("connect", () => {
-        if (ndkReadyResolve) {
-          ndkReadyResolve();
-          ndkReadyResolve = null;
-        }
-      });
-    }
-    // Safety timeout — resolve after 5s so operations don't hang forever
-    setTimeout(() => {
-      if (ndkReadyResolve) {
-        console.warn(
-          "[NDK] Ready timeout — resolving without relay connection",
-        );
-        ndkReadyResolve();
-        ndkReadyResolve = null;
-      }
-    }, 5000);
-  } else {
-    // No auto-connect — resolve immediately
-    if (ndkReadyResolve) {
-      ndkReadyResolve();
-      ndkReadyResolve = null;
-    }
   }
 
   return ndkInstance;
@@ -125,6 +93,37 @@ export function getNDK(): NDK {
     throw new Error("NDK not initialized. Call initializeNDK() first.");
   }
   return ndkInstance;
+}
+
+/**
+ * Ensure NDK is initialized and has at least one connected relay.
+ * Safe to call from anywhere — initializes NDK if needed, waits for
+ * first relay connection with a timeout so callers don't hang.
+ */
+export async function ensureNDK(): Promise<NDK> {
+  const ndk = ndkInstance ?? (await initializeNDK());
+
+  // Check if any pool relay is already connected
+  for (const relay of ndk.pool.relays.values()) {
+    if (relay.status === 1) return ndk;
+  }
+
+  // Wait for the first relay to connect (5s timeout)
+  await new Promise<void>((resolve) => {
+    let resolved = false;
+    const done = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve();
+    };
+
+    for (const relay of ndk.pool.relays.values()) {
+      relay.on("connect", done);
+    }
+    setTimeout(done, 5000);
+  });
+
+  return ndk;
 }
 
 /**
