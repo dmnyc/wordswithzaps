@@ -66,9 +66,18 @@ Games where the opponent hasn't moved are tracked with a decay tier system. Deca
 
 Decay badges only appear when it's the **opponent's** turn. When it's your turn the badge stays gold "Your turn" as usual.
 
-### Nudge Zaps
+### Nudge Modal
 
-Stale, cold, and dormant games show a bolt icon in the Lobby that opens a NudgeModal. This lets you send a reminder zap (21/50/100/500 sats) to the opponent with the message "Your turn on #WordsWithZaps!" — using the existing `zapUser` infrastructure.
+Stale, cold, and dormant games show a nudge icon in the Lobby that opens a NudgeModal. The modal has two sections:
+
+**Zap amounts**: No zap | 21 sats | Custom — using the existing `zapUser` infrastructure.
+
+**Share mode**: Same 4 options as post-move sharing (public post, public reply, standard DM, giftwrap DM) plus "Don't share". The nudge message is dynamic:
+
+- **Public**: `Hey nostr:npub1..., it's been 3 days. Don't forget to play your turn on #WordsWithZaps! [game link]`
+- **DM**: `Hey, it's been 3 days. Don't forget to play your turn on #WordsWithZaps! [game link]`
+
+Zap and share fire in parallel from the `handleNudgeConfirm` handler in Lobby.tsx, with toast feedback for each.
 
 ### Abandonment
 
@@ -116,7 +125,7 @@ The reply-to input accepts `note1...`, `nevent1...`, or raw 64-char hex event ID
 
 ## Share Options
 
-Post-move sharing supports four modes:
+Share publishing logic is extracted into `src/nostr/share.ts` as `publishShareMessage()`, shared by both the post-move ZapNudgeModal (GameView) and the Lobby NudgeModal. Both flows support four modes:
 
 | Mode | Kind | Description |
 |------|------|-------------|
@@ -151,6 +160,10 @@ The dictionary loads in priority order: `VITE_DICTIONARY_URL` > `wwzwords1.txt` 
 | Zap Square | Tile placed on a ZAP bonus square | bolt icon |
 | Double Word | Word on DW multiplier scoring 25+ points | "2x" |
 | High Score | Single word scores 40+ points | wow.svg |
+
+## Player Profile Modal
+
+Clicking a player's name in the ScoreBoard opens a `PlayerProfileModal` showing their avatar, display name, nip05, truncated npub, and bio (clamped to 3 lines). A "View on Jumble" link opens `https://jumble.social/{npub}` in a new tab. Profile data comes from the already-fetched profiles in ScoreBoard state.
 
 ## Fetch Timeout
 
