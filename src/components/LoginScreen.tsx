@@ -12,6 +12,8 @@ import {
 import { ZTileLoader } from "./ZTileLoader";
 import "./LoginScreen.css";
 
+const ENABLE_NOSTRCONNECT_QR = false;
+
 type LoginView =
   | "main"
   | "nip46-options"
@@ -321,7 +323,7 @@ WARNING: Never share your private key. Store this file securely.`;
               <div className="login-option-content">
                 <div className="login-option-title">Remote Signer</div>
                 <div className="login-option-desc">
-                  Amber, Primal, or NIP-46 bunker
+                  Amber or another NIP-46 bunker
                 </div>
               </div>
             </button>
@@ -356,17 +358,19 @@ WARNING: Never share your private key. Store this file securely.`;
             </div>
 
             <div className="login-suboptions">
-              <button className="login-suboption" onClick={handleShowQRCode}>
-                <span className="login-suboption-icon icon-blue">
-                  <CameraIcon />
-                </span>
-                <div>
-                  <div className="login-suboption-title">Scan QR Code</div>
-                  <div className="login-suboption-desc">
-                    For Primal mobile and other apps
+              {ENABLE_NOSTRCONNECT_QR && (
+                <button className="login-suboption" onClick={handleShowQRCode}>
+                  <span className="login-suboption-icon icon-blue">
+                    <CameraIcon />
+                  </span>
+                  <div>
+                    <div className="login-suboption-title">Scan QR Code</div>
+                    <div className="login-suboption-desc">
+                      For Primal mobile and other apps
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              )}
 
               <button
                 className="login-suboption"
@@ -391,7 +395,7 @@ WARNING: Never share your private key. Store this file securely.`;
         )}
 
         {/* NIP-46 QR Code */}
-        {view === "nip46-qr" && (
+        {ENABLE_NOSTRCONNECT_QR && view === "nip46-qr" && (
           <div className="login-expanded">
             <div className="login-expanded-header">
               <span className="login-suboption-icon icon-blue">

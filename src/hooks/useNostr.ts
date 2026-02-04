@@ -55,6 +55,44 @@ const AUTH_METHOD_KEY = "wwz_auth_method";
 const PRIVATE_KEY_KEY = "wwz_private_key";
 const NIP46_BUNKER_KEY = "wwz_nip46_bunker";
 const NIP46_LOCAL_KEY = "wwz_nip46_local_key";
+const NIP46_GENERIC_HINT = "Create a new bunker URL in your signer.";
+
+function formatErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const maybeMessage = (err as { message?: unknown }).message;
+    if (typeof maybeMessage === "string") return maybeMessage;
+    const maybeError = (err as { error?: unknown }).error;
+    if (typeof maybeError === "string") return maybeError;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+function formatNip46UiError(err: unknown): string {
+  const baseMessage = formatErrorMessage(err, "Failed to connect").trim();
+  const lower = baseMessage.toLowerCase();
+
+  if (lower.includes("already connected")) {
+    return "Already connected. Create a new bunker URL in your signer.";
+  }
+  if (lower.includes("expired") || lower.includes("revoked")) {
+    return "Link expired. Create a new bunker URL in your signer.";
+  }
+  if (lower.includes("timeout")) {
+    return "Connection timed out. Create a new bunker URL in your signer.";
+  }
+  if (baseMessage.length > 80) {
+    return `Failed to connect. ${NIP46_GENERIC_HINT}`;
+  }
+
+  return `${baseMessage}${baseMessage.endsWith(".") ? "" : "."} ${NIP46_GENERIC_HINT}`;
+}
 
 export function useNostr(): UseNostrReturn {
   const [user, setUser] = useState<NDKUser | null>(null);
@@ -266,8 +304,8 @@ export function useNostr(): UseNostrReturn {
         window.localStorage.setItem(LAST_PUBKEY_KEY, connectedUser.pubkey);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to connect";
-      setError(message);
+      console.warn("[useNostr] NIP-46 connect failed:", err);
+      setError(formatNip46UiError(err));
       throw err;
     } finally {
       setConnecting(false);
@@ -325,9 +363,8 @@ export function useNostr(): UseNostrReturn {
         if (nostrConnectCancelledRef.current) {
           return;
         }
-        const message =
-          err instanceof Error ? err.message : "Failed to connect";
-        setError(message);
+        console.warn("[useNostr] Nostr Connect failed:", err);
+        setError(formatNip46UiError(err));
         throw err;
       } finally {
         setConnecting(false);

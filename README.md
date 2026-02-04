@@ -28,7 +28,7 @@ Words With Zaps is a serverless, censorship-resistant word game where game state
 ## Login Methods
 
 - **Browser Extension (NIP-07)**: Alby, nos2x, or any NIP-07 signer
-- **Remote Signer (NIP-46)**: Scan a QR code or paste a bunker URI (Amber, nsecBunker, etc.)
+- **Remote Signer (NIP-46)**: Paste a bunker URI (Amber, nsecBunker, etc.)
 - **Local Keypair**: Generate a new keypair directly in the app with nsec backup
 
 ## Wallet Support
