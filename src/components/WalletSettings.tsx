@@ -21,6 +21,7 @@ import { getCurrentUser } from "../nostr/client";
 import { fetchProfile, updateProfileLightningAddress } from "../nostr/profiles";
 import { SparkLogo, BitcoinConnectLogo } from "./icons/WalletIcons";
 import { QRCodeSVG } from "qrcode.react";
+import { TbRefresh } from "react-icons/tb";
 import { sendPayment, createInvoice } from "../wallet/walletManager";
 import "./WalletSettings.css";
 
@@ -592,6 +593,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   );
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [lnAddressToDelete, setLnAddressToDelete] = useState(false);
+  const balanceKnown = state.balance !== undefined && state.balance !== null;
 
   // Load transactions when entering transactions view
   const loadTransactions = useCallback(
@@ -1007,38 +1009,48 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
             )}
 
             {/* Balance */}
-            {state.balance !== undefined &&
-              (activeWallet || bitcoinConnectConnected) && (
-                <>
-                  <div className="wallet-balance">
-                    <span className="balance-label">Balance</span>
-                    <span className="balance-amount">
-                      <img
-                        src="/assets/bolt-yellow.svg"
-                        alt=""
-                        className="balance-bolt"
-                      />
-                      {state.balance.toLocaleString()}
-                    </span>
+            {(activeWallet || bitcoinConnectConnected) && (
+              <>
+                <div className="wallet-balance">
+                  <span className="balance-label">Balance</span>
+                  <span className="balance-amount">
+                    <img
+                      src="/assets/bolt-yellow.svg"
+                      alt=""
+                      className="balance-bolt"
+                    />
+                    {balanceKnown
+                      ? (state.balance ?? 0).toLocaleString()
+                      : "..."}
+                  </span>
+                </div>
+                {activeWallet && (
+                  <div className="balance-actions-row">
+                    <button
+                      className="balance-action-btn"
+                      onClick={() => setView("funds")}
+                    >
+                      Manage Funds
+                    </button>
+                    <button
+                      className="balance-action-btn"
+                      onClick={() => setView("transactions")}
+                    >
+                      History
+                    </button>
+                    <button
+                      className={`balance-action-btn icon ${loading ? "is-loading" : ""}`}
+                      onClick={() => refreshBalance(true)}
+                      disabled={loading}
+                      aria-label="Sync balance"
+                      title="Sync balance"
+                    >
+                      <TbRefresh />
+                    </button>
                   </div>
-                  {activeWallet && (
-                    <div className="balance-actions-row">
-                      <button
-                        className="balance-action-btn"
-                        onClick={() => setView("funds")}
-                      >
-                        Manage Funds
-                      </button>
-                      <button
-                        className="balance-action-btn"
-                        onClick={() => setView("transactions")}
-                      >
-                        History
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
+                )}
+              </>
+            )}
 
             {/* Connected Wallet */}
             {(wallets.length > 0 || bitcoinConnectConnected) && (
@@ -1125,41 +1137,30 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
             )}
 
             {/* Add Wallet */}
-            {bitcoinConnectConnected
-              ? // Message when external wallet is active
-                !hasSparkWallet && (
-                  <div className="wallet-section">
-                    <h3>Add Wallet</h3>
-                    <p className="wallet-hint">
-                      Disconnect external wallet to use embedded wallet
-                      features.
-                    </p>
-                  </div>
-                )
-              : !hasSparkWallet && (
-                  <div className="wallet-section">
-                    <h3>Add Wallet</h3>
-                    <div className="wallet-options">
-                      <WalletOptionCard
-                        icon={<SparkLogo />}
-                        iconClass="spark"
-                        title="Self-Custodial Wallet"
-                        subtitle="Breez SDK + Spark"
-                        onClick={() => setView("spark-options")}
-                      />
-                      {/* External wallet option - only show if no embedded wallet */}
-                      {wallets.length === 0 && (
-                        <WalletOptionCard
-                          icon={<BitcoinConnectLogo />}
-                          iconClass="bitcoin-connect"
-                          title="Bitcoin Connect"
-                          subtitle="External wallet"
-                          onClick={connectBitcoinConnect}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
+            {!bitcoinConnectConnected && !hasSparkWallet && (
+              <div className="wallet-section">
+                <h3>Add Wallet</h3>
+                <div className="wallet-options">
+                  <WalletOptionCard
+                    icon={<SparkLogo />}
+                    iconClass="spark"
+                    title="Self-Custodial Wallet"
+                    subtitle="Breez SDK + Spark"
+                    onClick={() => setView("spark-options")}
+                  />
+                  {/* External wallet option - only show if no embedded wallet */}
+                  {wallets.length === 0 && (
+                    <WalletOptionCard
+                      icon={<BitcoinConnectLogo />}
+                      iconClass="bitcoin-connect"
+                      title="Bitcoin Connect"
+                      subtitle="External wallet"
+                      onClick={connectBitcoinConnect}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Backup - hide when external wallets are connected */}
             {!bitcoinConnectConnected && (

@@ -28,6 +28,7 @@ let _walletInitialized = false;
 let _sparkLoading = false;
 let _lightningAddress: string | null = null;
 let _recentPayments: SparkPayment[] = [];
+let _hasSynced = false;
 
 function notifyListeners() {
   stateListeners.forEach((listener) => {
@@ -161,6 +162,7 @@ async function setupEventListener(): Promise<void> {
       }
 
       if (event.type === "synced") {
+        _hasSynced = true;
         refreshBalanceInternal();
       }
 
@@ -191,7 +193,12 @@ async function refreshBalanceInternal(): Promise<void> {
       info.balance_sats ??
       info.balance ??
       0;
-    _walletBalance = Number(balanceValue);
+    const nextBalance = Number(balanceValue);
+    if (!Number.isFinite(nextBalance)) return;
+    if (nextBalance === 0 && !_hasSynced) {
+      return;
+    }
+    _walletBalance = nextBalance;
     notifyListeners();
   } catch (error) {
     console.error("[Spark] Failed to refresh balance:", error);
@@ -371,6 +378,7 @@ export async function initializeSdk(
     void Promise.resolve(_sdkInstance.syncWallet({}))
       .then(() => {
         console.log("[Spark] Background sync completed");
+        _hasSynced = true;
         refreshBalanceInternal();
       })
       .catch(() => {
@@ -494,6 +502,7 @@ export async function disconnectWallet(): Promise<void> {
     _walletInitialized = false;
     _lightningAddress = null;
     _recentPayments = [];
+    _hasSynced = false;
     notifyListeners();
   }
 }
@@ -509,13 +518,16 @@ export function isSparkInitialized(): boolean {
  * Get current balance
  * @param forceSync If true, waits for wallet sync before returning balance
  */
-export async function getSparkBalance(forceSync = false): Promise<number> {
+export async function getSparkBalance(
+  forceSync = false,
+): Promise<number | null> {
   if (!_sdkInstance) throw new Error("Spark SDK not initialized");
 
   if (forceSync) {
     try {
       console.log("[Spark] Force syncing wallet...");
       await _sdkInstance.syncWallet({});
+      _hasSynced = true;
       console.log("[Spark] Sync complete");
     } catch (e) {
       console.warn("[Spark] Force sync failed:", e);
@@ -523,7 +535,7 @@ export async function getSparkBalance(forceSync = false): Promise<number> {
   }
 
   await refreshBalanceInternal();
-  return _walletBalance ?? 0;
+  return _walletBalance ?? null;
 }
 
 /**
