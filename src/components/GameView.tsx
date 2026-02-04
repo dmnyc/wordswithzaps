@@ -596,16 +596,18 @@ export function GameView({
             : "Over to you!";
           shareText = `I just ${action} in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
         } else if (pendingMoveSummary?.isFirstMove) {
-          const challengeTarget =
-            options.shareMode === "public"
-              ? opponentLabel
-                ? `@${opponentLabel}`
-                : "you"
+          const isPublicShare =
+            options.shareMode === "public" ||
+            options.shareMode === "public-reply";
+          const publicTarget = opponentPubkey
+            ? `nostr:${opponentNpub}`
+            : opponentLabel
+              ? `@${opponentLabel}`
               : "you";
-          const joinLine =
-            options.shareMode === "public"
-              ? "Join or start a new game here:"
-              : "Join the game here:";
+          const challengeTarget = isPublicShare ? publicTarget : "you";
+          const joinLine = isPublicShare
+            ? "Join or start a new game here:"
+            : "Join the game here:";
           shareText = `I'm challenging ${challengeTarget} to play #WordsWithZaps.\n\nI just played ${word} for ${points} point${points === 1 ? "" : "s"}.\n\n${joinLine}\n\n${gameLink}`;
         } else {
           let opponentRef = "";
