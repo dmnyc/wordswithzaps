@@ -65,7 +65,7 @@ npm run test
 
 ## Dictionary
 
-The app ships with `wwzwords1.txt`, a custom word list that includes standard dictionary words plus game-specific additions (e.g. YOLO, FOMO, PUBKEY).
+The app ships with `wwzwords1.txt`, a custom word list that includes standard dictionary words plus game-specific additions (e.g. NOSTR, PUBKEY, YOLO).
 
 For alternative dictionaries, place a word list in `public/dictionaries/`. The app tries these in order:
 `wwzwords1.txt`, `sowpods.txt`, `csw21.txt`, `nwl2023.txt`, `twl06.txt`.
