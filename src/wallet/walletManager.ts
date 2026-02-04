@@ -232,7 +232,7 @@ export async function refreshBalance(
       return null;
     }
 
-    let balance: number | null = null;
+    let balance: number | null | undefined = null;
 
     switch (wallet.kind) {
       case WalletKind.SPARK:
@@ -246,11 +246,11 @@ export async function refreshBalance(
         break;
     }
 
-    setWalletBalance(balance);
-    if (balance !== null) {
+    if (balance !== null && balance !== undefined) {
+      setWalletBalance(balance);
       setWalletLastSync(Date.now());
     }
-    return balance;
+    return balance ?? null;
   } catch (e) {
     console.error("[WalletManager] Failed to refresh balance:", e);
     setWalletBalance(null);
