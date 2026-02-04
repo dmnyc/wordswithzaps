@@ -442,19 +442,23 @@
 /* Waiting State */
 .login-waiting {
     text-align: center;
-    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0 18px;
 }
 
 .login-waiting-text {
     color: #9a9a9a;
     font-size: 14px;
-    margin-bottom: 8px;
+    margin: 0;
 }
 
 .login-waiting-timeout {
     color: #5a5a5a;
     font-size: 12px;
-    margin-bottom: 16px;
+    margin: 0;
 }
 
 /* Key Display */
