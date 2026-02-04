@@ -34,6 +34,7 @@ import {
   deleteSparkMnemonic,
   getSparkState,
   listSparkPayments,
+  subscribeToSparkState,
 } from "./spark";
 import {
   isBitcoinConnectEnabled,
@@ -49,6 +50,24 @@ const BREEZ_API_KEY = import.meta.env?.VITE_BREEZ_SPARK_API_KEY || "";
 // State
 let isInitialized = false;
 let initializationPromise: Promise<void> | null = null;
+let sparkStateUnsubscribe: (() => void) | null = null;
+
+function syncSparkStateToStore(): void {
+  const active = getActiveWallet();
+  if (!active || active.kind !== WalletKind.SPARK) return;
+  const sparkState = getSparkState();
+  if (sparkState.balance !== null && sparkState.balance !== undefined) {
+    setWalletBalance(sparkState.balance);
+    setWalletLastSync(Date.now());
+  }
+}
+
+function ensureSparkStateBridge(): void {
+  if (sparkStateUnsubscribe) return;
+  sparkStateUnsubscribe = subscribeToSparkState(() => {
+    syncSparkStateToStore();
+  });
+}
 
 // Re-export wallet store state access
 export { getWalletStoreState, subscribeToWalletStore };
@@ -68,6 +87,7 @@ export async function connectWallet(
 ): Promise<{ success: boolean; wallet?: Wallet; error?: string }> {
   try {
     setWalletLoading(true);
+    ensureSparkStateBridge();
 
     let name: string;
 
@@ -99,6 +119,9 @@ export async function connectWallet(
 
     // Make it active
     setActiveWallet(wallet.id);
+
+    // Sync balance from Spark state if available
+    syncSparkStateToStore();
 
     await refreshBalance();
     return { success: true, wallet };
@@ -554,6 +577,7 @@ export async function initializeWalletManager(): Promise<void> {
   if (initializationPromise) return initializationPromise;
 
   initializationPromise = (async () => {
+    ensureSparkStateBridge();
     // Initialize BitcoinConnect if enabled
     if (isBitcoinConnectEnabled()) {
       await initBitcoinConnect();
@@ -573,6 +597,7 @@ export async function initializeWalletManager(): Promise<void> {
               hasSparkMnemonic(currentUser.pubkey)
             ) {
               await connectSparkWallet(currentUser.pubkey, BREEZ_API_KEY);
+              syncSparkStateToStore();
             }
             break;
         }
