@@ -336,7 +336,7 @@
     position: absolute;
     width: 10px;
     height: 10px;
-    animation: confettiFall 2.5s ease-out forwards;
+    animation: confettiFall 4s ease-out forwards;
 }
 
 .confetti-piece:nth-child(odd) {
@@ -407,17 +407,17 @@
     z-index: 2000;
     pointer-events: none;
     background: rgba(0, 0, 0, 0.4);
-    animation: victoryCelebrationFade 3s ease-out forwards;
+    animation: victoryCelebrationFade 5s ease-out forwards;
 }
 
 @keyframes victoryCelebrationFade {
     0% {
         opacity: 0;
     }
-    8% {
+    6% {
         opacity: 1;
     }
-    75% {
+    85% {
         opacity: 1;
     }
     100% {
