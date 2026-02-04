@@ -115,7 +115,7 @@ src/
 1. **Create Game**: Player A generates a game and publishes encrypted state to relays
 2. **Share Link**: Player A shares the game link with Player B
 3. **Play**: Each move is validated locally, then published as encrypted state
-4. **Zap & Share**: After a move, optionally zap your opponent and share a note
+4. **Share & Zap**: After a move, optionally share a note and zap your opponent
 5. **Sync**: Both clients subscribe to the game's d-tag for updates
 
 ## Nostr Protocol Usage

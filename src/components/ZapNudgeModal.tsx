@@ -142,7 +142,7 @@ export function ZapNudgeModal({
     SHARE_OPTIONS.find((option) => option.value === shareMode)?.label ||
     "Don't share";
   const confirmLabel = useMemo(() => {
-    if (hasZap && hasShare) return "Zap & Share";
+    if (hasZap && hasShare) return "Share & Zap";
     if (hasZap && !hasShare) return "Zap";
     if (!hasZap && hasShare) return "Share";
     return "Done";
@@ -229,7 +229,7 @@ export function ZapNudgeModal({
         >
           &times;
         </button>
-        <h2>Zap & Share</h2>
+        <h2>Share & Zap</h2>
         <div className="zap-summary">
           <div className="zap-summary-word">{word || "Your move"}</div>
           <div className="zap-summary-points">

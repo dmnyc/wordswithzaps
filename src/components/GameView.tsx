@@ -1320,6 +1320,9 @@ export function GameView({
           onClose={() => {
             setShowGameOverModal(false);
             setDevOverride(null);
+            // Suppress any lingering Share & Zap modal state
+            setShowZapModal(false);
+            setPendingMoveSummary(null);
           }}
           onSendZap={handleSendGgZap}
           onShareResult={handleShareResult}

@@ -1040,7 +1040,14 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                     </button>
                     <button
                       className={`balance-action-btn icon ${loading ? "is-loading" : ""}`}
-                      onClick={() => refreshBalance(true)}
+                      onClick={async () => {
+                        const balance = await refreshBalance(true);
+                        if (balance !== null) {
+                          onToast?.("Balance synced", "success");
+                        } else {
+                          onToast?.("Balance sync failed", "error");
+                        }
+                      }}
                       disabled={loading}
                       aria-label="Sync balance"
                       title="Sync balance"
