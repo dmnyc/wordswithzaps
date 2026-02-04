@@ -240,6 +240,14 @@ export function GameView({
       gameState.meta.status === "completed" ||
       gameState.meta.status === "abandoned";
     if (ended) {
+      // Suppress any pending post-move ZapNudgeModal — game is over
+      if (postMoveModalTimeoutRef.current !== null) {
+        window.clearTimeout(postMoveModalTimeoutRef.current);
+        postMoveModalTimeoutRef.current = null;
+      }
+      setShowZapModal(false);
+      setPendingMoveSummary(null);
+
       const iWon =
         gameState.meta.status === "completed" &&
         gameState.meta.winner === myPubkey;
@@ -249,7 +257,7 @@ export function GameView({
           setShowVictoryCelebration(false);
           setShowGameOverModal(true);
           victoryCelebrationRef.current = null;
-        }, 3000);
+        }, 5000);
       } else {
         setShowGameOverModal(true);
       }
@@ -828,9 +836,9 @@ export function GameView({
       const statsLine = gameEndStats?.highestWord
         ? `Best word: ${gameEndStats.highestWord.toUpperCase()} (${gameEndStats.highestWordScore} pts)`
         : "";
-      return `I just won ${myScore} to ${oppScore} against ${opponentRef} in #WordsWithZaps!${statsLine ? `\n\n${statsLine}` : ""}\n\n${appLink}`;
+      return `🏆⚡ I just won ${myScore} to ${oppScore} against ${opponentRef} in #WordsWithZaps!${statsLine ? `\n\n${statsLine}` : ""}\n\n${appLink}`;
     }
-    return `Tied ${myScore}-${oppScore} against ${opponentRef} in #WordsWithZaps!\n\n${appLink}`;
+    return `🤝⚡ Tied ${myScore}-${oppScore} against ${opponentRef} in #WordsWithZaps!\n\n${appLink}`;
   }, [
     gameState?.meta.winner,
     gameState?.meta.status,

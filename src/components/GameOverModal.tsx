@@ -236,7 +236,9 @@ export function GameOverModal({
             Share result to Nostr
           </label>
           {willShare && (
-            <div className="gameover-share-preview">{sharePreview}</div>
+            <div className="gameover-share-preview">
+              {sharePreview.replace(/nostr:npub1\w+/g, opponentLabel)}
+            </div>
           )}
         </div>
       )}
