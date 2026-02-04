@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { nip19 } from "nostr-tools";
 import type { NostrProfile } from "../types/nostr";
 import Modal from "./Modal";
@@ -29,11 +29,53 @@ export function PlayerProfileModal({
     profile?.displayName || profile?.name || npub.slice(0, 16) + "...";
   const truncatedNpub = npub.slice(0, 20) + "..." + npub.slice(-6);
   const jumbleUrl = `https://jumble.social/${npub}`;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyNpub = useCallback(() => {
+    navigator.clipboard.writeText(npub).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [npub]);
+
+  const websiteDisplay = useMemo(() => {
+    if (!profile?.website) return null;
+    try {
+      const url = new URL(
+        profile.website.startsWith("http")
+          ? profile.website
+          : `https://${profile.website}`,
+      );
+      return { label: url.hostname.replace(/^www\./, ""), href: url.href };
+    } catch {
+      return { label: profile.website, href: profile.website };
+    }
+  }, [profile?.website]);
 
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={onClose} className="player-profile-modal">
       <div className="player-profile">
-        <div className="player-profile-header">
+        {/* Banner */}
+        <div
+          className={`player-profile-banner ${profile?.banner ? "" : "no-image"}`}
+        >
+          {profile?.banner && (
+            <img
+              src={profile.banner}
+              alt=""
+              className="player-profile-banner-img"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+                (e.target as HTMLImageElement).parentElement?.classList.add(
+                  "no-image",
+                );
+              }}
+            />
+          )}
+        </div>
+
+        {/* Avatar overlapping banner */}
+        <div className="player-profile-avatar-wrap">
           {profile?.picture ? (
             <img
               src={profile.picture}
@@ -55,19 +97,66 @@ export function PlayerProfileModal({
           >
             {displayName.charAt(0).toUpperCase()}
           </div>
-          <div className="player-profile-info">
-            <div className="player-profile-name">{displayName}</div>
-            {profile?.nip05 && (
-              <div className="player-profile-nip05">{profile.nip05}</div>
-            )}
-            <div className="player-profile-npub" title={npub}>
-              {truncatedNpub}
-            </div>
-          </div>
         </div>
 
+        {/* Identity */}
+        <div className="player-profile-identity">
+          <div className="player-profile-name">{displayName}</div>
+          {profile?.nip05 && (
+            <div className="player-profile-nip05">{profile.nip05}</div>
+          )}
+          <button
+            className="player-profile-npub"
+            type="button"
+            title="Copy npub"
+            onClick={handleCopyNpub}
+          >
+            {copied ? "Copied!" : truncatedNpub}
+          </button>
+        </div>
+
+        {/* Bio */}
         {profile?.about && (
           <p className="player-profile-about">{profile.about}</p>
+        )}
+
+        {/* Meta row: website + lightning address */}
+        {(websiteDisplay || profile?.lud16) && (
+          <div className="player-profile-meta">
+            {websiteDisplay && (
+              <a
+                href={websiteDisplay.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="player-profile-meta-item"
+              >
+                <svg
+                  className="player-profile-meta-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                {websiteDisplay.label}
+              </a>
+            )}
+            {profile?.lud16 && (
+              <div className="player-profile-meta-item">
+                <img
+                  src="/assets/bolt-yellow.svg"
+                  alt=""
+                  className="player-profile-meta-icon bolt"
+                />
+                <span className="player-profile-lud16">{profile.lud16}</span>
+              </div>
+            )}
+          </div>
         )}
 
         <a

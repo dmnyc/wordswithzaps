@@ -549,7 +549,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
     connectBitcoinConnect,
     disconnectBitcoinConnect,
     disconnect,
-    setActiveWallet,
     refreshBalance,
     state,
   } = useWallet();
@@ -1060,23 +1059,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                         <span className="wallet-item-type">Self-custodial</span>
                       </div>
                       <div className="wallet-item-actions">
-                        {wallet.active ? (
-                          <span className="wallet-active-badge">
-                            <span className="btn-label">Active</span>
-                            <span className="btn-icon" title="Active">
-                              &#10003;
-                            </span>
-                          </span>
-                        ) : (
-                          <button
-                            className="wallet-btn-small"
-                            onClick={() => setActiveWallet(wallet.id)}
-                            title="Use this wallet"
-                          >
-                            <span className="btn-label">Use</span>
-                            <span className="btn-icon">&#43;</span>
-                          </button>
-                        )}
                         <button
                           className="wallet-btn-small danger"
                           onClick={() =>

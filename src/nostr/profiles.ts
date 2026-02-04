@@ -45,8 +45,11 @@ const parseProfile = (pubkey: string, content: string): NostrProfile | null => {
       pubkey,
       name: stringOrUndefined(metadata["name"]),
       displayName,
+      about: stringOrUndefined(metadata["about"]),
       picture: stringOrUndefined(metadata["picture"]),
+      banner: stringOrUndefined(metadata["banner"]),
       nip05: stringOrUndefined(metadata["nip05"]),
+      website: stringOrUndefined(metadata["website"]),
       lud16: stringOrUndefined(metadata["lud16"]),
       lud06: stringOrUndefined(metadata["lud06"]),
     };
@@ -235,8 +238,11 @@ export async function fetchProfile(
       displayName:
         stringOrUndefined(p.displayName) ||
         stringOrUndefined((p as Record<string, unknown>)["display_name"]),
+      about: stringOrUndefined(p.bio),
       picture: stringOrUndefined(p.image),
+      banner: stringOrUndefined(p.banner),
       nip05: stringOrUndefined(p.nip05),
+      website: stringOrUndefined(p.website),
       lud16: stringOrUndefined(p.lud16),
       lud06: stringOrUndefined((p as Record<string, unknown>)["lud06"]),
     };

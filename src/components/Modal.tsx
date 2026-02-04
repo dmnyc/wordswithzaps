@@ -6,6 +6,7 @@ interface ModalProps {
   open: boolean;
   title?: string;
   titleClassName?: string;
+  className?: string;
   ariaLabel?: string;
   onClose: () => void;
   children?: ReactNode;
@@ -16,6 +17,7 @@ export function Modal({
   open,
   title,
   titleClassName,
+  className,
   ariaLabel,
   onClose,
   children,
@@ -51,7 +53,7 @@ export function Modal({
       }}
     >
       <div
-        className="wwz-modal"
+        className={`wwz-modal${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
