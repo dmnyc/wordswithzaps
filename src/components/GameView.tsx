@@ -1031,7 +1031,15 @@ export function GameView({
   }, []);
 
   const handleDevTriggerGameOver = useCallback(
-    (outcome: "won" | "lost" | "tie" | "abandoned") => {
+    (
+      outcome:
+        | "won"
+        | "lost"
+        | "tie"
+        | "abandoned"
+        | "forfeit-lost"
+        | "forfeit-won",
+    ) => {
       const fakeStats: GameEndStats = {
         highestWord: "QUARTZ",
         highestWordScore: 68,
@@ -1058,6 +1066,20 @@ export function GameView({
           status: "completed",
           scores: { my: 305, opponent: 305 },
           stats: fakeStats,
+        });
+      } else if (outcome === "forfeit-lost") {
+        setDevOverride({
+          winner: opponentPubkey,
+          status: "abandoned",
+          scores: { my: 180, opponent: 120 },
+          stats: null,
+        });
+      } else if (outcome === "forfeit-won") {
+        setDevOverride({
+          winner: myPubkey,
+          status: "abandoned",
+          scores: { my: 180, opponent: 120 },
+          stats: null,
         });
       } else {
         setDevOverride({

@@ -208,11 +208,11 @@ export function GameOverModal({
 
         {/* Flavor text */}
         <p className="gameover-text">
-          {iWon && walletConnected
+          {iWon && !isAbandoned && walletConnected
             ? `Share your victory or send a GG zap to ${opponentLabel}!`
             : iWon
               ? "Share your victory on Nostr!"
-              : iLost && walletConnected
+              : iLost && !isAbandoned && walletConnected
                 ? `Want to send a GG zap to ${opponentLabel}?`
                 : isTie && walletConnected
                   ? `Share the result or send a GG zap to ${opponentLabel}!`
