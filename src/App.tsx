@@ -477,7 +477,10 @@ function App() {
       )}
 
       {showWalletSettings && (
-        <WalletSettings onClose={handleCloseWalletSettings} />
+        <WalletSettings
+          onClose={handleCloseWalletSettings}
+          onToast={showToast}
+        />
       )}
 
       {showProfileSettings && (

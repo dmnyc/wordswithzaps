@@ -103,36 +103,39 @@ export function GameOverModal({
     }
   }, [customAmountValue, selectedAmount]);
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (isSending) return;
-    setIsSending(true);
-    try {
-      const promises: Promise<void>[] = [];
 
-      // Zap
-      if (walletConnected && resolvedAmount > 0) {
-        promises.push(onSendZap(resolvedAmount));
-      }
+    const shouldZap = walletConnected && resolvedAmount > 0;
+    const shouldShare = canShare && willShare;
 
-      // Share
-      if (canShare && willShare) {
-        promises.push(onShareResult());
-      }
+    // Close modal immediately — zap and share run in the background
+    onClose();
 
-      if (promises.length > 0) {
-        await Promise.allSettled(promises);
+    // Fire sequentially: share first, then zap
+    (async () => {
+      if (shouldShare) {
+        try {
+          await onShareResult();
+        } catch {
+          // toast handled inside onShareResult
+        }
       }
-      onClose();
-    } finally {
-      setIsSending(false);
-    }
+      if (shouldZap) {
+        try {
+          await onSendZap(resolvedAmount);
+        } catch {
+          // toast handled inside onSendZap
+        }
+      }
+    })();
   };
 
   // Determine button label
   const hasZap = !isAbandoned && walletConnected && resolvedAmount > 0;
   const hasShare = canShare && willShare;
   let buttonLabel = "Done";
-  if (hasZap && hasShare) buttonLabel = "Zap & Share";
+  if (hasZap && hasShare) buttonLabel = "Share & Zap";
   else if (hasZap) buttonLabel = "Send GG zap";
   else if (hasShare) buttonLabel = "Share";
 
