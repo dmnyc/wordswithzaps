@@ -1019,7 +1019,9 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                       alt=""
                       className="balance-bolt"
                     />
-                    {balanceKnown ? state.balance.toLocaleString() : "..."}
+                    {balanceKnown
+                      ? (state.balance ?? 0).toLocaleString()
+                      : "..."}
                   </span>
                 </div>
                 {activeWallet && (
