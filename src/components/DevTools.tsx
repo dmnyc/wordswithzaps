@@ -4,7 +4,15 @@ import "./DevTools.css";
 
 interface DevToolsProps {
   onTriggerVictory: () => void;
-  onTriggerGameOver: (outcome: "won" | "lost" | "tie" | "abandoned") => void;
+  onTriggerGameOver: (
+    outcome:
+      | "won"
+      | "lost"
+      | "tie"
+      | "abandoned"
+      | "forfeit-lost"
+      | "forfeit-won",
+  ) => void;
   onTriggerZapAnimation: () => void;
   onTriggerZapathon: () => void;
   onTriggerAchievement: (achievement: Achievement) => void;
@@ -101,6 +109,18 @@ export function DevTools({
               onClick={() => onTriggerGameOver("abandoned")}
             >
               Abandoned
+            </button>
+            <button
+              type="button"
+              onClick={() => onTriggerGameOver("forfeit-lost")}
+            >
+              Forfeit (I lost)
+            </button>
+            <button
+              type="button"
+              onClick={() => onTriggerGameOver("forfeit-won")}
+            >
+              Forfeit (I won)
             </button>
           </div>
 

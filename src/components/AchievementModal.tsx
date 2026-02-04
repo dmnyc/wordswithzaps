@@ -36,7 +36,7 @@ const ACHIEVEMENT_ICONS: Record<
 };
 
 const ACHIEVEMENT_ZAP_MESSAGES: Record<Achievement["type"], string> = {
-  bingo: "Nice job on the Zapathon! ⚡️ #WordsWithZaps",
+  bingo: "Nice job on the #Zapathon! ⚡️ #WordsWithZaps",
   "zap-bonus": "Nice job hitting the Zap Square! ⚡️ #WordsWithZaps",
   "double-word": "Nice job on the Double Word Score! ⚡️ #WordsWithZaps",
   "high-score": "Nice word score! ⚡️ #WordsWithZaps",
