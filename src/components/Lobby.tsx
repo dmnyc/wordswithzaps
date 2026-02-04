@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useGame } from "../hooks/useGame";
 import { getCurrentUser, subscribeToEvents } from "../nostr/client";
+import { publishShareMessage, type ShareMode } from "../nostr/share";
 import { fetchProfile, normalizePubkey } from "../nostr/profiles";
 import { getGameLabel } from "../utils/gameLabel";
 import { fetchUserGames, type GameSummary } from "../nostr/games";
@@ -8,6 +9,7 @@ import { GAME_KIND } from "../types/nostr";
 import type { NostrProfile } from "../types/nostr";
 import OpponentSearch from "./OpponentSearch";
 import { ZTileLoader } from "./ZTileLoader";
+import { TbHandFingerRight } from "react-icons/tb";
 import { NudgeModal } from "./NudgeModal";
 import { getDecayTier, type DecayInfo } from "../utils/gameDecay";
 import { useWallet } from "../hooks/useWallet";
@@ -15,12 +17,14 @@ import "./Lobby.css";
 
 interface LobbyProps {
   onGameStart: (gameId: string, opponentPubkey: string) => void;
+  onToast?: (message: string, tone?: "success" | "error" | "info") => void;
   prefillGameId?: string | null;
   prefillError?: string | null;
 }
 
 export function Lobby({
   onGameStart,
+  onToast,
   prefillGameId,
   prefillError,
 }: LobbyProps) {
@@ -225,6 +229,81 @@ export function Lobby({
   const visibleGames = filteredGames.slice(0, visibleLimit);
   const hasMore = filteredGames.length > visibleLimit;
 
+  const nudgeGameLink = useMemo(() => {
+    if (!nudgeTarget) return "";
+    const url = new URL(window.location.href);
+    url.searchParams.set("gameId", nudgeTarget.game.gameId);
+    return url.toString();
+  }, [nudgeTarget]);
+
+  const handleNudgeConfirm = useCallback(
+    async (options: {
+      zapAmount: number;
+      shareMode: ShareMode;
+      replyTo?: string;
+      publicMessage: string;
+      privateMessage: string;
+    }) => {
+      if (!nudgeTarget) return;
+      const opponentPubkey =
+        nudgeTarget.game.opponentPubkey ||
+        nudgeTarget.game.players.find((p) => p !== user?.pubkey) ||
+        "";
+
+      const zapPromise =
+        options.zapAmount > 0 && isWalletConnected && opponentPubkey
+          ? zapUser({
+              recipientPubkey: opponentPubkey,
+              amountSats: options.zapAmount,
+              gameId: nudgeTarget.game.gameId,
+              moveDescription: options.privateMessage,
+            })
+              .then(() => {
+                onToast?.(
+                  `Sent ${options.zapAmount} sat${options.zapAmount === 1 ? "" : "s"}!`,
+                  "success",
+                );
+              })
+              .catch((err) => {
+                const msg = err instanceof Error ? err.message : String(err);
+                onToast?.(`Zap failed: ${msg}`, "error");
+              })
+          : null;
+
+      const isPrivateMode =
+        options.shareMode === "private" || options.shareMode === "private-dm";
+      const sharePromise =
+        options.shareMode !== "none" && opponentPubkey
+          ? publishShareMessage({
+              text: isPrivateMode
+                ? options.privateMessage
+                : options.publicMessage,
+              shareMode: options.shareMode as Exclude<ShareMode, "none">,
+              recipientPubkey: opponentPubkey,
+              replyTo: options.replyTo,
+            })
+              .then(() => {
+                onToast?.(
+                  isPrivateMode ? "Sent privately!" : "Shared publicly!",
+                  "success",
+                );
+              })
+              .catch((err) => {
+                const msg = err instanceof Error ? err.message : String(err);
+                onToast?.(`Share failed: ${msg}`, "error");
+              })
+          : null;
+
+      const promises: Promise<void>[] = [];
+      if (zapPromise) promises.push(zapPromise);
+      if (sharePromise) promises.push(sharePromise);
+      if (promises.length > 0) await Promise.all(promises);
+
+      setNudgeTarget(null);
+    },
+    [nudgeTarget, user?.pubkey, isWalletConnected, zapUser, onToast],
+  );
+
   const handleGameClick = (game: GameSummary) => {
     const opponent =
       game.opponentPubkey || game.players.find((p) => p !== user?.pubkey);
@@ -361,11 +440,7 @@ export function Lobby({
                         setNudgeTarget({ game, decay });
                       }}
                     >
-                      <img
-                        src="/assets/bolt-yellow.svg"
-                        alt="Nudge"
-                        className="nudge-icon"
-                      />
+                      <TbHandFingerRight className="nudge-icon" />
                     </button>
                   )}
 
@@ -499,10 +574,12 @@ export function Lobby({
             ""
           }
           gameId={nudgeTarget.game.gameId}
+          gameLink={nudgeGameLink}
           updatedAt={nudgeTarget.game.updatedAt}
           decay={nudgeTarget.decay}
           walletConnected={isWalletConnected}
           onZap={zapUser}
+          onConfirm={handleNudgeConfirm}
           onClose={() => setNudgeTarget(null)}
         />
       )}

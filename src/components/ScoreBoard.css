@@ -41,6 +41,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 2px;
+    transition: text-decoration-color 0.15s;
+}
+
+.player-name:hover {
+    text-decoration-color: currentColor;
 }
 
 .player-score.active .player-name {
@@ -108,6 +121,7 @@
     display: none;
 }
 
+.back-btn,
 .rules-btn,
 .share-btn,
 .relay-btn,
@@ -127,6 +141,18 @@
 .action-icon {
     width: 16px;
     height: 16px;
+}
+
+.back-btn {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.back-btn .action-icon {
+    color: #fff;
 }
 
 .rules-btn {
@@ -222,6 +248,10 @@
     }
 
     .actions-desktop {
+        display: none;
+    }
+
+    .scoreboard-scores > .back-btn {
         display: none;
     }
 

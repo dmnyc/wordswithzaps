@@ -436,6 +436,7 @@ function App() {
           />
           <Lobby
             onGameStart={handleGameStart}
+            onToast={showToast}
             prefillGameId={prefillGameId}
             prefillError={prefillError}
           />
@@ -467,6 +468,7 @@ function App() {
             onOpenCreatorZap={handleOpenCreatorZap}
             onOpenWalletSettings={handleOpenWalletSettings}
             onOpenRelayList={handleOpenRelayList}
+            onBackToLobby={handleBackToLobby}
           />
         </>
       )}

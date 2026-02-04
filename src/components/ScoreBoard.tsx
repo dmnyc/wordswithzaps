@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { TbDoorExit } from "react-icons/tb";
 import { fetchProfile } from "../nostr/profiles";
 import type { NostrProfile } from "../types/nostr";
+import PlayerProfileModal from "./PlayerProfileModal";
 import "./ScoreBoard.css";
 
 interface Player {
@@ -21,6 +22,7 @@ interface ScoreBoardProps {
   onShowRelays?: () => void;
   onRefresh?: () => void;
   forfeitDisabled?: boolean;
+  onBackToLobby?: () => void;
 }
 
 function truncatePubkey(pubkey: string): string {
@@ -39,9 +41,13 @@ export function ScoreBoard({
   onShowRelays,
   onRefresh,
   forfeitDisabled = false,
+  onBackToLobby,
 }: ScoreBoardProps) {
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
     {},
+  );
+  const [profileModalPubkey, setProfileModalPubkey] = useState<string | null>(
+    null,
   );
 
   useEffect(() => {
@@ -70,16 +76,38 @@ export function ScoreBoard({
     return profile?.displayName || profile?.name || truncatePubkey(pubkey);
   };
 
-  const isMyTurn =
-    (player1.isActive && player1.pubkey === currentUserPubkey) ||
-    (player2.isActive && player2.pubkey === currentUserPubkey);
-
   return (
     <div className="scoreboard">
       {/* Row 1: Scores */}
       <div className="scoreboard-scores">
+        {onBackToLobby && (
+          <button
+            className="back-btn"
+            onClick={onBackToLobby}
+            title="Back to lobby"
+            type="button"
+          >
+            <svg
+              className="action-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+        )}
         <div className={`player-score ${player1.isActive ? "active" : ""}`}>
-          <span className="player-name">{getDisplayName(player1.pubkey)}</span>
+          <button
+            className="player-name"
+            type="button"
+            onClick={() => setProfileModalPubkey(player1.pubkey)}
+          >
+            {getDisplayName(player1.pubkey)}
+          </button>
           <span className="player-points">{player1.score}</span>
         </div>
 
@@ -101,7 +129,13 @@ export function ScoreBoard({
         </div>
 
         <div className={`player-score ${player2.isActive ? "active" : ""}`}>
-          <span className="player-name">{getDisplayName(player2.pubkey)}</span>
+          <button
+            className="player-name"
+            type="button"
+            onClick={() => setProfileModalPubkey(player2.pubkey)}
+          >
+            {getDisplayName(player2.pubkey)}
+          </button>
           <span className="player-points">{player2.score}</span>
         </div>
 
@@ -210,12 +244,27 @@ export function ScoreBoard({
         </div>
       </div>
 
-      {/* Row 2: Turn indicator + Actions (mobile only) */}
+      {/* Row 2: Back + Actions (mobile only) */}
       <div className="scoreboard-status-row">
-        {isMyTurn ? (
-          <span className="turn-indicator">Your turn</span>
-        ) : (
-          <span className="turn-indicator waiting">Waiting...</span>
+        {onBackToLobby && (
+          <button
+            className="back-btn"
+            onClick={onBackToLobby}
+            title="Back to lobby"
+            type="button"
+          >
+            <svg
+              className="action-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
         )}
         <div className="scoreboard-actions actions-mobile">
           {onShowRules && (
@@ -320,6 +369,15 @@ export function ScoreBoard({
           )}
         </div>
       </div>
+
+      {profileModalPubkey && (
+        <PlayerProfileModal
+          open={!!profileModalPubkey}
+          pubkey={profileModalPubkey}
+          profile={profiles[profileModalPubkey] ?? null}
+          onClose={() => setProfileModalPubkey(null)}
+        />
+      )}
     </div>
   );
 }

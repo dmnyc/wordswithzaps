@@ -61,10 +61,10 @@ interface ZapNudgeModalProps {
 const PRESET_AMOUNTS = [21, 50, 100, 500];
 const SHARE_OPTIONS: ShareOption[] = [
   { value: "none", label: "Don't share" },
-  { value: "public", label: "Public Nostr post (kind 1)" },
-  { value: "public-reply", label: "Public Nostr reply (kind 1)" },
-  { value: "private", label: "Standard DM (kind 4: More compatible)" },
-  { value: "private-dm", label: "Giftwrap DM (NIP-17: More secure)" },
+  { value: "public", label: "Public Nostr post" },
+  { value: "public-reply", label: "Public Nostr reply" },
+  { value: "private", label: "Standard DM (Most compatible, less secure)" },
+  { value: "private-dm", label: "Giftwrap DM (More secure, less compatible)" },
 ];
 
 export function ZapNudgeModal({
