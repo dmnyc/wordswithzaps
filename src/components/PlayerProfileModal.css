@@ -1,42 +1,83 @@
 .player-profile {
     display: flex;
     flex-direction: column;
-    gap: 16px;
 }
 
-.player-profile-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
+/* Ensure the modal close button floats above the banner */
+.player-profile-modal .wwz-modal-header {
+    position: relative;
+    z-index: 2;
+}
+
+/* Pull banner up behind the modal header so it reaches the top edge.
+   20px body top padding + 32px header + 12px header margin-bottom = 64px above body content. */
+.player-profile-banner {
+    margin: -64px -20px 0;
+    height: 150px;
+    border-radius: 14px 14px 0 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.player-profile-banner.no-image {
+    background: linear-gradient(
+        135deg,
+        rgba(80, 60, 120, 0.5),
+        rgba(30, 50, 80, 0.5)
+    );
+    height: 100px;
+}
+
+.player-profile-banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Avatar — overlaps banner bottom */
+.player-profile-avatar-wrap {
+    margin-top: -36px;
+    margin-left: 4px;
+    width: 72px;
+    height: 72px;
+    position: relative;
+    z-index: 1;
 }
 
 .player-profile-avatar {
-    width: 56px;
-    height: 56px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     object-fit: cover;
+    border: 3px solid var(--panel);
     flex-shrink: 0;
 }
 
 .player-profile-avatar.fallback {
+    width: 72px;
+    height: 72px;
     background: rgba(255, 255, 255, 0.1);
     color: #ccc;
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 3px solid var(--panel);
+    border-radius: 50%;
 }
 
-.player-profile-info {
-    min-width: 0;
+/* Identity block */
+.player-profile-identity {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    margin-top: 8px;
 }
 
 .player-profile-name {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     color: #eaeaea;
     overflow: hidden;
@@ -58,25 +99,80 @@
     font-family:
         "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
         monospace;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
 }
 
+.player-profile-npub:hover {
+    color: #999;
+}
+
+/* Bio */
 .player-profile-about {
     font-size: 13px;
     color: #aaa;
     line-height: 1.5;
-    margin: 0;
+    margin: 12px 0 0;
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
 }
 
+/* Meta row: website, lightning address */
+.player-profile-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.player-profile-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #9a9a9a;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+a.player-profile-meta-item:hover {
+    color: #ccc;
+}
+
+.player-profile-meta-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.player-profile-meta-icon.bolt {
+    width: 13px;
+    height: 13px;
+}
+
+.player-profile-lud16 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* View on Jumble link */
 .player-profile-link {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     padding: 10px 20px;
+    margin-top: 16px;
     background: rgba(255, 255, 255, 0.08);
     color: #eaeaea;
     border-radius: 8px;
