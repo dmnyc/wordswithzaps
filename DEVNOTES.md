@@ -34,6 +34,23 @@ The center square is a ZAP square (not a star). The first word must cover it.
 - A player forfeits (opponent wins)
 - A game is declared abandoned after 14 days idle (no winner)
 
+## Game End Flow
+
+The GameOverModal differentiates by outcome:
+
+| Outcome | Graphic | Content | Actions |
+|---------|---------|---------|---------|
+| **Won** | `victory.svg` | Score, best word, words played | Share to Nostr + GG zap + creator zap |
+| **Lost** | `game_over.svg` | Score | GG zap + creator zap |
+| **Tie** | `game_over.svg` | Score | Share to Nostr + GG zap + creator zap |
+| **Abandoned** | `game_over.svg` | — | Creator zap |
+
+When the current user wins, a 3-second victory celebration overlay (confetti + score) plays before the modal appears.
+
+**Share options** reuse the same modes as post-move sharing (public kind 1, public reply, kind 4 DM, NIP-17 giftwrap). Victory messages include the final score, opponent mention, and best word.
+
+**Game stats** are computed from `scoring.history` via `computeGameEndStats()` in `src/utils/gameStats.ts` — highest-scoring word, total words played, and total moves.
+
 ## Game Decay & Abandonment
 
 Games where the opponent hasn't moved are tracked with a decay tier system. Decay is computed from the existing `updatedAt` (Lobby) or `turn.timestamp` (GameView) — no schema changes needed.

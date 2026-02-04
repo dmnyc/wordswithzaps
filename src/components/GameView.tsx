@@ -33,6 +33,8 @@ import { detectAchievement, type Achievement } from "../utils/achievements";
 import { nip19 } from "nostr-tools";
 import { fetchProfile } from "../nostr/profiles";
 import { canDeclareAbandoned } from "../utils/gameDecay";
+import { computeGameEndStats, type GameEndStats } from "../utils/gameStats";
+import DevTools from "./DevTools";
 import "./GameView.css";
 
 interface GameViewProps {
@@ -108,6 +110,8 @@ export function GameView({
   const [opponentDisplayName, setOpponentDisplayName] = useState<string | null>(
     null,
   );
+  const [opponentPicture, setOpponentPicture] = useState<string | null>(null);
+  const [myPicture, setMyPicture] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<
     "forfeit" | "delete" | "pass" | "abandon" | null
   >(null);
@@ -117,8 +121,15 @@ export function GameView({
   const [pendingAchievement, setPendingAchievement] =
     useState<Achievement | null>(null);
   const [showBingoCelebration, setShowBingoCelebration] = useState(false);
+  const [showVictoryCelebration, setShowVictoryCelebration] = useState(false);
   const [wordScorePop, setWordScorePop] = useState<WordScorePop | null>(null);
   const [showZapAnimation, setShowZapAnimation] = useState(false);
+  const [devOverride, setDevOverride] = useState<{
+    winner: string | undefined;
+    status: "completed" | "abandoned";
+    scores: { my: number; opponent: number };
+    stats: GameEndStats | null;
+  } | null>(null);
   const lastValidationErrorRef = useRef<string | null>(null);
   const lastAchievementTurnRef = useRef<number | null>(null);
   const wordScoreTimeoutRef = useRef<number | null>(null);
@@ -141,6 +152,29 @@ export function GameView({
   const { zapUser, state: walletState, bitcoinConnectConnected } = useWallet();
   const isWalletConnected = walletState.connected || bitcoinConnectConnected;
 
+  const gameEndStats = useMemo(() => {
+    if (!gameState || gameState.meta.status === "active") return null;
+    return computeGameEndStats(gameState.scoring.history, myPubkey);
+  }, [gameState?.meta.status, gameState?.scoring.history, myPubkey]);
+
+  const gameEndScores = useMemo(() => {
+    if (!gameState || gameState.meta.status === "active")
+      return { my: 0, opponent: 0 };
+    const isPlayerOne = gameState.meta.playerOne === myPubkey;
+    return {
+      my: isPlayerOne ? gameState.scoring.p1Score : gameState.scoring.p2Score,
+      opponent: isPlayerOne
+        ? gameState.scoring.p2Score
+        : gameState.scoring.p1Score,
+    };
+  }, [
+    gameState?.meta.status,
+    gameState?.scoring.p1Score,
+    gameState?.scoring.p2Score,
+    gameState?.meta.playerOne,
+    myPubkey,
+  ]);
+
   useEffect(() => {
     const unsubscribe = subscribeAppSettings(() => {
       setZapsDisabled(getDisableGameplayZaps());
@@ -158,10 +192,12 @@ export function GameView({
       .then((profile) => {
         if (cancelled) return;
         setOpponentDisplayName(profile?.displayName || profile?.name || null);
+        setOpponentPicture(profile?.picture || null);
       })
       .catch(() => {
         if (!cancelled) {
           setOpponentDisplayName(null);
+          setOpponentPicture(null);
         }
       });
     return () => {
@@ -169,11 +205,32 @@ export function GameView({
     };
   }, [opponentPubkey]);
 
+  useEffect(() => {
+    if (!myPubkey) return;
+    let cancelled = false;
+    fetchProfile(myPubkey)
+      .then((profile) => {
+        if (!cancelled) setMyPicture(profile?.picture || null);
+      })
+      .catch(() => {
+        if (!cancelled) setMyPicture(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [myPubkey]);
+
   const gameLink = useMemo(() => {
     const url = new URL(window.location.href);
     url.searchParams.set("gameId", gameId);
     return url.toString();
   }, [gameId]);
+
+  const appLink = useMemo(() => {
+    const url = new URL(window.location.href);
+    url.search = "";
+    return url.toString();
+  }, []);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -181,15 +238,28 @@ export function GameView({
     window.history.replaceState({}, "", url.toString());
   }, [gameId]);
 
+  const victoryCelebrationRef = useRef<number | null>(null);
   useEffect(() => {
     if (!gameState) return;
     const ended =
       gameState.meta.status === "completed" ||
       gameState.meta.status === "abandoned";
     if (ended) {
-      setShowGameOverModal(true);
+      const iWon =
+        gameState.meta.status === "completed" &&
+        gameState.meta.winner === myPubkey;
+      if (iWon) {
+        setShowVictoryCelebration(true);
+        victoryCelebrationRef.current = window.setTimeout(() => {
+          setShowVictoryCelebration(false);
+          setShowGameOverModal(true);
+          victoryCelebrationRef.current = null;
+        }, 3000);
+      } else {
+        setShowGameOverModal(true);
+      }
     }
-  }, [gameState?.meta.status, gameId]);
+  }, [gameState?.meta.status, gameId, myPubkey]);
 
   useEffect(() => {
     return () => {
@@ -201,6 +271,9 @@ export function GameView({
       }
       if (bingoTimeoutRef.current !== null) {
         window.clearTimeout(bingoTimeoutRef.current);
+      }
+      if (victoryCelebrationRef.current !== null) {
+        window.clearTimeout(victoryCelebrationRef.current);
       }
     };
   }, []);
@@ -430,6 +503,7 @@ export function GameView({
       // Show bingo celebration if all 7 tiles were played
       if (wasBingo) {
         setShowBingoCelebration(true);
+        triggerZapAnimation();
         if (bingoTimeoutRef.current !== null) {
           window.clearTimeout(bingoTimeoutRef.current);
         }
@@ -834,6 +908,53 @@ export function GameView({
     ],
   );
 
+  const sharePreview = useMemo(() => {
+    if (!gameState || gameState.meta.status !== "completed") return "";
+    const iWon = gameState.meta.winner === myPubkey;
+    const isTie = !gameState.meta.winner;
+    if (!iWon && !isTie) return "";
+
+    const myScore = gameEndScores.my;
+    const oppScore = gameEndScores.opponent;
+    const opponentRef = opponentPubkey
+      ? `nostr:${opponentNpub}`
+      : opponentLabel;
+
+    if (iWon) {
+      const statsLine = gameEndStats?.highestWord
+        ? `Best word: ${gameEndStats.highestWord.toUpperCase()} (${gameEndStats.highestWordScore} pts)`
+        : "";
+      return `I just won ${myScore} to ${oppScore} against ${opponentRef} in #WordsWithZaps!${statsLine ? `\n\n${statsLine}` : ""}\n\n${appLink}`;
+    }
+    return `Tied ${myScore}-${oppScore} against ${opponentRef} in #WordsWithZaps!\n\n${appLink}`;
+  }, [
+    gameState?.meta.winner,
+    gameState?.meta.status,
+    gameEndScores,
+    gameEndStats,
+    appLink,
+    myPubkey,
+    opponentLabel,
+    opponentNpub,
+    opponentPubkey,
+  ]);
+
+  const handleShareResult = useCallback(async () => {
+    if (!sharePreview) return;
+    try {
+      const event = createEvent(1, sharePreview, [
+        ["t", "wordswithzaps"],
+        ["client", "Words With Zaps"],
+        ...(opponentPubkey ? [["p", opponentPubkey]] : []),
+      ]);
+      await publishEvent(event);
+      onToast?.("Shared to Nostr!", "success");
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      onToast?.(`Sharing failed: ${errorMsg}`, "error");
+    }
+  }, [sharePreview, onToast, opponentPubkey]);
+
   const handleAchievementZap = useCallback(
     async (amount: number, message: string) => {
       if (!isWalletConnected || !opponentPubkey || !pendingAchievement) return;
@@ -985,6 +1106,69 @@ export function GameView({
     }
   }, [isMyTurn, pendingPlacements.length, validation, onToast]);
   void handleDeleteGame; // Reserved for delete button UI
+
+  // Dev tools handlers
+  const handleDevTriggerVictory = useCallback(() => {
+    setShowVictoryCelebration(true);
+    if (victoryCelebrationRef.current)
+      window.clearTimeout(victoryCelebrationRef.current);
+    victoryCelebrationRef.current = window.setTimeout(() => {
+      setShowVictoryCelebration(false);
+      victoryCelebrationRef.current = null;
+    }, 3000);
+  }, []);
+
+  const handleDevTriggerGameOver = useCallback(
+    (outcome: "won" | "lost" | "tie" | "abandoned") => {
+      const fakeStats: GameEndStats = {
+        highestWord: "QUARTZ",
+        highestWordScore: 68,
+        totalWordsPlayed: 14,
+        totalMoves: 16,
+      };
+      if (outcome === "won") {
+        setDevOverride({
+          winner: myPubkey,
+          status: "completed",
+          scores: { my: 342, opponent: 278 },
+          stats: fakeStats,
+        });
+      } else if (outcome === "lost") {
+        setDevOverride({
+          winner: opponentPubkey,
+          status: "completed",
+          scores: { my: 278, opponent: 342 },
+          stats: fakeStats,
+        });
+      } else if (outcome === "tie") {
+        setDevOverride({
+          winner: undefined,
+          status: "completed",
+          scores: { my: 305, opponent: 305 },
+          stats: fakeStats,
+        });
+      } else {
+        setDevOverride({
+          winner: undefined,
+          status: "abandoned",
+          scores: { my: 180, opponent: 120 },
+          stats: null,
+        });
+      }
+      setShowGameOverModal(true);
+    },
+    [myPubkey, opponentPubkey],
+  );
+
+  const handleDevTriggerZapathon = useCallback(() => {
+    setShowBingoCelebration(true);
+    triggerZapAnimation();
+    if (bingoTimeoutRef.current) window.clearTimeout(bingoTimeoutRef.current);
+    bingoTimeoutRef.current = window.setTimeout(() => {
+      setShowBingoCelebration(false);
+      bingoTimeoutRef.current = null;
+    }, 2500);
+  }, []);
 
   if (!gameState) {
     return (
@@ -1175,17 +1359,38 @@ export function GameView({
         </Modal>
       )}
 
-      {gameState.meta.status !== "active" && (
+      {(gameState.meta.status !== "active" || devOverride) && (
         <GameOverModal
           open={showGameOverModal}
           opponentLabel={opponentLabel}
           walletConnected={isWalletConnected}
-          onClose={() => setShowGameOverModal(false)}
+          winner={devOverride?.winner ?? gameState.meta.winner}
+          myPubkey={myPubkey}
+          gameStatus={devOverride?.status ?? gameState.meta.status}
+          scores={devOverride?.scores ?? gameEndScores}
+          gameStats={devOverride?.stats ?? gameEndStats}
+          sharePreview={
+            devOverride
+              ? devOverride.winner === myPubkey
+                ? `I just won ${devOverride.scores.my} to ${devOverride.scores.opponent} against ${opponentLabel} in #WordsWithZaps!\n\nBest word: QUARTZ (68 pts)\n\n${appLink}`
+                : devOverride.status === "completed" && !devOverride.winner
+                  ? `Tied ${devOverride.scores.my}-${devOverride.scores.opponent} against ${opponentLabel} in #WordsWithZaps!\n\n${appLink}`
+                  : undefined
+              : sharePreview
+          }
+          myPicture={myPicture}
+          opponentPicture={opponentPicture}
+          onClose={() => {
+            setShowGameOverModal(false);
+            setDevOverride(null);
+          }}
           onSendZap={handleSendGgZap}
+          onShareResult={handleShareResult}
           onOpenCreatorZap={() => {
             setShowGameOverModal(false);
             onOpenCreatorZap?.(() => setShowGameOverModal(true));
           }}
+          onOpenWalletSettings={onOpenWalletSettings}
         />
       )}
 
@@ -1206,7 +1411,7 @@ export function GameView({
             {Array.from({ length: 30 }).map((_, i) => (
               <div
                 key={i}
-                className="confetti-piece"
+                className="confetti-piece zapathon-confetti-piece"
                 style={{
                   left: `${Math.random() * 100}%`,
                   animationDelay: `${Math.random() * 0.5}s`,
@@ -1216,11 +1421,36 @@ export function GameView({
             ))}
           </div>
           <div className="zapathon-celebration-content">
-            <div className="zapathon-text">ZAPATHON!</div>
-            <div className="zapathon-subtext">
-              All {RACK_SIZE} tiles played!
-            </div>
+            <img
+              src="/assets/zapathon.svg"
+              alt="Zapathon"
+              className="zapathon-celebration-graphic"
+            />
             <div className="zapathon-bonus">+{BINGO_BONUS} bonus points</div>
+          </div>
+        </div>
+      )}
+
+      {showVictoryCelebration && (
+        <div className="victory-celebration">
+          <div className="victory-confetti">
+            {Array.from({ length: 40 }).map((_, i) => (
+              <div
+                key={i}
+                className="confetti-piece victory-confetti-piece"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 0.8}s`,
+                  animationDuration: `${2.5 + Math.random() * 1.5}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="victory-celebration-content">
+            <div className="victory-celebration-text">VICTORY!</div>
+            <div className="victory-celebration-score">
+              {gameEndScores.my} - {gameEndScores.opponent}
+            </div>
           </div>
         </div>
       )}
@@ -1233,6 +1463,14 @@ export function GameView({
       {showZapAnimation && (
         <ZapAnimation onComplete={handleZapAnimationComplete} />
       )}
+
+      <DevTools
+        onTriggerVictory={handleDevTriggerVictory}
+        onTriggerGameOver={handleDevTriggerGameOver}
+        onTriggerZapAnimation={triggerZapAnimation}
+        onTriggerZapathon={handleDevTriggerZapathon}
+        onTriggerAchievement={setPendingAchievement}
+      />
     </div>
   );
 }
