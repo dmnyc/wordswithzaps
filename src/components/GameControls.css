@@ -125,68 +125,58 @@
 /* Mobile responsive breakpoints */
 @media (max-width: 520px) {
     .game-controls {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: auto auto;
         gap: 8px;
         padding: 10px 12px;
     }
 
-    /* Play button row - first, prominent, full width */
+    /* Utility buttons in a single horizontal row */
+    .controls-left,
+    .controls-right {
+        display: contents;
+    }
+
+    .controls-left .control-btn,
+    .controls-right .control-btn {
+        width: 100%;
+        padding: 10px 6px;
+        font-size: 12px;
+    }
+
+    /* Play button row - first row, full width */
     .controls-center {
         order: -1;
+        grid-column: 1 / -1;
+        grid-row: 1;
         width: 100%;
         justify-content: center;
-        gap: 10px;
-        flex-direction: column;
+        gap: 8px;
+        flex-direction: row;
         align-items: stretch;
     }
 
     .play-btn {
         flex: 1;
-        width: 100%;
-        padding: 16px 24px;
-        font-size: 18px;
+        padding: 14px 20px;
+        font-size: 16px;
         font-weight: 700;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
     }
 
     .pending-score {
-        font-size: 18px;
-        padding: 8px 14px;
-        order: 2;
-        align-self: center;
+        font-size: 16px;
+        padding: 0 12px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
     }
 
     .play-btn-wrap {
-        width: 100%;
-        order: 1;
-    }
-
-    /* Utility buttons container - 2x2 grid */
-    .controls-left,
-    .controls-right {
-        display: contents;
-    }
-
-    .game-controls {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto auto;
-        gap: 8px;
-    }
-
-    .controls-center {
-        grid-column: 1 / -1;
-        grid-row: 1;
-    }
-
-    /* Each button takes a cell in 2x2 grid */
-    .controls-left .control-btn,
-    .controls-right .control-btn {
-        width: 100%;
-        padding: 10px 8px;
-        font-size: 13px;
+        flex: 1;
+        display: flex;
     }
 
     .play-score-pop {

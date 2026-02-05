@@ -123,7 +123,10 @@ h1 {
 
 @media (max-width: 520px) {
     .app-toast {
-        width: min(800px, calc(100% - 16px));
+        top: auto;
+        bottom: 12px;
+        width: calc(100% - 24px);
+        max-width: none;
     }
 }
 
