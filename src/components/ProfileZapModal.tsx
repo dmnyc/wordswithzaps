@@ -105,16 +105,16 @@ export function ProfileZapModal({
           </div>
         )}
         {!walletConnected && (
-          <p className="zap-hint">
+          <div className="zap-hint" style={{ marginTop: 12 }}>
             <button
               type="button"
               className="zap-btn tertiary"
               onClick={onOpenWalletSettings}
+              style={{ width: "100%", padding: "10px 16px" }}
             >
-              Connect wallet
-            </button>{" "}
-            to send zaps
-          </p>
+              Connect wallet to send zaps
+            </button>
+          </div>
         )}
       </div>
 
