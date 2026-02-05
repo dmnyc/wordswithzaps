@@ -16,20 +16,17 @@ import {
   subscribeToEvents,
   fetchEvents,
 } from "./client";
-import {
-  encryptDirectMessage,
-  decryptDirectMessage,
-  decryptMessage,
-} from "./encryption";
+import { encryptDirectMessage, decryptDirectMessage } from "./encryption";
 import { addMessage } from "../stores/dmStore";
 import { addNotification } from "../stores/notificationStore";
 import type { DMMessage } from "../stores/dmStore";
 import { DM_RELAY_KIND } from "../types/nostr";
 
 // --- Subscription management ---
-let _nip04Unsub: (() => void) | null = null;
-let _nip17Unsub: (() => void) | null = null;
-let _zapUnsub: (() => void) | null = null;
+type Unsub = { unsubscribe: () => void };
+let _nip04Unsub: Unsub | null = null;
+let _nip17Unsub: Unsub | null = null;
+let _zapUnsub: Unsub | null = null;
 const _processedIds = new Set<string>();
 
 /**
@@ -49,17 +46,17 @@ export function startSubscriptions(userPubkey: string): void {
  * Stop all subscriptions. Called on disconnect.
  */
 export function stopSubscriptions(): void {
-  _nip04Unsub?.();
+  _nip04Unsub?.unsubscribe();
   _nip04Unsub = null;
-  _nip17Unsub?.();
+  _nip17Unsub?.unsubscribe();
   _nip17Unsub = null;
-  _zapUnsub?.();
+  _zapUnsub?.unsubscribe();
   _zapUnsub = null;
 }
 
 // --- NIP-04 (Legacy DMs) ---
 
-function subscribeNip04(userPubkey: string): () => void {
+function subscribeNip04(userPubkey: string): Unsub {
   const since = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60; // 7 days
   const filter: NDKFilter = {
     kinds: [4],
@@ -94,9 +91,7 @@ function subscribeNip04(userPubkey: string): () => void {
       const msg: DMMessage = {
         id: event.id,
         fromPubkey: event.pubkey,
-        toPubkey: isOwnMessage
-          ? otherPubkey
-          : userPubkey,
+        toPubkey: isOwnMessage ? otherPubkey : userPubkey,
         content: plaintext,
         createdAt: event.created_at || Math.floor(Date.now() / 1000),
         protocol: "nip04",
@@ -110,7 +105,9 @@ function subscribeNip04(userPubkey: string): () => void {
           type: "dm",
           fromPubkey: event.pubkey,
           content:
-            plaintext.length > 100 ? plaintext.slice(0, 100) + "..." : plaintext,
+            plaintext.length > 100
+              ? plaintext.slice(0, 100) + "..."
+              : plaintext,
           conversationPubkey: event.pubkey,
           createdAt: event.created_at || Math.floor(Date.now() / 1000),
           read: false,
@@ -121,12 +118,14 @@ function subscribeNip04(userPubkey: string): () => void {
     }
   };
 
-  const unsub1 = subscribeToEvents(filter, handleEvent);
-  const unsub2 = subscribeToEvents(sentFilter, handleEvent);
+  const sub1 = subscribeToEvents(filter, handleEvent);
+  const sub2 = subscribeToEvents(sentFilter, handleEvent);
 
-  return () => {
-    unsub1();
-    unsub2();
+  return {
+    unsubscribe: () => {
+      sub1.unsubscribe();
+      sub2.unsubscribe();
+    },
   };
 }
 
@@ -156,7 +155,7 @@ export async function sendNip04DM(
 
 // --- NIP-17 (Private DMs via Gift Wrap) ---
 
-function subscribeNip17(userPubkey: string): () => void {
+function subscribeNip17(userPubkey: string): Unsub {
   const since = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
   const filter: NDKFilter = {
     kinds: [1059],
@@ -217,7 +216,7 @@ function subscribeNip17(userPubkey: string): () => void {
  */
 async function unwrapGiftWrap(
   giftWrap: NDKEvent,
-  userPubkey: string,
+  _userPubkey: string,
 ): Promise<{
   id: string;
   pubkey: string;
@@ -233,7 +232,11 @@ async function unwrapGiftWrap(
   try {
     // Decrypt gift wrap content → seal (kind 13)
     const wrapSender = ndk.getUser({ pubkey: giftWrap.pubkey });
-    const sealJson = await signer.decrypt(wrapSender, giftWrap.content, "nip44");
+    const sealJson = await signer.decrypt(
+      wrapSender,
+      giftWrap.content,
+      "nip44",
+    );
     const seal = JSON.parse(sealJson);
 
     if (seal.kind !== 13) return null;
@@ -357,7 +360,10 @@ async function sendGiftWrap(
 
 // --- DM Relay Preferences (Kind 10050) ---
 
-const _dmRelayCache = new Map<string, { relays: string[]; fetchedAt: number }>();
+const _dmRelayCache = new Map<
+  string,
+  { relays: string[]; fetchedAt: number }
+>();
 const DM_RELAY_CACHE_TTL = 5 * 60_000;
 
 export async function fetchDMRelays(pubkey: string): Promise<string[]> {
@@ -399,7 +405,7 @@ export async function supportsNip17(pubkey: string): Promise<boolean> {
 
 // --- Zap Receipt Subscriptions ---
 
-function subscribeZapReceipts(userPubkey: string): () => void {
+function subscribeZapReceipts(userPubkey: string): Unsub {
   const since = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
   const filter: NDKFilter = {
     kinds: [9735],
