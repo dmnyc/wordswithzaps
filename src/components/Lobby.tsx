@@ -96,7 +96,7 @@ export function Lobby({
 
     const intervalId = window.setInterval(() => {
       loadGames();
-    }, 30000);
+    }, 60000);
 
     return () => {
       subscription.unsubscribe();

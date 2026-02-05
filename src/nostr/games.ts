@@ -30,6 +30,9 @@ export interface GameSummary {
 const getTagValues = (tags: string[][], name: string): string[] =>
   tags.filter((tag) => tag[0] === name && tag[1]).map((tag) => tag[1]);
 
+// Cache decrypted game summaries by eventId to avoid redundant NIP-44 decryption
+const summaryCache = new Map<string, GameSummary>();
+
 export async function fetchUserGames(
   pubkey: string,
   limit: number = 200,
@@ -70,8 +73,23 @@ export async function fetchUserGames(
   );
 
   // Attempt to decrypt latest state to get status + turn info (parallel)
+  // Use cache to skip decryption for events we've already processed
   await Promise.all(
     summaries.map(async (summary) => {
+      const cached = summaryCache.get(summary.eventId);
+      if (cached) {
+        summary.status = cached.status;
+        summary.deletedBy = cached.deletedBy;
+        summary.creatorPubkey = cached.creatorPubkey;
+        summary.playerOne = cached.playerOne;
+        summary.playerTwo = cached.playerTwo;
+        summary.turnIndex = cached.turnIndex;
+        summary.activePlayer = cached.activePlayer;
+        summary.p1Score = cached.p1Score;
+        summary.p2Score = cached.p2Score;
+        return;
+      }
+
       const event = events.find((e) => e.id === summary.eventId);
       if (!event || !summary.opponentPubkey) return;
       try {
@@ -90,6 +108,7 @@ export async function fetchUserGames(
         summary.activePlayer = state.turn.activePlayer;
         summary.p1Score = state.scoring.p1Score;
         summary.p2Score = state.scoring.p2Score;
+        summaryCache.set(summary.eventId, { ...summary });
       } catch {
         // Skip if decryption fails
       }

@@ -268,7 +268,7 @@ export function useGame(): UseGameReturn {
           } catch (err) {
             console.warn("Polling error:", err);
           }
-        }, 15000);
+        }, 30000);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to load game";
