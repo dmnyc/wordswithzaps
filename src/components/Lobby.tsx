@@ -5,6 +5,26 @@ import { publishShareMessage, type ShareMode } from "../nostr/share";
 import { fetchProfile, normalizePubkey } from "../nostr/profiles";
 import { getGameLabel } from "../utils/gameLabel";
 import { fetchUserGames, type GameSummary } from "../nostr/games";
+
+const LOBBY_CACHE_KEY = "wwz_lobby_games";
+
+function loadCachedGames(pubkey: string): GameSummary[] {
+  try {
+    const raw = localStorage.getItem(`${LOBBY_CACHE_KEY}_${pubkey}`);
+    if (!raw) return [];
+    return JSON.parse(raw) as GameSummary[];
+  } catch {
+    return [];
+  }
+}
+
+function saveCachedGames(pubkey: string, games: GameSummary[]): void {
+  try {
+    localStorage.setItem(`${LOBBY_CACHE_KEY}_${pubkey}`, JSON.stringify(games));
+  } catch {
+    // Ignore storage errors
+  }
+}
 import { GAME_KIND } from "../types/nostr";
 import type { NostrProfile } from "../types/nostr";
 import OpponentSearch from "./OpponentSearch";
@@ -65,12 +85,22 @@ export function Lobby({
     }
   }, [prefillGameId, prefillError, joinGameId]);
 
+  // Load cached games on mount for instant display
+  useEffect(() => {
+    if (!user?.pubkey) return;
+    const cached = loadCachedGames(user.pubkey);
+    if (cached.length > 0) {
+      setGames(cached);
+    }
+  }, [user?.pubkey]);
+
   const loadGames = useCallback(async () => {
     if (!user?.pubkey) return;
     setIsLoadingGames(true);
     try {
       const results = await fetchUserGames(user.pubkey);
       setGames(results);
+      saveCachedGames(user.pubkey, results);
     } catch (err) {
       console.error("Failed to load games:", err);
     } finally {
@@ -330,24 +360,37 @@ export function Lobby({
           <h2>Your Games</h2>
           <div className="games-header-actions">
             <button
-              className={`text-btn ${showEndedGames ? "active" : ""}`}
-              onClick={() => setShowEndedGames((prev) => !prev)}
-            >
-              {showEndedGames ? "Hide ended" : "Show ended"}
-            </button>
-            <button
               className="text-btn"
               onClick={loadGames}
               disabled={isLoadingGames}
             >
+              {isLoadingGames && games.length > 0 && (
+                <svg
+                  className="refresh-spinner"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <path d="M14 8a6 6 0 1 1-1.5-4" />
+                  <path d="M14 2v4h-4" />
+                </svg>
+              )}
               Refresh
+            </button>
+            <button
+              className={`text-btn ${showEndedGames ? "active" : ""}`}
+              onClick={() => setShowEndedGames((prev) => !prev)}
+            >
+              {showEndedGames ? "Hide ended" : "Show ended"}
             </button>
           </div>
         </div>
 
         {visibleGames.length === 0 ? (
           <div className="games-empty">
-            {isLoadingGames ? (
+            {isLoadingGames && games.length === 0 ? (
               <ZTileLoader />
             ) : games.length === 0 ? (
               "No games yet"
