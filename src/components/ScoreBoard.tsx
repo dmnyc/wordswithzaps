@@ -16,6 +16,7 @@ interface ScoreBoardProps {
   player2: Player;
   tilesRemaining: number;
   currentUserPubkey: string;
+  walletConnected: boolean;
   onShare?: () => void;
   onForfeit?: () => void;
   onShowRules?: () => void;
@@ -23,6 +24,8 @@ interface ScoreBoardProps {
   onRefresh?: () => void;
   forfeitDisabled?: boolean;
   onBackToLobby?: () => void;
+  onZapUser?: (pubkey: string, amount: number, message: string) => void;
+  onOpenWalletSettings?: () => void;
 }
 
 function truncatePubkey(pubkey: string): string {
@@ -35,6 +38,7 @@ export function ScoreBoard({
   player2,
   tilesRemaining,
   currentUserPubkey,
+  walletConnected,
   onShare,
   onForfeit,
   onShowRules,
@@ -42,6 +46,8 @@ export function ScoreBoard({
   onRefresh,
   forfeitDisabled = false,
   onBackToLobby,
+  onZapUser,
+  onOpenWalletSettings,
 }: ScoreBoardProps) {
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
     {},
@@ -375,7 +381,12 @@ export function ScoreBoard({
           open={!!profileModalPubkey}
           pubkey={profileModalPubkey}
           profile={profiles[profileModalPubkey] ?? null}
+          walletConnected={walletConnected}
+          onZap={(pubkey, amount, message) => {
+            onZapUser?.(pubkey, amount, message);
+          }}
           onClose={() => setProfileModalPubkey(null)}
+          onOpenWalletSettings={onOpenWalletSettings}
         />
       )}
     </div>

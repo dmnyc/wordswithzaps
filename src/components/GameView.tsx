@@ -1137,6 +1137,7 @@ export function GameView({
           }}
           tilesRemaining={gameState.tileBag.length}
           currentUserPubkey={myPubkey}
+          walletConnected={isWalletConnected}
           onShare={handleCopyLink}
           onShowRules={() => setShowRulesModal(true)}
           onShowRelays={onOpenRelayList}
@@ -1146,6 +1147,26 @@ export function GameView({
           }
           forfeitDisabled={isLoading}
           onBackToLobby={onBackToLobby}
+          onZapUser={(pubkey, amount, message) => {
+            zapUser({
+              recipientPubkey: pubkey,
+              amountSats: amount,
+              gameId,
+              moveDescription: message,
+            })
+              .then(() => {
+                triggerZapAnimation();
+                onToast?.(
+                  `Sent ${amount} sat${amount === 1 ? "" : "s"}!`,
+                  "success",
+                );
+              })
+              .catch((err) => {
+                const msg = err instanceof Error ? err.message : "Zap failed";
+                onToast?.(`Zap failed: ${msg}`, "error");
+              });
+          }}
+          onOpenWalletSettings={onOpenWalletSettings}
         />
 
         {gameState.meta.status !== "active" && (

@@ -2,21 +2,29 @@ import { useCallback, useMemo, useState } from "react";
 import { nip19 } from "nostr-tools";
 import type { NostrProfile } from "../types/nostr";
 import Modal from "./Modal";
+import ProfileZapModal from "./ProfileZapModal";
 import "./PlayerProfileModal.css";
 
 interface PlayerProfileModalProps {
   open: boolean;
   profile: NostrProfile | null;
   pubkey: string;
+  walletConnected: boolean;
+  onZap: (pubkey: string, amount: number, message: string) => void;
   onClose: () => void;
+  onOpenWalletSettings?: () => void;
 }
 
 export function PlayerProfileModal({
   open,
   profile,
   pubkey,
+  walletConnected,
+  onZap,
   onClose,
+  onOpenWalletSettings,
 }: PlayerProfileModalProps) {
+  const [showZapModal, setShowZapModal] = useState(false);
   const npub = useMemo(() => {
     try {
       return nip19.npubEncode(pubkey);
@@ -159,28 +167,52 @@ export function PlayerProfileModal({
           </div>
         )}
 
-        <a
-          href={jumbleUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="player-profile-link"
-        >
-          View on Jumble
-          <svg
-            className="player-profile-link-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <div className="player-profile-actions">
+          <button
+            type="button"
+            className="player-profile-zap-btn"
+            onClick={() => setShowZapModal(true)}
+            disabled={!profile?.lud16}
+            title={profile?.lud16 ? "Zap this user" : "No lightning address"}
           >
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-        </a>
+            <img src="/assets/bolt-yellow.svg" alt="" className="zap-icon" />
+            Zap
+          </button>
+          <a
+            href={jumbleUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="player-profile-link"
+          >
+            View on Jumble
+            <svg
+              className="player-profile-link-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
+        </div>
       </div>
+
+      <ProfileZapModal
+        open={showZapModal}
+        recipientName={displayName}
+        walletConnected={walletConnected}
+        onZap={(amount, message) => {
+          onZap(pubkey, amount, message);
+          setShowZapModal(false);
+        }}
+        onClose={() => setShowZapModal(false)}
+        onOpenWalletSettings={onOpenWalletSettings}
+      />
     </Modal>
   );
 }
