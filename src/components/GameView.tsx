@@ -562,7 +562,7 @@ export function GameView({
               recipientPubkey: opponentPubkey,
               amountSats: options.zapAmount,
               gameId,
-              moveDescription: "It's your turn on #WordsWithZaps!",
+              moveDescription: "It's your turn!",
             }).then(() => {
               triggerZapAnimation();
               onToast?.(
@@ -870,22 +870,24 @@ export function GameView({
   }, [sharePreview, onToast, opponentPubkey]);
 
   const handleAchievementZap = useCallback(
-    async (amount: number, message: string) => {
+    (amount: number, message: string) => {
       if (!isWalletConnected || !opponentPubkey || !pendingAchievement) return;
-      try {
-        await zapUser({
-          recipientPubkey: opponentPubkey,
-          amountSats: amount,
-          gameId,
-          moveDescription: message,
+      // Close modal immediately, send zap in background
+      setPendingAchievement(null);
+      zapUser({
+        recipientPubkey: opponentPubkey,
+        amountSats: amount,
+        gameId,
+        moveDescription: message,
+      })
+        .then(() => {
+          triggerZapAnimation();
+          onToast?.(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
+        })
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : "Zap failed";
+          onToast?.(`Zap failed: ${msg}`, "error");
         });
-        triggerZapAnimation();
-        onToast?.(`Sent ${amount} sat${amount === 1 ? "" : "s"}!`, "success");
-        setPendingAchievement(null);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Zap failed";
-        onToast?.(`Zap failed: ${message}`, "error");
-      }
     },
     [
       gameId,

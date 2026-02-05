@@ -378,22 +378,35 @@ export async function createInvoice(
 
 const ZAP_FETCH_TIMEOUT = 20000; // 20s timeout for LNURL fetches (longer for mobile networks)
 
-function fetchWithTimeout(
+async function fetchWithTimeout(
   input: string | URL,
   timeoutMs: number = ZAP_FETCH_TIMEOUT,
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(input.toString(), { signal: controller.signal }).finally(() =>
-    clearTimeout(timer),
-  );
+  const url = input.toString();
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return response;
+  } catch (err) {
+    clearTimeout(timer);
+    if (err instanceof Error) {
+      if (err.name === "AbortError") {
+        throw new Error(`Request timed out after ${timeoutMs}ms: ${url}`);
+      }
+      throw new Error(`Failed to fetch ${url}: ${err.message}`);
+    }
+    throw err;
+  }
 }
 
 /**
  * Zap a user (game move notification)
  */
 export async function zapUser(params: ZapParams): Promise<string> {
-  const { recipientPubkey, amountSats, gameId, moveDescription } = params;
+  const { recipientPubkey, amountSats, moveDescription } = params;
 
   // Fetch recipient's Lightning address
   const recipientUser = await fetchUserProfile(recipientPubkey);
@@ -426,6 +439,8 @@ export async function zapUser(params: ZapParams): Promise<string> {
       throw new Error("Must be logged in to send zaps");
     }
 
+    // NIP-57 zap request - only include required/valid tags
+    // Note: gameId is a UUID, not a valid Nostr event ID, so we omit the "e" tag
     const zapRequest = createEvent(9734, moveDescription, [
       [
         "relays",
@@ -436,7 +451,6 @@ export async function zapUser(params: ZapParams): Promise<string> {
       ],
       ["amount", (amountSats * 1000).toString()],
       ["p", recipientPubkey],
-      ["e", gameId],
     ]);
 
     const ndk = getNDK();
