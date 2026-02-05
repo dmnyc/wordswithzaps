@@ -1,4 +1,5 @@
-import { fetchEvents, fetchUserRelayList, addRelaysToPool } from "./client";
+import { fetchEvents, fetchUserRelayList, getNDK } from "./client";
+import { NDKRelaySet } from "@nostr-dev-kit/ndk";
 import { decryptGameState } from "./encryption";
 import type { GameState, GameStatus } from "../types/game";
 import { GameEngine } from "../engine/GameEngine";
@@ -206,28 +207,30 @@ export async function rebroadcastGame(gameId: string): Promise<number> {
 
   // Get players from the event and fetch their NIP-65 relays
   const players = getTagValues(latest.tags, "p");
-  const allOpponentRelays: string[] = [];
+  const playerRelays: string[] = [];
 
   for (const pubkey of players) {
     try {
       const relays = await fetchUserRelayList(pubkey);
-      allOpponentRelays.push(...relays);
+      playerRelays.push(...relays);
     } catch (err) {
       console.warn(`[rebroadcast] Failed to fetch relays for ${pubkey}:`, err);
     }
   }
 
-  // Add opponent relays to pool before publishing
-  if (allOpponentRelays.length > 0) {
-    const uniqueRelays = [...new Set(allOpponentRelays)];
-    await addRelaysToPool(uniqueRelays);
-    console.log(
-      `[rebroadcast] Added ${uniqueRelays.length} player relays to pool`,
-    );
-  }
+  // Build relay set: pool relays + player relays (without modifying global pool)
+  const ndk = getNDK();
+  const poolRelayUrls = Array.from(ndk.pool.relays.values()).map((r) => r.url);
+  const allRelayUrls = [...new Set([...poolRelayUrls, ...playerRelays])];
 
-  // Rebroadcast to all connected relays (now includes opponent relays)
-  const relays = await latest.publish();
+  // Create temporary relay set for this publish only
+  const relaySet = NDKRelaySet.fromRelayUrls(allRelayUrls, ndk, true);
+  console.log(
+    `[rebroadcast] Publishing to ${allRelayUrls.length} relays (${playerRelays.length} from players)`,
+  );
+
+  // Rebroadcast to combined relay set
+  const relays = await latest.publish(relaySet);
 
   return relays.size;
 }

@@ -2,6 +2,7 @@ import NDK, {
   NDKEvent,
   NDKFilter,
   NDKRelay,
+  NDKRelaySet,
   NDKUser,
   NDKNip07Signer,
   NDKPrivateKeySigner,
@@ -752,14 +753,22 @@ export async function publishEvent(
   } = {},
 ): Promise<Set<NDKRelay>> {
   const { maxRetries = 2, retryDelayMs = 1500, additionalRelays } = options;
-
-  // If additional relays specified, connect to them first
-  if (additionalRelays && additionalRelays.length > 0) {
-    await addRelaysToPool(additionalRelays);
-  }
   const ndk = getNDK();
   event.ndk = ndk;
   await event.sign();
+
+  // Build relay set: pool relays + any additional relays (without modifying global pool)
+  let relaySet: NDKRelaySet | undefined;
+  if (additionalRelays && additionalRelays.length > 0) {
+    // Get current pool relay URLs
+    const poolRelayUrls = Array.from(ndk.pool.relays.values()).map(
+      (r) => r.url,
+    );
+    // Combine with additional relays, deduplicating
+    const allRelayUrls = [...new Set([...poolRelayUrls, ...additionalRelays])];
+    // Create temporary relay set (connects to new relays without adding to pool)
+    relaySet = NDKRelaySet.fromRelayUrls(allRelayUrls, ndk, true);
+  }
 
   let lastError: Error | undefined;
 
@@ -772,7 +781,7 @@ export async function publishEvent(
     }
 
     try {
-      const relays = await event.publish();
+      const relays = await event.publish(relaySet);
       if (relays.size > 0) {
         if (attempt > 0) {
           console.log(
