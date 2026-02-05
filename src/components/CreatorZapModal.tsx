@@ -1,14 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import {
-  getZapNudgeDefaultAmount,
-  setZapNudgeDefaultAmount,
-} from "../settings/appSettings";
 import Modal from "./Modal";
 import "./CreatorZapModal.css";
 
 const CREATOR_LIGHTNING_ADDRESS = "daniel@breez.tips";
-const PRESET_AMOUNTS = [50, 100, 500, 1000];
 
 interface CreatorZapModalProps {
   open: boolean;
@@ -23,58 +18,30 @@ export function CreatorZapModal({
   onClose,
   onSendZap,
 }: CreatorZapModalProps) {
-  const [selectedAmount, setSelectedAmount] = useState<number | "custom" | 0>(
-    getZapNudgeDefaultAmount(),
-  );
-  const [customAmount, setCustomAmount] = useState(() => {
-    const saved = getZapNudgeDefaultAmount();
-    return saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "";
-  });
+  const [customAmount, setCustomAmount] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    const saved = getZapNudgeDefaultAmount();
-    setSelectedAmount(
-      saved > 0 && !PRESET_AMOUNTS.includes(saved) ? "custom" : saved,
-    );
-    setCustomAmount(
-      saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "",
-    );
+    setCustomAmount("");
     setIsSending(false);
     setError(null);
   }, [open]);
 
-  const customAmountValue = useMemo(() => {
+  const amount = useMemo(() => {
     const parsed = parseInt(customAmount, 10);
-    return Number.isFinite(parsed) ? parsed : 0;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [customAmount]);
-
-  const resolvedAmount = useMemo(() => {
-    if (selectedAmount === "custom") return customAmountValue;
-    return selectedAmount;
-  }, [customAmountValue, selectedAmount]);
-
-  const customAmountInvalid =
-    selectedAmount === "custom" && customAmountValue <= 0;
-
-  useEffect(() => {
-    const amount =
-      selectedAmount === "custom" ? customAmountValue : selectedAmount;
-    if (amount >= 0) {
-      setZapNudgeDefaultAmount(amount);
-    }
-  }, [customAmountValue, selectedAmount]);
 
   const qrValue = useMemo(() => `lightning:${CREATOR_LIGHTNING_ADDRESS}`, []);
 
   const handleSend = async () => {
-    if (!walletConnected || customAmountInvalid || resolvedAmount <= 0) return;
+    if (!walletConnected || amount <= 0) return;
     setIsSending(true);
     setError(null);
     try {
-      await onSendZap(resolvedAmount);
+      await onSendZap(amount);
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Zap failed";
@@ -121,16 +88,14 @@ export function CreatorZapModal({
             placeholder="sats"
             value={customAmount}
             onChange={(event) => {
-              const val = event.target.value.slice(0, 8);
-              setCustomAmount(val);
-              setSelectedAmount("custom");
+              setCustomAmount(event.target.value.slice(0, 8));
             }}
           />
           <button
             className="creator-zap-btn"
             type="button"
             onClick={handleSend}
-            disabled={!walletConnected || isSending || customAmountValue <= 0}
+            disabled={!walletConnected || isSending || amount <= 0}
           >
             {isSending ? "Sending..." : "Zap"}
           </button>
