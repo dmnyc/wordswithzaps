@@ -59,3 +59,6 @@ export const DEFAULT_RELAYS = [
 
 // NIP-65 relay list kind
 export const RELAY_LIST_KIND = 10002;
+
+// NIP-17 DM relay preferences kind
+export const DM_RELAY_KIND = 10050;
