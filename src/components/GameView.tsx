@@ -1218,7 +1218,7 @@ export function GameView({
       />
 
       <GameControls
-        canPlay={validation?.valid || false}
+        canPlay={isMyTurn && (validation?.valid || false)}
         canPass={isMyTurn && gameState.meta.status === "active"}
         canExchange={
           isMyTurn &&
@@ -1226,6 +1226,7 @@ export function GameView({
           gameState.tileBag.length >= RACK_SIZE
         }
         isLoading={isLoading}
+        isMyTurn={isMyTurn}
         pendingScore={validation?.score}
         onPlay={handlePlay}
         onPass={handlePass}
