@@ -96,7 +96,7 @@ export function ProfileZapModal({
               placeholder="Enter amount"
               value={customAmount}
               min={1}
-              onChange={(e) => setCustomAmount(e.target.value)}
+              onChange={(e) => setCustomAmount(e.target.value.slice(0, 6))}
               disabled={!walletConnected}
             />
             {customAmountInvalid && (

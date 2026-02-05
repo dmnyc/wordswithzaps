@@ -310,7 +310,9 @@ export function ZapNudgeModal({
                     placeholder="Custom sats"
                     value={customAmount}
                     disabled={isSubmitting}
-                    onChange={(event) => setCustomAmount(event.target.value)}
+                    onChange={(event) =>
+                      setCustomAmount(event.target.value.slice(0, 6))
+                    }
                   />
                 </div>
               )}

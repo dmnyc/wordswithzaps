@@ -84,11 +84,11 @@ export function CreatorZapModal({
             className="creator-zap-input"
             type="number"
             min={1}
-            maxLength={8}
+            maxLength={6}
             placeholder="sats"
             value={customAmount}
             onChange={(event) => {
-              setCustomAmount(event.target.value.slice(0, 8));
+              setCustomAmount(event.target.value.slice(0, 6));
             }}
           />
           <button

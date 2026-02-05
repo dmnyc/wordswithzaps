@@ -300,7 +300,7 @@ export function NudgeModal({
                   min={1}
                   placeholder="Custom sats"
                   value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
+                  onChange={(e) => setCustomAmount(e.target.value.slice(0, 6))}
                   disabled={isSubmitting}
                 />
               </div>

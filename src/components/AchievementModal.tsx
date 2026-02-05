@@ -161,7 +161,7 @@ export function AchievementModal({
                   placeholder="Custom amount"
                   value={customAmount}
                   onChange={(e) => {
-                    setCustomAmount(e.target.value);
+                    setCustomAmount(e.target.value.slice(0, 6));
                     setSelectedAmount("custom");
                   }}
                   onFocus={() => setSelectedAmount("custom")}

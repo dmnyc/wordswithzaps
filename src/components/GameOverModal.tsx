@@ -291,7 +291,9 @@ export function GameOverModal({
                 min={1}
                 placeholder="Custom sats"
                 value={customAmount}
-                onChange={(event) => setCustomAmount(event.target.value)}
+                onChange={(event) =>
+                  setCustomAmount(event.target.value.slice(0, 6))
+                }
               />
             </div>
           )}
