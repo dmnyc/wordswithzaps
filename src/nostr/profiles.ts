@@ -221,18 +221,33 @@ export function normalizePubkey(input: string): string | null {
   return null;
 }
 
+// Per-pubkey profile cache with 5-minute TTL
+const PROFILE_SINGLE_CACHE_TTL_MS = 5 * 60_000;
+const profileCache = new Map<
+  string,
+  { profile: NostrProfile | null; fetchedAt: number }
+>();
+
 export async function fetchProfile(
   pubkey: string,
 ): Promise<NostrProfile | null> {
+  const cached = profileCache.get(pubkey);
+  if (cached && Date.now() - cached.fetchedAt < PROFILE_SINGLE_CACHE_TTL_MS) {
+    return cached.profile;
+  }
+
   try {
     const ndk = getNDK();
     const ndkUser = ndk.getUser({ pubkey });
     await ndkUser.fetchProfile();
 
     const p = ndkUser.profile;
-    if (!p) return null;
+    if (!p) {
+      profileCache.set(pubkey, { profile: null, fetchedAt: Date.now() });
+      return null;
+    }
 
-    return {
+    const profile: NostrProfile = {
       pubkey,
       name: stringOrUndefined(p.name),
       displayName:
@@ -246,6 +261,8 @@ export async function fetchProfile(
       lud16: stringOrUndefined(p.lud16),
       lud06: stringOrUndefined((p as Record<string, unknown>)["lud06"]),
     };
+    profileCache.set(pubkey, { profile, fetchedAt: Date.now() });
+    return profile;
   } catch {
     return null;
   }
