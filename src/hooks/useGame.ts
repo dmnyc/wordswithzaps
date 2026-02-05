@@ -5,6 +5,7 @@ import { GameEngine } from "../engine/GameEngine";
 import { TILE_DISTRIBUTION } from "../engine/constants";
 import { NostrSync } from "../nostr/NostrSync";
 import { getCurrentUser } from "../nostr/client";
+import { optimisticMovePlayed } from "../nostr/games";
 
 export interface UseGameReturn {
   gameState: GameState | null;
@@ -36,6 +37,7 @@ export function useGame(): UseGameReturn {
   const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const syncRef = useRef<NostrSync | null>(null);
+  const gameIdRef = useRef<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevIsMyTurnRef = useRef<boolean | null>(null);
   const gameStateRef = useRef<GameState | null>(null);
@@ -156,6 +158,7 @@ export function useGame(): UseGameReturn {
 
         // Set up sync
         syncRef.current = new NostrSync(gameId, opponentPubkey);
+        gameIdRef.current = gameId;
 
         // Save rack
         await syncRef.current.savePlayerRack({ rack });
@@ -205,6 +208,7 @@ export function useGame(): UseGameReturn {
       try {
         // Set up sync
         syncRef.current = new NostrSync(gameId, opponentPubkey);
+        gameIdRef.current = gameId;
 
         // Fetch latest state
         const latest = await syncRef.current.fetchLatestGameState();
@@ -365,6 +369,16 @@ export function useGame(): UseGameReturn {
         }
         setPlayerRack(newRack);
 
+        // Optimistically update lobby cache
+        const opponent =
+          gameState.meta.playerOne === myPubkey
+            ? gameState.meta.playerTwo
+            : gameState.meta.playerOne;
+        optimisticMovePlayed(myPubkey, gameIdRef.current!, opponent, {
+          p1Score: finalState.scoring.p1Score,
+          p2Score: finalState.scoring.p2Score,
+        });
+
         return {
           valid: true,
           words: validation.words,
@@ -424,6 +438,16 @@ export function useGame(): UseGameReturn {
 
       setGameState(finalState);
       setLastEventId(eventId);
+
+      // Optimistically update lobby cache
+      const opponent =
+        gameState.meta.playerOne === myPubkey
+          ? gameState.meta.playerTwo
+          : gameState.meta.playerOne;
+      optimisticMovePlayed(myPubkey, gameIdRef.current!, opponent, {
+        p1Score: finalState.scoring.p1Score,
+        p2Score: finalState.scoring.p2Score,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to pass";
       setError(message);
@@ -484,6 +508,16 @@ export function useGame(): UseGameReturn {
           console.error("Failed to save rack after exchange:", rackErr);
         }
         setPlayerRack(newRack);
+
+        // Optimistically update lobby cache
+        const opponent =
+          gameState.meta.playerOne === myPubkey
+            ? gameState.meta.playerTwo
+            : gameState.meta.playerOne;
+        optimisticMovePlayed(myPubkey, gameIdRef.current!, opponent, {
+          p1Score: newState.scoring.p1Score,
+          p2Score: newState.scoring.p2Score,
+        });
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to exchange";

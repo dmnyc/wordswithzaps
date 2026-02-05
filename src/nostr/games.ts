@@ -33,6 +33,50 @@ const getTagValues = (tags: string[][], name: string): string[] =>
 // Cache decrypted game summaries by eventId to avoid redundant NIP-44 decryption
 const summaryCache = new Map<string, GameSummary>();
 
+// --- localStorage lobby cache ---
+const LOBBY_CACHE_KEY = "wwz_lobby_games";
+
+export function loadCachedGames(pubkey: string): GameSummary[] {
+  try {
+    const raw = localStorage.getItem(`${LOBBY_CACHE_KEY}_${pubkey}`);
+    if (!raw) return [];
+    return JSON.parse(raw) as GameSummary[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCachedGames(pubkey: string, games: GameSummary[]): void {
+  try {
+    localStorage.setItem(`${LOBBY_CACHE_KEY}_${pubkey}`, JSON.stringify(games));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Optimistically update a game in the lobby cache after a move is played.
+ * Sets activePlayer to the opponent so the lobby shows "Waiting" immediately.
+ */
+export function optimisticMovePlayed(
+  userPubkey: string,
+  gameId: string,
+  opponentPubkey: string,
+  newScore?: { p1Score: number; p2Score: number },
+): void {
+  const games = loadCachedGames(userPubkey);
+  const game = games.find((g) => g.gameId === gameId);
+  if (!game) return;
+  game.activePlayer = opponentPubkey;
+  game.updatedAt = Math.floor(Date.now() / 1000);
+  if (game.turnIndex != null) game.turnIndex += 1;
+  if (newScore) {
+    game.p1Score = newScore.p1Score;
+    game.p2Score = newScore.p2Score;
+  }
+  saveCachedGames(userPubkey, games);
+}
+
 export async function fetchUserGames(
   pubkey: string,
   limit: number = 200,

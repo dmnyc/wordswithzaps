@@ -4,27 +4,12 @@ import { getCurrentUser, subscribeToEvents } from "../nostr/client";
 import { publishShareMessage, type ShareMode } from "../nostr/share";
 import { fetchProfile, normalizePubkey } from "../nostr/profiles";
 import { getGameLabel } from "../utils/gameLabel";
-import { fetchUserGames, type GameSummary } from "../nostr/games";
-
-const LOBBY_CACHE_KEY = "wwz_lobby_games";
-
-function loadCachedGames(pubkey: string): GameSummary[] {
-  try {
-    const raw = localStorage.getItem(`${LOBBY_CACHE_KEY}_${pubkey}`);
-    if (!raw) return [];
-    return JSON.parse(raw) as GameSummary[];
-  } catch {
-    return [];
-  }
-}
-
-function saveCachedGames(pubkey: string, games: GameSummary[]): void {
-  try {
-    localStorage.setItem(`${LOBBY_CACHE_KEY}_${pubkey}`, JSON.stringify(games));
-  } catch {
-    // Ignore storage errors
-  }
-}
+import {
+  fetchUserGames,
+  loadCachedGames,
+  saveCachedGames,
+  type GameSummary,
+} from "../nostr/games";
 import { GAME_KIND } from "../types/nostr";
 import type { NostrProfile } from "../types/nostr";
 import OpponentSearch from "./OpponentSearch";
