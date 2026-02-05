@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Modal from "./Modal";
 import "./ZapNudgeModal.css";
 
-const PRESET_AMOUNTS = [21, 50, 100, 500];
+const PRESET_AMOUNTS = [21, 50, 100, 500, 1000];
 
 interface ProfileZapModalProps {
   open: boolean;
@@ -21,16 +21,14 @@ export function ProfileZapModal({
   onClose,
   onOpenWalletSettings,
 }: ProfileZapModalProps) {
-  const [selectedAmount, setSelectedAmount] = useState<number | "custom" | 0>(
-    0,
-  );
+  const [selectedAmount, setSelectedAmount] = useState<number | "custom">(21);
   const [customAmount, setCustomAmount] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setSelectedAmount(0);
+      setSelectedAmount(21);
       setCustomAmount("");
       setMessage("");
       setIsSubmitting(false);
@@ -89,14 +87,6 @@ export function ProfileZapModal({
           >
             Custom
           </button>
-          <button
-            type="button"
-            className={`zap-amount-btn ${selectedAmount === 0 ? "active" : ""}`}
-            onClick={() => setSelectedAmount(0)}
-            disabled={!walletConnected}
-          >
-            None
-          </button>
         </div>
         {selectedAmount === "custom" && (
           <div className="zap-custom-row">
@@ -151,7 +141,9 @@ export function ProfileZapModal({
           onClick={handleSubmit}
           disabled={!canSubmit || isSubmitting}
         >
-          {isSubmitting ? "Sending..." : `Zap ${resolvedAmount > 0 ? resolvedAmount + " sats" : ""}`}
+          {isSubmitting
+            ? "Sending..."
+            : `Zap ${resolvedAmount > 0 ? resolvedAmount + " sats" : ""}`}
         </button>
       </div>
     </Modal>
