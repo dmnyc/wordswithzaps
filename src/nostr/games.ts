@@ -1,4 +1,4 @@
-import { fetchEvents } from "./client";
+import { fetchEvents, fetchUserRelayList, addRelaysToPool } from "./client";
 import { decryptGameState } from "./encryption";
 import type { GameState, GameStatus } from "../types/game";
 import { GameEngine } from "../engine/GameEngine";
@@ -183,7 +183,7 @@ export async function fetchGamePlayers(gameId: string): Promise<{
 }
 
 /**
- * Rebroadcast a game event to all connected relays
+ * Rebroadcast a game event to all connected relays plus opponent's NIP-65 relays
  * Useful when opponents can't find the game event on their relays
  */
 export async function rebroadcastGame(gameId: string): Promise<number> {
@@ -204,7 +204,29 @@ export async function rebroadcastGame(gameId: string): Promise<number> {
   );
   const latest = sorted[0];
 
-  // Rebroadcast to all connected relays
+  // Get players from the event and fetch their NIP-65 relays
+  const players = getTagValues(latest.tags, "p");
+  const allOpponentRelays: string[] = [];
+
+  for (const pubkey of players) {
+    try {
+      const relays = await fetchUserRelayList(pubkey);
+      allOpponentRelays.push(...relays);
+    } catch (err) {
+      console.warn(`[rebroadcast] Failed to fetch relays for ${pubkey}:`, err);
+    }
+  }
+
+  // Add opponent relays to pool before publishing
+  if (allOpponentRelays.length > 0) {
+    const uniqueRelays = [...new Set(allOpponentRelays)];
+    await addRelaysToPool(uniqueRelays);
+    console.log(
+      `[rebroadcast] Added ${uniqueRelays.length} player relays to pool`,
+    );
+  }
+
+  // Rebroadcast to all connected relays (now includes opponent relays)
   const relays = await latest.publish();
 
   return relays.size;

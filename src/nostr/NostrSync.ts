@@ -12,6 +12,7 @@ import {
   publishEvent,
   createEvent,
   subscribeToEvents,
+  fetchUserRelayList,
 } from "./client";
 import {
   encryptGameState,
@@ -125,6 +126,14 @@ export class NostrSync {
       throw new Error("Must be logged in to publish game state");
     }
 
+    // Fetch opponent's NIP-65 relays to ensure they can find the game
+    let opponentRelays: string[] = [];
+    try {
+      opponentRelays = await fetchUserRelayList(this.opponentPubkey);
+    } catch (err) {
+      console.warn("[game] Failed to fetch opponent relays:", err);
+    }
+
     // Encrypt the state for the opponent
     const encryptedContent = await encryptGameState(this.opponentPubkey, state);
 
@@ -135,7 +144,9 @@ export class NostrSync {
       ["p", state.meta.playerTwo],
     ]);
 
-    const relays = await publishEvent(event);
+    const relays = await publishEvent(event, {
+      additionalRelays: opponentRelays,
+    });
     console.log(
       `[game] state confirmed by ${relays.size} relay(s) for game ${this.gameId}`,
     );

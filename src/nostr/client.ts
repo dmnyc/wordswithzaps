@@ -745,9 +745,18 @@ export async function fetchEvents(filter: NDKFilter): Promise<NDKEvent[]> {
  */
 export async function publishEvent(
   event: NDKEvent,
-  options: { maxRetries?: number; retryDelayMs?: number } = {},
+  options: {
+    maxRetries?: number;
+    retryDelayMs?: number;
+    additionalRelays?: string[];
+  } = {},
 ): Promise<Set<NDKRelay>> {
-  const { maxRetries = 2, retryDelayMs = 1500 } = options;
+  const { maxRetries = 2, retryDelayMs = 1500, additionalRelays } = options;
+
+  // If additional relays specified, connect to them first
+  if (additionalRelays && additionalRelays.length > 0) {
+    await addRelaysToPool(additionalRelays);
+  }
   const ndk = getNDK();
   event.ndk = ndk;
   await event.sign();
