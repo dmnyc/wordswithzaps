@@ -57,3 +57,51 @@
 .relay-url {
     flex: 1;
 }
+
+.relay-rebroadcast {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.relay-rebroadcast-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+}
+
+.relay-rebroadcast-btn {
+    width: 100%;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #eaeaea;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.relay-rebroadcast-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.relay-rebroadcast-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.relay-rebroadcast-result {
+    font-size: 12px;
+    margin: 8px 0 0;
+    text-align: center;
+}
+
+.relay-rebroadcast-result.success {
+    color: #68d391;
+}
+
+.relay-rebroadcast-result.error {
+    color: #ff9b9b;
+}

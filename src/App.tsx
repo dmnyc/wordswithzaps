@@ -16,6 +16,7 @@ import RelayListModal from "./components/RelayListModal";
 import ZapAnimation from "./components/ZapAnimation";
 import WelcomeModal from "./components/WelcomeModal";
 import { sendPayment } from "./wallet/walletManager";
+import { rebroadcastGame } from "./nostr/games";
 import "./index.css";
 
 type Screen = "login" | "lobby" | "game";
@@ -509,6 +510,8 @@ function App() {
         open={showRelayListModal}
         relays={relayUrls}
         connectedRelays={connectedRelayUrls}
+        gameId={gameSession?.gameId}
+        onRebroadcast={rebroadcastGame}
         onClose={handleCloseRelayList}
       />
 

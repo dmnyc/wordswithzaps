@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Modal from "./Modal";
 import "./RelayListModal.css";
 
@@ -5,6 +6,8 @@ interface RelayListModalProps {
   open: boolean;
   relays: string[];
   connectedRelays?: string[];
+  gameId?: string;
+  onRebroadcast?: (gameId: string) => Promise<number>;
   onClose: () => void;
 }
 
@@ -12,12 +15,34 @@ export function RelayListModal({
   open,
   relays,
   connectedRelays = [],
+  gameId,
+  onRebroadcast,
   onClose,
 }: RelayListModalProps) {
+  const [isRebroadcasting, setIsRebroadcasting] = useState(false);
+  const [rebroadcastResult, setRebroadcastResult] = useState<string | null>(
+    null,
+  );
   const sortedRelays = [...relays].sort();
   const normalize = (relay: string) =>
     relay.trim().toLowerCase().replace(/\/+$/, "");
   const connectedSet = new Set(connectedRelays.map(normalize));
+
+  const handleRebroadcast = async () => {
+    if (!gameId || !onRebroadcast || isRebroadcasting) return;
+    setIsRebroadcasting(true);
+    setRebroadcastResult(null);
+    try {
+      const count = await onRebroadcast(gameId);
+      setRebroadcastResult(`Sent to ${count} relay${count === 1 ? "" : "s"}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to rebroadcast";
+      setRebroadcastResult(`Error: ${msg}`);
+    } finally {
+      setIsRebroadcasting(false);
+    }
+  };
+
   return (
     <Modal open={open} onClose={onClose} title="Relays">
       <div className="relay-list-summary">
@@ -45,6 +70,30 @@ export function RelayListModal({
             );
           })}
         </ul>
+      )}
+
+      {gameId && onRebroadcast && (
+        <div className="relay-rebroadcast">
+          <p className="relay-rebroadcast-hint">
+            If your opponent can't find this game, try rebroadcasting to all
+            relays.
+          </p>
+          <button
+            type="button"
+            className="relay-rebroadcast-btn"
+            onClick={handleRebroadcast}
+            disabled={isRebroadcasting}
+          >
+            {isRebroadcasting ? "Broadcasting..." : "Rebroadcast Game"}
+          </button>
+          {rebroadcastResult && (
+            <p
+              className={`relay-rebroadcast-result ${rebroadcastResult.startsWith("Error") ? "error" : "success"}`}
+            >
+              {rebroadcastResult}
+            </p>
+          )}
+        </div>
       )}
     </Modal>
   );

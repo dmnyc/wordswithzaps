@@ -181,3 +181,31 @@ export async function fetchGamePlayers(gameId: string): Promise<{
     eventId: latest.id,
   };
 }
+
+/**
+ * Rebroadcast a game event to all connected relays
+ * Useful when opponents can't find the game event on their relays
+ */
+export async function rebroadcastGame(gameId: string): Promise<number> {
+  const dTag = `${GAME_D_TAG_PREFIX}${gameId}`;
+  const events = await fetchEvents({
+    kinds: [GAME_KIND],
+    "#d": [dTag],
+    limit: 10,
+  });
+
+  if (events.length === 0) {
+    throw new Error("Game event not found");
+  }
+
+  // Get the latest event
+  const sorted = events.sort(
+    (a, b) => (b.created_at || 0) - (a.created_at || 0),
+  );
+  const latest = sorted[0];
+
+  // Rebroadcast to all connected relays
+  const relays = await latest.publish();
+
+  return relays.size;
+}
