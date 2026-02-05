@@ -512,6 +512,7 @@ function App() {
         connectedRelays={connectedRelayUrls}
         gameId={gameSession?.gameId}
         onRebroadcast={rebroadcastGame}
+        onToast={showToast}
         onClose={handleCloseRelayList}
       />
 

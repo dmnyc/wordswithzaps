@@ -11,6 +11,9 @@
 
 .wwz-modal {
     width: min(92vw, 540px);
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
     background: var(--panel);
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -62,6 +65,8 @@
 .wwz-modal-body {
     color: var(--text-muted);
     line-height: 1.5;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .wwz-modal-footer {

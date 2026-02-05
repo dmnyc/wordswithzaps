@@ -8,6 +8,7 @@ interface RelayListModalProps {
   connectedRelays?: string[];
   gameId?: string;
   onRebroadcast?: (gameId: string) => Promise<number>;
+  onToast?: (message: string, tone?: "success" | "error" | "info") => void;
   onClose: () => void;
 }
 
@@ -17,12 +18,10 @@ export function RelayListModal({
   connectedRelays = [],
   gameId,
   onRebroadcast,
+  onToast,
   onClose,
 }: RelayListModalProps) {
   const [isRebroadcasting, setIsRebroadcasting] = useState(false);
-  const [rebroadcastResult, setRebroadcastResult] = useState<string | null>(
-    null,
-  );
   const sortedRelays = [...relays].sort();
   const normalize = (relay: string) =>
     relay.trim().toLowerCase().replace(/\/+$/, "");
@@ -31,13 +30,12 @@ export function RelayListModal({
   const handleRebroadcast = async () => {
     if (!gameId || !onRebroadcast || isRebroadcasting) return;
     setIsRebroadcasting(true);
-    setRebroadcastResult(null);
     try {
       const count = await onRebroadcast(gameId);
-      setRebroadcastResult(`Sent to ${count} relay${count === 1 ? "" : "s"}`);
+      onToast?.(`Sent to ${count} relay${count === 1 ? "" : "s"}`, "success");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to rebroadcast";
-      setRebroadcastResult(`Error: ${msg}`);
+      onToast?.(`Rebroadcast failed: ${msg}`, "error");
     } finally {
       setIsRebroadcasting(false);
     }
@@ -45,6 +43,23 @@ export function RelayListModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Relays">
+      {gameId && onRebroadcast && (
+        <div className="relay-rebroadcast">
+          <p className="relay-rebroadcast-hint">
+            If your opponent can't find this game, try rebroadcasting to all
+            relays.
+          </p>
+          <button
+            type="button"
+            className="relay-rebroadcast-btn"
+            onClick={handleRebroadcast}
+            disabled={isRebroadcasting}
+          >
+            {isRebroadcasting ? "Broadcasting..." : "Rebroadcast Game"}
+          </button>
+        </div>
+      )}
+
       <div className="relay-list-summary">
         {sortedRelays.length} relay{sortedRelays.length === 1 ? "" : "s"} in
         pool
@@ -70,30 +85,6 @@ export function RelayListModal({
             );
           })}
         </ul>
-      )}
-
-      {gameId && onRebroadcast && (
-        <div className="relay-rebroadcast">
-          <p className="relay-rebroadcast-hint">
-            If your opponent can't find this game, try rebroadcasting to all
-            relays.
-          </p>
-          <button
-            type="button"
-            className="relay-rebroadcast-btn"
-            onClick={handleRebroadcast}
-            disabled={isRebroadcasting}
-          >
-            {isRebroadcasting ? "Broadcasting..." : "Rebroadcast Game"}
-          </button>
-          {rebroadcastResult && (
-            <p
-              className={`relay-rebroadcast-result ${rebroadcastResult.startsWith("Error") ? "error" : "success"}`}
-            >
-              {rebroadcastResult}
-            </p>
-          )}
-        </div>
       )}
     </Modal>
   );
