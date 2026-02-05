@@ -37,6 +37,7 @@ export async function fetchUserGames(
   pubkey: string,
   limit: number = 200,
 ): Promise<GameSummary[]> {
+  // Step 1: Discover games via #p query
   const events = await fetchEvents({
     kinds: [GAME_KIND],
     "#p": [pubkey],
@@ -68,11 +69,45 @@ export async function fetchUserGames(
     }
   }
 
+  // Step 2: For each game, fetch by #d tag to get the true latest event.
+  // The #p query can miss events due to relay indexing quirks on addressable events.
+  // Build a lookup of all events we already have by id for reuse.
+  const eventById = new Map(events.map((e) => [e.id, e]));
+
+  await Promise.all(
+    Array.from(map.values()).map(async (summary) => {
+      try {
+        const dTag = `${GAME_D_TAG_PREFIX}${summary.gameId}`;
+        const gameEvents = await fetchEvents({
+          kinds: [GAME_KIND],
+          "#d": [dTag],
+          limit: 5,
+        });
+        // Find the latest event across both queries
+        for (const event of gameEvents) {
+          const updatedAt = event.created_at || 0;
+          if (updatedAt > summary.updatedAt) {
+            const players = getTagValues(event.tags, "p");
+            const opponent = players.find((p) => p !== pubkey) || "";
+            summary.opponentPubkey = opponent || summary.opponentPubkey;
+            summary.players = players.length > 0 ? players : summary.players;
+            summary.updatedAt = updatedAt;
+            summary.eventId = event.id;
+          }
+          // Store for decryption step
+          eventById.set(event.id, event);
+        }
+      } catch {
+        // Fall back to #p result if #d fetch fails
+      }
+    }),
+  );
+
   const summaries = Array.from(map.values()).sort(
     (a, b) => b.updatedAt - a.updatedAt,
   );
 
-  // Attempt to decrypt latest state to get status + turn info (parallel)
+  // Step 3: Decrypt latest state to get status + turn info (parallel)
   // Use cache to skip decryption for events we've already processed
   await Promise.all(
     summaries.map(async (summary) => {
@@ -90,7 +125,7 @@ export async function fetchUserGames(
         return;
       }
 
-      const event = events.find((e) => e.id === summary.eventId);
+      const event = eventById.get(summary.eventId);
       if (!event || !summary.opponentPubkey) return;
       try {
         const decryptKey =

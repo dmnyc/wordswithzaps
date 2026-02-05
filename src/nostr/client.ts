@@ -729,7 +729,10 @@ export async function fetchEvents(filter: NDKFilter): Promise<NDKEvent[]> {
         typeof event.deduplicationKey === "function"
           ? event.deduplicationKey()
           : event.id;
-      events.set(dedupKey, event);
+      const existing = events.get(dedupKey);
+      if (!existing || (event.created_at || 0) >= (existing.created_at || 0)) {
+        events.set(dedupKey, event);
+      }
     });
 
     subscription.on("eose", () => {
