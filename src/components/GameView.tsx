@@ -14,6 +14,7 @@ import { BINGO_BONUS, RACK_SIZE, shuffleArray } from "../engine/constants";
 import {
   getDisableGameplayZaps,
   subscribeAppSettings,
+  addDismissedGame,
 } from "../settings/appSettings";
 import ZapNudgeModal from "./ZapNudgeModal";
 import GameOverModal from "./GameOverModal";
@@ -1347,6 +1348,8 @@ export function GameView({
             // Suppress any lingering Share & Zap modal state
             setShowZapModal(false);
             setPendingMoveSummary(null);
+            // Mark game as dismissed so it hides from lobby
+            addDismissedGame(gameId);
           }}
           onSendZap={handleSendGgZap}
           onShareResult={handleShareResult}

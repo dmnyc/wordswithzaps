@@ -14,10 +14,11 @@ import { GAME_KIND } from "../types/nostr";
 import type { NostrProfile } from "../types/nostr";
 import OpponentSearch from "./OpponentSearch";
 import { ZTileLoader } from "./ZTileLoader";
-import { TbHandFingerRight } from "react-icons/tb";
+import { TbHandFingerRight, TbCircleCheck, TbX } from "react-icons/tb";
 import { NudgeModal } from "./NudgeModal";
 import { getDecayTier, type DecayInfo } from "../utils/gameDecay";
 import { useWallet } from "../hooks/useWallet";
+import { isGameDismissed } from "../settings/appSettings";
 import "./Lobby.css";
 
 interface LobbyProps {
@@ -240,7 +241,9 @@ export function Lobby({
 
   const filteredGames = showEndedGames
     ? games
-    : games.filter((game) => !isGameEnded(game));
+    : games.filter(
+        (game) => !isGameEnded(game) || !isGameDismissed(game.gameId),
+      );
   const visibleGames = filteredGames.slice(0, visibleLimit);
   const hasMore = filteredGames.length > visibleLimit;
 
@@ -391,6 +394,7 @@ export function Lobby({
                 game.players.find((p) => p !== user?.pubkey) ||
                 "";
               const ended = isGameEnded(game);
+              const dismissed = ended && isGameDismissed(game.gameId);
               const myTurn = isMyTurn(game);
               const scorePreview = getScorePreview(game);
               const decay =
@@ -399,7 +403,7 @@ export function Lobby({
               return (
                 <div
                   key={game.gameId}
-                  className={`game-card ${ended ? "ended" : ""} ${myTurn && !ended ? "my-turn" : ""} ${decay && decay.tier !== "fresh" ? `decay-${decay.tier}` : ""}`}
+                  className={`game-card ${ended && dismissed ? "ended" : ""} ${ended && !dismissed && game.status === "completed" ? "completed" : ""} ${ended && !dismissed && game.status !== "completed" ? "forfeited" : ""} ${myTurn && !ended ? "my-turn" : ""} ${decay && decay.tier !== "fresh" ? `decay-${decay.tier}` : ""}`}
                   onClick={() => handleGameClick(game)}
                 >
                   <div className="opponent-avatar-wrapper">
@@ -472,15 +476,19 @@ export function Lobby({
                     </button>
                   )}
 
-                  {ended && (
-                    <span className={`game-status ${game.status}`}>
-                      {game.status === "completed"
-                        ? "Done"
-                        : game.status === "deleted"
-                          ? "Deleted"
-                          : "Ended"}
-                    </span>
+                  {ended && game.status === "completed" && (
+                    <div className="completed-icon-btn">
+                      <TbCircleCheck className="completed-icon" />
+                    </div>
                   )}
+
+                  {ended &&
+                    (game.status === "abandoned" ||
+                      game.status === "deleted") && (
+                      <div className="forfeited-icon-btn">
+                        <TbX className="forfeited-icon" />
+                      </div>
+                    )}
                 </div>
               );
             })}

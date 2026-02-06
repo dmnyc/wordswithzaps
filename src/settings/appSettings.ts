@@ -1,5 +1,6 @@
 import { updateSetting } from "./nostrSettings";
 
+const DISMISSED_GAMES_KEY = "wwz_dismissed_games";
 const DISABLE_GAMEPLAY_ZAPS_KEY = "wordswithzaps_disable_gameplay_zaps";
 const DEFAULT_DISABLE_GAMEPLAY_ZAPS = false;
 const SHARE_TO_NOSTR_DEFAULT_KEY = "wordswithzaps_share_to_nostr_default";
@@ -159,6 +160,32 @@ export function setZapNudgeDefaultAmount(amount: number): void {
     localStorage.setItem(ZAP_NUDGE_DEFAULT_AMOUNT_KEY, String(amount));
     // Sync to relays
     updateSetting("zapNudgeDefaultAmount", amount);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function getDismissedGames(): string[] {
+  try {
+    const stored = localStorage.getItem(DISMISSED_GAMES_KEY);
+    if (!stored) return [];
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+export function isGameDismissed(gameId: string): boolean {
+  return getDismissedGames().includes(gameId);
+}
+
+export function addDismissedGame(gameId: string): void {
+  try {
+    const dismissed = getDismissedGames();
+    if (!dismissed.includes(gameId)) {
+      dismissed.push(gameId);
+      localStorage.setItem(DISMISSED_GAMES_KEY, JSON.stringify(dismissed));
+    }
   } catch {
     // Ignore storage errors
   }
