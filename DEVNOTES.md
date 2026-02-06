@@ -30,7 +30,7 @@ The center square is a ZAP square (not a star). The first word must cover it.
 ### Game End
 
 - Both players pass consecutively
-- One player uses all tiles
+- One player runs out of tiles
 - A player forfeits (opponent wins)
 - A game is declared abandoned after 14 days idle (no winner)
 
@@ -183,6 +183,18 @@ Bitcoin Connect uses a WebLN provider interface internally (`WebLNProvider` in `
 ## Zap Fetch Timeout
 
 `ZAP_FETCH_TIMEOUT` in `walletManager.ts` is set to **20 seconds** for LNURL fetches during zap sends. This longer timeout accommodates slower mobile networks (5G with variable latency). The zap flow requires two sequential fetches (LNURL pay info + invoice callback), so adequate timeout per request is important. Adjust if users report timeouts or excessive wait times.
+
+## Toast System
+
+Toasts are rendered inline in `App.tsx` as a `<div className="app-toast">` with auto-dismiss after 1800ms. The `showToast(message, tone?)` callback is passed as the `onToast` prop to child components. Tones: `"success"` (default), `"error"`, `"info"`.
+
+Toast messages longer than 80 characters are truncated with an ellipsis at render time. This prevents long LNURL error strings from overflowing the toast display.
+
+Relay sync toasts provide feedback after game actions:
+- **Move synced** (info) — after a successful `makeMove()`
+- **Turn passed** (info) — after `pass()`
+- **Game deleted** (info) — after `deleteGame()`
+- Exchange, forfeit, and abandon already have their own success toasts and don't need additional sync confirmation.
 
 ## Signer Compatibility
 

@@ -86,7 +86,7 @@ export function GameRulesModal({ open, onClose }: GameRulesModalProps) {
           <h3>Game End</h3>
           <ul>
             <li>Both players pass consecutively (2 total passes)</li>
-            <li>One player uses all tiles (goes out)</li>
+            <li>One player uses all tiles (runs out)</li>
             <li>A player forfeits</li>
           </ul>
         </section>
