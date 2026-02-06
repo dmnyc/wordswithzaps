@@ -7,6 +7,8 @@ import {
   BINGO_BONUS,
   RACK_SIZE,
   ZAP_BONUS_POINTS,
+  isBonusWord,
+  BONUS_WORD_MULTIPLIER,
 } from "./constants";
 import { getDictionary } from "./Dictionary";
 
@@ -16,6 +18,7 @@ export interface WordFound {
   word: string;
   coords: string[];
   score: number;
+  isBonus: boolean;
 }
 
 /**
@@ -231,9 +234,9 @@ export function extractWord(
   }
 
   const word = letters.join("");
-  const score = calculateWordScore(board, placements, coords);
+  const score = calculateWordScore(board, placements, coords, word);
 
-  return { word, coords, score };
+  return { word, coords, score, isBonus: isBonusWord(word) };
 }
 
 /**
@@ -294,6 +297,7 @@ export function calculateWordScore(
   board: Record<string, string | { letter: string; isBlank?: boolean }>,
   placements: TilePlacement[],
   wordCoords: string[],
+  word?: string,
 ): number {
   let wordScore = 0;
   let wordMultiplier = 1;
@@ -348,7 +352,14 @@ export function calculateWordScore(
     wordScore += tileScore;
   }
 
-  return wordScore * wordMultiplier + zapBonus;
+  let total = wordScore * wordMultiplier + zapBonus;
+
+  // Bonus word easter egg: 2x for bitcoin/nostr words
+  if (word && isBonusWord(word)) {
+    total *= BONUS_WORD_MULTIPLIER;
+  }
+
+  return total;
 }
 
 /**
@@ -434,10 +445,13 @@ export function validateMove(
     words.reduce((sum, w) => sum + w.score, 0) +
     (placements.length === RACK_SIZE ? BINGO_BONUS : 0);
 
+  const bonusWords = words.filter((w) => w.isBonus).map((w) => w.word);
+
   return {
     valid: true,
     words: words.map((w) => w.word),
     score,
+    bonusWords: bonusWords.length > 0 ? bonusWords : undefined,
   };
 }
 

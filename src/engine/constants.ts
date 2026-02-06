@@ -163,6 +163,49 @@ export function createTileBag(): string[] {
   return bag;
 }
 
+// Bonus words — bitcoin/nostr easter egg (2x word score)
+export const BONUS_WORD_MULTIPLIER = 2;
+
+export const BONUS_WORDS = new Set([
+  "BITCOIN",
+  "BITCOINS",
+  "BOLT",
+  "BOLTS",
+  "FOMO",
+  "HALVING",
+  "HALVINGS",
+  "HASH",
+  "HODL",
+  "HODLER",
+  "HODLERS",
+  "LIGHTNING",
+  "MEME",
+  "MEMES",
+  "MEMPOOL",
+  "MEMPOOLS",
+  "NODE",
+  "NODES",
+  "NONCE",
+  "NONCES",
+  "NOSTR",
+  "NYM",
+  "NYMS",
+  "PUBKEY",
+  "PUBKEYS",
+  "RELAY",
+  "RELAYS",
+  "SAT",
+  "SATOSHI",
+  "SATS",
+  "YOLO",
+  "ZAP",
+  "ZAPS",
+]);
+
+export function isBonusWord(word: string): boolean {
+  return BONUS_WORDS.has(word.toUpperCase());
+}
+
 // Fisher-Yates shuffle
 export function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];

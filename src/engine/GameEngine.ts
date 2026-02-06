@@ -12,6 +12,7 @@ import {
   RACK_SIZE,
   BINGO_BONUS,
   LETTER_VALUES,
+  isBonusWord,
 } from "./constants";
 import { validateMove, applyPlacements, findAllWords } from "./Board";
 
@@ -147,6 +148,13 @@ export class GameEngine {
     // Determine opponent
     const opponent = this.getOpponent(state, playerPubkey);
 
+    // Collect bonus words and their tile coordinates
+    const bonusWordEntries = words.filter((w) => isBonusWord(w.word));
+    const bonusWords = bonusWordEntries.map((w) => w.word);
+    const bonusWordCoords = [
+      ...new Set(bonusWordEntries.flatMap((w) => w.coords)),
+    ];
+
     // Update scores
     const isPlayerOne = state.meta.playerOne === playerPubkey;
     const newScoring = {
@@ -163,6 +171,9 @@ export class GameEngine {
           word: words.map((w) => w.word).join(", "),
           score,
           coords: placements.map((p) => `${p.x},${p.y}`),
+          bonusWords: bonusWords.length > 0 ? bonusWords : undefined,
+          bonusWordCoords:
+            bonusWordCoords.length > 0 ? bonusWordCoords : undefined,
         } as MoveHistory,
       ].slice(-GameEngine.MAX_HISTORY_ENTRIES),
     };

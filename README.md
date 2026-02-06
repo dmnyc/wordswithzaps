@@ -15,7 +15,7 @@ Words With Zaps is a serverless, censorship-resistant word game where game state
 ## Features
 
 - Full crossword-style mechanics on a 15x15 board with letter values, multipliers, and bonus squares
-- Custom scoring: 42-point Zapathon bonus for using all 7 tiles, 21-point Zap Square bonus at corners and center
+- Custom scoring: 42-point Zapathon bonus for using all 7 tiles, 21-point Zap Square bonus at corners and center, 2x bonus for Bitcoin and Nostr themed words
 - End-to-end encrypted game state (NIP-44 with NIP-04 fallback)
 - Lightning zaps as move notifications via Breez SDK (Spark) or Bitcoin Connect
 - Post-move sharing: public note, public reply (kind 1), standard DM (kind 4), or gift-wrapped DM (NIP-17/kind 14)

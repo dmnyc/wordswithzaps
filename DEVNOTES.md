@@ -27,6 +27,21 @@ The center square is a ZAP square (not a star). The first word must cover it.
 - **Blank tiles**: Worth 0 points, can represent any letter, locked once played
 - **99 tiles total** with 4 blanks
 
+### Bonus Words (Easter Egg)
+
+Certain Bitcoin and Nostr themed words (e.g. BITCOIN, NOSTR, and others) receive an automatic 2x word score multiplier when played. This stacks with existing board multipliers (DL, QL, DW, ZAP) and the Zapathon bonus.
+
+The bonus word list is defined in `BONUS_WORDS` in `src/engine/constants.ts`. The `isBonusWord()` helper checks membership. The 2x multiplier is applied in `calculateWordScore()` in `Board.ts` after all other scoring.
+
+Bonus words are tracked through the system:
+- `WordFound.isBonus` — set during word extraction in `Board.ts`
+- `ValidationResult.bonusWords` — returned by `validateMove()` so the UI knows during preview
+- `MoveHistory.bonusWords` / `MoveHistory.bonusWordCoords` — persisted in game state so tiles can be tinted after the fact
+
+Tiles forming bonus words are tinted gold on the board via the `isBonusWord` prop on `Tile.tsx` (CSS class `.tile.placed.bonus-word`). The coordinates are computed from all `bonusWordCoords` across game history in `GameView.tsx` and passed through `Board.tsx`.
+
+The DevTools panel includes a "Bonus Words" section with a "Place BITCOIN" button to preview the gold tile tint without playing a real game.
+
 ### Game End
 
 - Both players pass consecutively
