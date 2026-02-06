@@ -21,6 +21,8 @@ export interface MoveHistory {
   word: string;
   score: number;
   coords: string[]; // Array of "x,y"
+  bonusWords?: string[]; // Bonus words played (bitcoin/nostr easter egg)
+  bonusWordCoords?: string[]; // All tile coords forming bonus words ("x,y")
 }
 
 export interface Scoring {
@@ -64,4 +66,5 @@ export interface ValidationResult {
   error?: string;
   words?: string[]; // all words formed by this move
   score?: number;
+  bonusWords?: string[]; // bonus words in this move (bitcoin/nostr easter egg)
 }

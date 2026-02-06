@@ -25,6 +25,7 @@ interface BoardProps {
   disabled?: boolean;
   isFirstMove?: boolean;
   highlightCoords?: Set<string>;
+  bonusWordCoords?: Set<string>;
 }
 
 function getCellClass(multiplier: MultiplierType): string {
@@ -74,6 +75,7 @@ export function Board({
   disabled = false,
   isFirstMove = false,
   highlightCoords,
+  bonusWordCoords,
 }: BoardProps) {
   const [dragOver, setDragOver] = useState<string | null>(null);
   const boardStyle = {
@@ -200,6 +202,7 @@ export function Board({
             isBlank={isPlacedBlank}
             isPlaced
             isHighlighted={highlightCoords?.has(coord)}
+            isBonusWord={bonusWordCoords?.has(coord)}
           />
         ) : pending ? (
           <Tile

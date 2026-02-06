@@ -95,6 +95,18 @@
     }
 }
 
+/* Bonus word tile (bitcoin/nostr easter egg) */
+.tile.placed.bonus-word {
+    background: linear-gradient(145deg, #ffdb33, #ccaa00);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.tile.placed.bonus-word:hover {
+    background: linear-gradient(145deg, #ffdb33, #ccaa00);
+}
+
 /* Board tiles scale with cell size */
 .board .tile {
     width: calc(var(--cell-size, 36px) - 4px);

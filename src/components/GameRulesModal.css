@@ -80,6 +80,11 @@
     color: #68d391;
 }
 
+.bonus-word-label {
+    font-weight: 700;
+    color: #ffcc00;
+}
+
 /* Scrollbar styling */
 .game-rules-content::-webkit-scrollbar {
     width: 6px;

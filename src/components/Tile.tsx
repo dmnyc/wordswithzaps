@@ -7,6 +7,7 @@ interface TileProps {
   isDragging?: boolean;
   isPlaced?: boolean;
   isHighlighted?: boolean;
+  isBonusWord?: boolean;
   onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragEnd?: (event: React.DragEvent<HTMLDivElement>) => void;
 }
@@ -17,6 +18,7 @@ export function Tile({
   isDragging = false,
   isPlaced = false,
   isHighlighted = false,
+  isBonusWord = false,
   onDragStart,
   onDragEnd,
 }: TileProps) {
@@ -32,7 +34,7 @@ export function Tile({
 
   return (
     <div
-      className={`tile ${isDragging ? "dragging" : ""} ${isPlaced ? "placed" : ""} ${isBlank ? "blank" : ""} ${isHighlighted ? "highlighted" : ""}`}
+      className={`tile ${isDragging ? "dragging" : ""} ${isPlaced ? "placed" : ""} ${isBlank ? "blank" : ""} ${isHighlighted ? "highlighted" : ""} ${isBonusWord ? "bonus-word" : ""}`}
       draggable={!!onDragStart}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}

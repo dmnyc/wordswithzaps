@@ -56,6 +56,12 @@ export function GameRulesModal({ open, onClose }: GameRulesModalProps) {
               <span className="bingo">ZAPATHON:</span> Play all {RACK_SIZE}{" "}
               tiles = +{BINGO_BONUS} bonus points
             </li>
+            <li>
+              <span className="bonus-word-label">BONUS WORD:</span> Certain
+              Bitcoin and Nostr themed words (like BITCOIN, NOSTR, and others)
+              automatically score 2x word value. Bonus word tiles turn gold on
+              the board.
+            </li>
           </ul>
         </section>
 

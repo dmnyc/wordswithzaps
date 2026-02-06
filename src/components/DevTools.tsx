@@ -17,6 +17,8 @@ interface DevToolsProps {
   onTriggerZapathon: () => void;
   onTriggerAchievement: (achievement: Achievement) => void;
   onRepairRack?: () => Promise<string[]>;
+  onPlaceBonusWord?: () => void;
+  onClearBonusWord?: () => void;
 }
 
 const SAMPLE_ACHIEVEMENTS: { label: string; achievement: Achievement }[] = [
@@ -65,6 +67,8 @@ export function DevTools({
   onTriggerZapathon,
   onTriggerAchievement,
   onRepairRack,
+  onPlaceBonusWord,
+  onClearBonusWord,
 }: DevToolsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [repairStatus, setRepairStatus] = useState<string | null>(null);
@@ -139,6 +143,20 @@ export function DevTools({
               </button>
             ))}
           </div>
+
+          {onPlaceBonusWord && (
+            <div className="dev-tools-section">
+              <div className="dev-tools-section-title">Bonus Words</div>
+              <button type="button" onClick={onPlaceBonusWord}>
+                Place BITCOIN
+              </button>
+              {onClearBonusWord && (
+                <button type="button" onClick={onClearBonusWord}>
+                  Clear bonus tiles
+                </button>
+              )}
+            </div>
+          )}
 
           {onRepairRack && (
             <div className="dev-tools-section">

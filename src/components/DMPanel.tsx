@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { nip19 } from "nostr-tools";
 import { useDM } from "../hooks/useDM";
 import { fetchProfile } from "../nostr/profiles";
 import type { NostrProfile } from "../types/nostr";
@@ -54,12 +55,18 @@ export default function DMPanel({
     }
   }, [open]);
 
+  const currentUser = getCurrentUser();
+  const myPubkey = currentUser?.pubkey || "";
+
   // Fetch profiles for conversations
   useEffect(() => {
     if (!open) return;
     const pubkeys = conversations.map((c) => c.pubkey);
     if (activePubkey && !pubkeys.includes(activePubkey)) {
       pubkeys.push(activePubkey);
+    }
+    if (myPubkey && !pubkeys.includes(myPubkey)) {
+      pubkeys.push(myPubkey);
     }
     const missing = pubkeys.filter(
       (pk) => !profiles.has(pk) && !inFlight.current.has(pk),
@@ -85,7 +92,7 @@ export default function DMPanel({
         });
       }
     });
-  }, [open, conversations, activePubkey]);
+  }, [open, conversations, activePubkey, myPubkey]);
 
   // Mark conversation read when viewing thread
   useEffect(() => {
@@ -125,8 +132,72 @@ export default function DMPanel({
     }
   }, [activePubkey, composeText, sending, sendMessage, onToast]);
 
-  const currentUser = getCurrentUser();
-  const myPubkey = currentUser?.pubkey || "";
+  const resolveNostrMentions = useCallback(
+    (text: string) => {
+      // Match full npubs and truncated ones (e.g. nostr:npub1abc...! or nostr:npub1abc…)
+      return text.replace(
+        /nostr:npub1[a-z0-9]+(?:(?:\.\.\.|…)[a-z0-9]*)?/g,
+        (match) => {
+          const bare = match.replace("nostr:", "");
+          // Try decoding full npubs
+          try {
+            const decoded = nip19.decode(bare);
+            if (decoded.type === "npub") {
+              const profile = profiles.get(decoded.data);
+              if (profile?.displayName || profile?.name) {
+                return profile.displayName || profile.name!;
+              }
+            }
+          } catch {
+            /* truncated or invalid — try prefix match */
+          }
+
+          // For truncated npubs, match by prefix against known profiles
+          const npubPrefix = bare.replace(/(?:\.\.\.|…).*$/, "");
+          if (npubPrefix.length >= 10) {
+            for (const [pubkey, profile] of profiles) {
+              try {
+                const fullNpub = nip19.npubEncode(pubkey);
+                if (fullNpub.startsWith(npubPrefix)) {
+                  return profile.displayName || profile.name || match;
+                }
+              } catch {
+                continue;
+              }
+            }
+          }
+
+          return match;
+        },
+      );
+    },
+    [profiles],
+  );
+
+  const renderMessageContent = useCallback(
+    (text: string) => {
+      const resolved = resolveNostrMentions(text);
+      const urlPattern = /(https?:\/\/[^\s]+)/g;
+      const parts = resolved.split(urlPattern);
+      if (parts.length === 1) return resolved;
+      return parts.map((part, i) =>
+        urlPattern.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="dm-message-link"
+          >
+            {part}
+          </a>
+        ) : (
+          part
+        ),
+      );
+    },
+    [resolveNostrMentions],
+  );
 
   const getDisplayName = (pubkey: string) => {
     const profile = profiles.get(pubkey);
@@ -213,7 +284,7 @@ export default function DMPanel({
                       </span>
                     </div>
                     <div className="dm-convo-preview">
-                      {convo.lastMessagePreview}
+                      {resolveNostrMentions(convo.lastMessagePreview)}
                     </div>
                   </div>
                   {convo.unreadCount > 0 && (
@@ -272,7 +343,9 @@ export default function DMPanel({
                       className={`dm-message ${isMine ? "sent" : "received"} ${msg.protocol} ${msg.pending ? "pending" : ""} ${msg.failed ? "failed" : ""}`}
                     >
                       <div className="dm-message-bubble">
-                        <div className="dm-message-text">{msg.content}</div>
+                        <div className="dm-message-text">
+                          {renderMessageContent(msg.content)}
+                        </div>
                         <div className="dm-message-meta">
                           <span className="dm-message-time">
                             {formatMessageTime(msg.createdAt)}

@@ -123,6 +123,9 @@ export function GameView({
   const [showVictoryCelebration, setShowVictoryCelebration] = useState(false);
   const [wordScorePop, setWordScorePop] = useState<WordScorePop | null>(null);
   const [showZapAnimation, setShowZapAnimation] = useState(false);
+  const [devBonusTiles, setDevBonusTiles] = useState<
+    Record<string, string> | undefined
+  >();
   const [devOverride, setDevOverride] = useState<{
     winner: string | undefined;
     status: "completed" | "abandoned";
@@ -361,6 +364,27 @@ export function GameView({
     }
     return new Set<string>();
   }, [gameState, isMyTurn, myPubkey]);
+
+  // Coords of tiles forming bonus words (yellow tint easter egg)
+  const bonusWordCoords = useMemo(() => {
+    if (!gameState && !devBonusTiles) return new Set<string>();
+    const coords = new Set<string>();
+    if (gameState) {
+      for (const move of gameState.scoring.history) {
+        if (move.bonusWordCoords) {
+          for (const c of move.bonusWordCoords) {
+            coords.add(c);
+          }
+        }
+      }
+    }
+    if (devBonusTiles) {
+      for (const c of Object.keys(devBonusTiles)) {
+        coords.add(c);
+      }
+    }
+    return coords;
+  }, [gameState?.scoring.history, devBonusTiles]);
 
   // Validate current pending move
   const validation = useMemo(() => {
@@ -1104,6 +1128,20 @@ export function GameView({
     [myPubkey, opponentPubkey],
   );
 
+  const handleDevPlaceBonusWord = useCallback(() => {
+    // Place "BITCOIN" horizontally at row 1, starting col 1
+    const word = "BITCOIN";
+    const tiles: Record<string, string> = {};
+    for (let i = 0; i < word.length; i++) {
+      tiles[`${1 + i},1`] = word[i];
+    }
+    setDevBonusTiles((prev) => (prev ? { ...prev, ...tiles } : tiles));
+  }, []);
+
+  const handleDevClearBonusWord = useCallback(() => {
+    setDevBonusTiles(undefined);
+  }, []);
+
   const handleDevTriggerZapathon = useCallback(() => {
     setShowBingoCelebration(true);
     triggerZapAnimation();
@@ -1199,7 +1237,11 @@ export function GameView({
       </div>
 
       <Board
-        board={gameState.board}
+        board={
+          devBonusTiles
+            ? { ...gameState.board, ...devBonusTiles }
+            : gameState.board
+        }
         pendingPlacements={pendingPlacements}
         selectedTileIndex={selectedTileIndex}
         onPlaceTile={handlePlaceTile}
@@ -1208,6 +1250,7 @@ export function GameView({
         disabled={!isMyTurn || gameState.meta.status !== "active"}
         isFirstMove={(gameState.turn.index ?? 0) === 0}
         highlightCoords={highlightCoords}
+        bonusWordCoords={bonusWordCoords}
       />
 
       <Rack
@@ -1446,6 +1489,8 @@ export function GameView({
         onTriggerZapathon={handleDevTriggerZapathon}
         onTriggerAchievement={setPendingAchievement}
         onRepairRack={repairRack}
+        onPlaceBonusWord={handleDevPlaceBonusWord}
+        onClearBonusWord={devBonusTiles ? handleDevClearBonusWord : undefined}
       />
     </div>
   );
