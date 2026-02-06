@@ -15,9 +15,10 @@ import {
   publishEvent,
   subscribeToEvents,
   fetchEvents,
+  fetchUserRelayList,
 } from "./client";
 import { encryptDirectMessage, decryptDirectMessage } from "./encryption";
-import { addMessage } from "../stores/dmStore";
+import { addMessage, getConversations } from "../stores/dmStore";
 import { addNotification } from "../stores/notificationStore";
 import type { DMMessage } from "../stores/dmStore";
 import { DM_RELAY_KIND } from "../types/nostr";
@@ -28,6 +29,17 @@ let _nip04Unsub: Unsub | null = null;
 let _nip17Unsub: Unsub | null = null;
 let _zapUnsub: Unsub | null = null;
 const _processedIds = new Set<string>();
+
+// Limit concurrent NIP-04 decryptions to prevent extension prompt flood
+let _decryptQueue: Promise<void> = Promise.resolve();
+function queueDecrypt<T>(fn: () => Promise<T>): Promise<T> {
+  const result = _decryptQueue.then(fn, fn);
+  _decryptQueue = result.then(
+    () => {},
+    () => {},
+  );
+  return result;
+}
 
 /**
  * Start all DM and notification subscriptions.
@@ -57,7 +69,7 @@ export function stopSubscriptions(): void {
 // --- NIP-04 (Legacy DMs) ---
 
 function subscribeNip04(userPubkey: string): Unsub {
-  const since = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60; // 7 days
+  const since = Math.floor(Date.now() / 1000) - 24 * 60 * 60; // 24 hours
   const filter: NDKFilter = {
     kinds: [4],
     "#p": [userPubkey],
@@ -71,51 +83,54 @@ function subscribeNip04(userPubkey: string): Unsub {
     since,
   };
 
-  const handleEvent = async (event: NDKEvent) => {
+  const handleEvent = (event: NDKEvent) => {
     if (_processedIds.has(event.id)) return;
     _processedIds.add(event.id);
 
-    try {
-      const isOwnMessage = event.pubkey === userPubkey;
-      const otherPubkey = isOwnMessage
-        ? event.tags.find((t) => t[0] === "p")?.[1] || ""
-        : event.pubkey;
+    // Queue decryption to avoid flooding extension with prompts
+    queueDecrypt(async () => {
+      try {
+        const isOwnMessage = event.pubkey === userPubkey;
+        const otherPubkey = isOwnMessage
+          ? event.tags.find((t) => t[0] === "p")?.[1] || ""
+          : event.pubkey;
 
-      if (!otherPubkey) return;
+        if (!otherPubkey) return;
 
-      const plaintext = await decryptDirectMessage(
-        isOwnMessage ? otherPubkey : event.pubkey,
-        event.content,
-      );
+        const plaintext = await decryptDirectMessage(
+          isOwnMessage ? otherPubkey : event.pubkey,
+          event.content,
+        );
 
-      const msg: DMMessage = {
-        id: event.id,
-        fromPubkey: event.pubkey,
-        toPubkey: isOwnMessage ? otherPubkey : userPubkey,
-        content: plaintext,
-        createdAt: event.created_at || Math.floor(Date.now() / 1000),
-        protocol: "nip04",
-      };
-
-      addMessage(msg, isOwnMessage);
-
-      if (!isOwnMessage) {
-        addNotification({
-          id: `dm_${event.id}`,
-          type: "dm",
+        const msg: DMMessage = {
+          id: event.id,
           fromPubkey: event.pubkey,
-          content:
-            plaintext.length > 100
-              ? plaintext.slice(0, 100) + "..."
-              : plaintext,
-          conversationPubkey: event.pubkey,
+          toPubkey: isOwnMessage ? otherPubkey : userPubkey,
+          content: plaintext,
           createdAt: event.created_at || Math.floor(Date.now() / 1000),
-          read: false,
-        });
+          protocol: "nip04",
+        };
+
+        addMessage(msg, isOwnMessage);
+
+        if (!isOwnMessage) {
+          addNotification({
+            id: `dm_${event.id}`,
+            type: "dm",
+            fromPubkey: event.pubkey,
+            content:
+              plaintext.length > 100
+                ? plaintext.slice(0, 100) + "..."
+                : plaintext,
+            conversationPubkey: event.pubkey,
+            createdAt: event.created_at || Math.floor(Date.now() / 1000),
+            read: false,
+          });
+        }
+      } catch (err) {
+        console.warn("[DM] Failed to decrypt NIP-04 message:", err);
       }
-    } catch (err) {
-      console.warn("[DM] Failed to decrypt NIP-04 message:", err);
-    }
+    });
   };
 
   const sub1 = subscribeToEvents(filter, handleEvent);
@@ -156,7 +171,9 @@ export async function sendNip04DM(
 // --- NIP-17 (Private DMs via Gift Wrap) ---
 
 function subscribeNip17(userPubkey: string): Unsub {
-  const since = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
+  // NIP-17 gift wraps use randomized timestamps (up to 2 days in the past)
+  // so we need a wider window to catch recent messages
+  const since = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60; // 7 days
   const filter: NDKFilter = {
     kinds: [1059],
     "#p": [userPubkey],
@@ -208,7 +225,97 @@ function subscribeNip17(userPubkey: string): Unsub {
     }
   };
 
-  return subscribeToEvents(filter, handleEvent);
+  // Subscribe on default pool relays
+  const poolSub = subscribeToEvents(filter, handleEvent);
+
+  // Also subscribe on the user's DM relays (kind 10050).
+  // Senders publish gift wraps to these relays — they may be different
+  // from pool relays and may require NIP-42 auth (e.g. inbox.nostr.wine).
+  // We add them to the pool and create a second subscription after connecting.
+  let dmRelaySub: Unsub | null = null;
+  fetchDMRelays(userPubkey)
+    .then(async (dmRelays) => {
+      if (dmRelays.length === 0) return;
+
+      const ndk = getNDK();
+
+      // Add each DM relay to the pool and wait for connection
+      for (const relayUrl of dmRelays) {
+        try {
+          const relay = ndk.pool.getRelay(relayUrl, true);
+          relay.on("disconnect", () => {
+            // Auto-reconnect DM relays after a brief delay
+            setTimeout(() => {
+              relay.connect().catch(() => {});
+            }, 3000);
+          });
+          if (relay.status !== 1) {
+            await relay.connect().catch(() => {});
+          }
+        } catch {
+          // Ignore individual relay failures
+        }
+      }
+
+      // Wait briefly for connections to settle
+      await new Promise((r) => setTimeout(r, 2000));
+
+      // Create a subscription specifically on the DM relays
+      const relaySet = NDKRelaySet.fromRelayUrls(dmRelays, ndk);
+      const sub = ndk.subscribe(filter, { closeOnEose: false }, relaySet);
+      sub.on("event", handleEvent);
+      dmRelaySub = { unsubscribe: () => sub.stop() };
+    })
+    .catch(() => {});
+
+  // Also subscribe on conversation partners' write relays.
+  // Some clients (e.g. Amethyst) publish gift wraps to the sender's
+  // own relays rather than looking up the recipient's kind 10050 DM relays.
+  const partnerRelaySubs: Unsub[] = [];
+  const conversations = getConversations();
+  if (conversations.length > 0) {
+    const ndk = getNDK();
+    const poolUrls = new Set(
+      Array.from(ndk.pool.relays.values()).map((r) =>
+        r.url.replace(/\/+$/, ""),
+      ),
+    );
+
+    const partnerPubkeys = conversations.slice(0, 10).map((c) => c.pubkey);
+    Promise.all(
+      partnerPubkeys.map(async (pubkey) => {
+        try {
+          const relays = await fetchUserRelayList(pubkey);
+          const newRelays = relays.filter((r) => {
+            const normalized = r.trim().toLowerCase().replace(/\/+$/, "");
+            return !poolUrls.has(normalized);
+          });
+          if (newRelays.length > 0) {
+            console.log(
+              "[DM] NIP-17 partner",
+              pubkey.slice(0, 8),
+              "extra relays:",
+              newRelays,
+            );
+            const relaySet = NDKRelaySet.fromRelayUrls(newRelays, ndk, true);
+            const sub = ndk.subscribe(filter, { closeOnEose: false }, relaySet);
+            sub.on("event", handleEvent);
+            partnerRelaySubs.push({ unsubscribe: () => sub.stop() });
+          }
+        } catch {
+          // Ignore failures for individual partners
+        }
+      }),
+    ).catch(() => {});
+  }
+
+  return {
+    unsubscribe: () => {
+      poolSub.unsubscribe();
+      dmRelaySub?.unsubscribe();
+      partnerRelaySubs.forEach((s) => s.unsubscribe());
+    },
+  };
 }
 
 /**
@@ -406,7 +513,7 @@ export async function supportsNip17(pubkey: string): Promise<boolean> {
 // --- Zap Receipt Subscriptions ---
 
 function subscribeZapReceipts(userPubkey: string): Unsub {
-  const since = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
+  const since = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60; // 7 days
   const filter: NDKFilter = {
     kinds: [9735],
     "#p": [userPubkey],

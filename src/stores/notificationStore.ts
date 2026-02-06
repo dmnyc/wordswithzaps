@@ -42,7 +42,8 @@ function load(): Notification[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const notifications = JSON.parse(stored) as Notification[];
+      return notifications.sort((a, b) => b.createdAt - a.createdAt);
     }
   } catch {
     /* ignore */
@@ -77,10 +78,9 @@ export function addNotification(notification: Notification): void {
   // Deduplicate by id
   if (_notifications.some((n) => n.id === notification.id)) return;
 
-  _notifications = [notification, ..._notifications].slice(
-    0,
-    MAX_NOTIFICATIONS,
-  );
+  _notifications = [notification, ..._notifications]
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, MAX_NOTIFICATIONS);
   save(_notifications);
   notifyListeners();
 }

@@ -3,6 +3,7 @@ import NDK, {
   NDKFilter,
   NDKRelay,
   NDKRelaySet,
+  NDKRelayAuthPolicies,
   NDKUser,
   NDKNip07Signer,
   NDKPrivateKeySigner,
@@ -140,6 +141,10 @@ export async function connectWithNip07(): Promise<NDKUser> {
   const signer = new NDKNip07Signer();
   ndk.signer = signer;
 
+  // Enable NIP-42 relay authentication so paid/private relays
+  // (e.g. inbox.nostr.wine) automatically sign AUTH challenges
+  ndk.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ ndk });
+
   // Add timeout to signer.user() which calls out to NIP-07 extension
   const user = await withTimeout(
     signer.user(),
@@ -198,6 +203,7 @@ export async function connectWithPrivateKey(
 
   const signer = new NDKPrivateKeySigner(privateKeyHex);
   ndk.signer = signer;
+  ndk.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ ndk });
 
   const user = await signer.user();
 
@@ -243,6 +249,7 @@ export async function connectWithBunker(
   );
 
   ndk.signer = nip46Signer;
+  ndk.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ ndk });
 
   // Fetch profile with timeout (non-critical, can fail gracefully)
   try {
@@ -347,6 +354,7 @@ export async function waitForNostrConnect(
 
   // Create a custom NDK signer that wraps the BunkerSigner
   ndk.signer = new BunkerSignerWrapper(bunkerSigner, userPubkey, ndk);
+  ndk.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ ndk });
 
   // Get the user
   const user = ndk.getUser({ pubkey: userPubkey });

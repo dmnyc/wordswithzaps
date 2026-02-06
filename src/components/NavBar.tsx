@@ -5,6 +5,7 @@ import type { WalletProviderType } from "../types/wallet";
 import { SparkLogo, BitcoinConnectLogo, EyeIcon } from "./icons/WalletIcons";
 import { WifiIcon } from "./icons/RelayIcons";
 import { updateSetting } from "../settings/nostrSettings";
+import NotificationBell from "./NotificationBell";
 import "./NavBar.css";
 
 const BALANCE_HIDDEN_KEY = "wordswithzaps_balance_hidden";
@@ -25,6 +26,7 @@ interface NavBarProps {
   connectionMethod?: "nip07" | "private-key" | "nip46" | null;
   relayCount?: number;
   onOpenRelayList?: () => void;
+  onOpenMessages?: (pubkey?: string) => void;
 }
 
 function WalletTypeIcon({ walletType }: { walletType?: WalletProviderType }) {
@@ -53,6 +55,7 @@ export function NavBar({
   connectionMethod,
   relayCount,
   onOpenRelayList,
+  onOpenMessages,
 }: NavBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
@@ -215,6 +218,8 @@ export function NavBar({
             )}
           </div>
         )}
+
+        <NotificationBell onOpenMessages={onOpenMessages} />
 
         <button
           className="user-button"

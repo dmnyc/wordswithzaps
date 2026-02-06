@@ -15,8 +15,10 @@ import AboutModal from "./components/AboutModal";
 import RelayListModal from "./components/RelayListModal";
 import ZapAnimation from "./components/ZapAnimation";
 import WelcomeModal from "./components/WelcomeModal";
+import DMPanel from "./components/DMPanel";
 import { sendPayment } from "./wallet/walletManager";
 import { rebroadcastGame } from "./nostr/games";
+import { startSubscriptions, stopSubscriptions } from "./nostr/dm";
 import "./index.css";
 
 type Screen = "login" | "lobby" | "game";
@@ -72,6 +74,10 @@ function App() {
   const [showRelayListModal, setShowRelayListModal] = useState(false);
   const [showZapAnimation, setShowZapAnimation] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showDMPanel, setShowDMPanel] = useState(false);
+  const [dmPanelInitialPubkey, setDmPanelInitialPubkey] = useState<
+    string | null
+  >(null);
   const creatorZapReturnRef = useRef<null | (() => void)>(null);
   const walletType = activeWallet
     ? "spark"
@@ -123,6 +129,16 @@ function App() {
 
   const handleCloseRelayList = useCallback(() => {
     setShowRelayListModal(false);
+  }, []);
+
+  const handleOpenMessages = useCallback((pubkey?: string) => {
+    setDmPanelInitialPubkey(pubkey || null);
+    setShowDMPanel(true);
+  }, []);
+
+  const handleCloseDMPanel = useCallback(() => {
+    setShowDMPanel(false);
+    setDmPanelInitialPubkey(null);
   }, []);
 
   const showToast = useCallback(
@@ -368,6 +384,16 @@ function App() {
     };
   }, [prefillGameId, isConnected, screen]);
 
+  // Start/stop notification & DM subscriptions based on connection state
+  useEffect(() => {
+    if (isConnected && user?.pubkey) {
+      startSubscriptions(user.pubkey);
+    } else {
+      stopSubscriptions();
+    }
+    return () => stopSubscriptions();
+  }, [isConnected, user?.pubkey]);
+
   const handleConnected = () => {
     setScreen("lobby");
   };
@@ -431,6 +457,7 @@ function App() {
             connectionMethod={authMethod}
             relayCount={relayCount}
             onOpenRelayList={handleOpenRelayList}
+            onOpenMessages={handleOpenMessages}
           />
           <Lobby
             onGameStart={handleGameStart}
@@ -458,6 +485,7 @@ function App() {
             connectionMethod={authMethod}
             relayCount={relayCount}
             onOpenRelayList={handleOpenRelayList}
+            onOpenMessages={handleOpenMessages}
           />
           <GameView
             gameId={gameSession.gameId}
@@ -520,6 +548,13 @@ function App() {
         open={showWelcomeModal}
         onClose={() => setShowWelcomeModal(false)}
         onOpenWalletSettings={handleOpenWalletSettings}
+      />
+
+      <DMPanel
+        open={showDMPanel}
+        onClose={handleCloseDMPanel}
+        initialPubkey={dmPanelInitialPubkey}
+        onToast={showToast}
       />
 
       {showZapAnimation && (
