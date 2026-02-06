@@ -1,5 +1,5 @@
 .board {
-    --cell-size: 40px;
+    --cell-size: min(40px, max(30px, calc((100dvh - 220px) / 16)));
     --cell-gap: 2px;
     --cell-pad: 6px;
     display: grid;
@@ -65,7 +65,7 @@
 }
 
 .cell-label {
-    font-size: 9px;
+    font-size: calc(var(--cell-size, 40px) * 0.225);
     font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -119,8 +119,8 @@
 }
 
 .cell-bolt {
-    width: 18px;
-    height: 18px;
+    width: calc(var(--cell-size, 40px) * 0.45);
+    height: calc(var(--cell-size, 40px) * 0.45);
     filter: drop-shadow(0 0 6px rgba(255, 204, 0, 0.45));
 }
 
