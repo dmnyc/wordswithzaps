@@ -95,6 +95,20 @@
     }
 }
 
+/* Board tiles scale with cell size */
+.board .tile {
+    width: calc(var(--cell-size, 36px) - 4px);
+    height: calc(var(--cell-size, 36px) - 4px);
+}
+
+.board .tile-letter {
+    font-size: calc(var(--cell-size, 36px) * 0.5);
+}
+
+.board .tile-value {
+    font-size: calc(var(--cell-size, 36px) * 0.225);
+}
+
 /* Blank tile styling */
 .tile.blank .tile-letter {
     color: #666;
