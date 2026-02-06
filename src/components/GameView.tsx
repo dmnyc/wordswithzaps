@@ -506,6 +506,7 @@ export function GameView({
 
     const result = await makeMove(pendingPlacements);
     if (result.valid) {
+      onToast?.("Move synced", "info");
       const remainingTiles = availableRack;
       setPendingPlacements([]);
       setLocalRack(remainingTiles);
@@ -967,6 +968,7 @@ export function GameView({
       }
       if (confirmAction === "pass") {
         await pass();
+        onToast?.("Turn passed", "info");
         setPendingPlacements([]);
         setPendingMoveSummary({
           word: "Turn completed",
@@ -985,6 +987,7 @@ export function GameView({
       }
       if (confirmAction === "delete") {
         await deleteGame();
+        onToast?.("Game deleted", "info");
       }
       setConfirmAction(null);
     } catch (err) {
