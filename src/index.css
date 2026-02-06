@@ -46,6 +46,13 @@ body {
     -webkit-user-drag: none;
 }
 
+button,
+input,
+textarea,
+select {
+    font-family: inherit;
+}
+
 input,
 textarea,
 select,

@@ -101,13 +101,11 @@ export function NudgeModal({
   const [saveShareSetting, setSaveShareSetting] = useState(() =>
     getSaveShareSettingDefault(),
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isMountedRef = useRef(true);
+  const [isSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
       setShareMenuOpen(false);
-      setIsSubmitting(false);
       setReplyTo("");
       setSaveShareSetting(getSaveShareSettingDefault());
       if (!getShareToNostrDefault()) {
@@ -188,13 +186,6 @@ export function NudgeModal({
     setShareMethodDefault(shareMode as ShareMethod);
   }, [shareMode, saveShareSetting]);
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
   // Close share menu on outside click / escape
   useEffect(() => {
     if (!shareMenuOpen) return;
@@ -229,24 +220,24 @@ export function NudgeModal({
       onClose();
       return;
     }
-    setIsSubmitting(true);
-    Promise.resolve(
-      onConfirm({
-        zapAmount: customAmountInvalid ? 0 : hasZap ? resolvedAmount : 0,
-        shareMode,
-        replyTo: shareMode === "public-reply" && replyTo ? replyTo : undefined,
-        publicMessage,
-        privateMessage,
-      }),
-    )
-      .catch(() => {})
-      .finally(() => {
-        if (isMountedRef.current) setIsSubmitting(false);
-      });
+    // Close immediately — zap and share run in the background
+    onConfirm({
+      zapAmount: customAmountInvalid ? 0 : hasZap ? resolvedAmount : 0,
+      shareMode,
+      replyTo: shareMode === "public-reply" && replyTo ? replyTo : undefined,
+      publicMessage,
+      privateMessage,
+    });
+    onClose();
   };
 
   return (
-    <Modal open={open} title="Send a Nudge" onClose={onClose}>
+    <Modal
+      open={open}
+      title="Send a Nudge"
+      onClose={onClose}
+      className="nudge-modal"
+    >
       <div className="nudge-content">
         <p className="nudge-waiting">
           <strong>{opponentName}</strong> has been idle for{" "}
@@ -421,7 +412,7 @@ export function NudgeModal({
             onClick={handleConfirm}
             disabled={isSubmitting || replyInvalid}
           >
-            {isSubmitting ? "Sending..." : confirmLabel}
+            {confirmLabel}
           </button>
         </div>
 

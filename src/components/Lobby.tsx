@@ -312,12 +312,13 @@ export function Lobby({
               })
           : null;
 
+      // Close modal immediately — zap and share run in the background
+      setNudgeTarget(null);
+
       const promises: Promise<void>[] = [];
       if (zapPromise) promises.push(zapPromise);
       if (sharePromise) promises.push(sharePromise);
-      if (promises.length > 0) await Promise.all(promises);
-
-      setNudgeTarget(null);
+      if (promises.length > 0) void Promise.allSettled(promises);
     },
     [nudgeTarget, user?.pubkey, isWalletConnected, zapUser, onToast],
   );

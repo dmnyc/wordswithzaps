@@ -2,6 +2,12 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-height: 240px;
+}
+
+/* Allow share dropdown to overflow the modal body */
+.nudge-modal .wwz-modal-body {
+    overflow: visible;
 }
 
 .nudge-waiting {
