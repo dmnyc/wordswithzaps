@@ -243,9 +243,9 @@ function mapPayment(p: any): SparkPayment {
     type: isIncoming ? "incoming" : "outgoing",
     amountSats: Number(amountSats),
     feesSats: feesSats !== undefined ? Number(feesSats) : undefined,
-    description: p.description || p.bolt11Description,
-    preimage: p.preimage,
-    paymentHash: p.paymentHash || p.payment_hash,
+    description: p.description || p.details?.description || p.bolt11Description,
+    preimage: p.preimage || p.details?.preimage,
+    paymentHash: p.paymentHash || p.payment_hash || p.details?.paymentHash,
     createdAt: timestamp,
     settledAt: p.settledAt || p.settled_at,
     status:
