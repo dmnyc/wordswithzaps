@@ -16,6 +16,7 @@ interface DevToolsProps {
   onTriggerZapAnimation: () => void;
   onTriggerZapathon: () => void;
   onTriggerAchievement: (achievement: Achievement) => void;
+  onRepairRack?: () => Promise<string[]>;
 }
 
 const SAMPLE_ACHIEVEMENTS: { label: string; achievement: Achievement }[] = [
@@ -63,8 +64,10 @@ export function DevTools({
   onTriggerZapAnimation,
   onTriggerZapathon,
   onTriggerAchievement,
+  onRepairRack,
 }: DevToolsProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [repairStatus, setRepairStatus] = useState<string | null>(null);
 
   if (import.meta.env.PROD) return null;
 
@@ -136,6 +139,31 @@ export function DevTools({
               </button>
             ))}
           </div>
+
+          {onRepairRack && (
+            <div className="dev-tools-section">
+              <div className="dev-tools-section-title">Rack</div>
+              <button
+                type="button"
+                onClick={async () => {
+                  setRepairStatus("Repairing...");
+                  try {
+                    const newRack = await onRepairRack();
+                    setRepairStatus(`Repaired: ${newRack.join(", ")}`);
+                  } catch (err) {
+                    setRepairStatus(
+                      `Failed: ${err instanceof Error ? err.message : String(err)}`,
+                    );
+                  }
+                }}
+              >
+                Repair rack
+              </button>
+              {repairStatus && (
+                <div className="dev-tools-status">{repairStatus}</div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

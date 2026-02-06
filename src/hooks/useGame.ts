@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { GameState, TilePlacement, ValidationResult } from "../types/game";
 import type { DecryptedGameEvent } from "../types/nostr";
 import { GameEngine } from "../engine/GameEngine";
-import { TILE_DISTRIBUTION } from "../engine/constants";
+import { TILE_DISTRIBUTION, RACK_SIZE } from "../engine/constants";
 import { NostrSync } from "../nostr/NostrSync";
 import { getCurrentUser } from "../nostr/client";
 import { optimisticMovePlayed } from "../nostr/games";
@@ -27,6 +27,9 @@ export interface UseGameReturn {
 
   // Validation
   validateMove: (placements: TilePlacement[]) => ValidationResult;
+
+  // Dev tools
+  repairRack: () => Promise<string[]>;
 }
 
 export function useGame(): UseGameReturn {
@@ -223,7 +226,14 @@ export function useGame(): UseGameReturn {
         let updatedState = latest.state;
 
         // If no rack exists, this player needs to draw their initial tiles
-        if (rack.length === 0 && updatedState.meta.status === "active") {
+        const drawLockKey = `wwz_drew_initial_${gameId}`;
+        const alreadyDrew = localStorage.getItem(drawLockKey) === "true";
+        if (
+          rack.length === 0 &&
+          !alreadyDrew &&
+          updatedState.meta.status === "active"
+        ) {
+          localStorage.setItem(drawLockKey, "true");
           const [drawnRack, remainingBag] = GameEngine.drawInitialRack(
             updatedState.tileBag,
           );
@@ -635,6 +645,42 @@ export function useGame(): UseGameReturn {
     };
   }, []);
 
+  // Dev: repair rack by drawing missing tiles from the bag
+  const repairRack = useCallback(async (): Promise<string[]> => {
+    if (!gameState || !syncRef.current || !lastEventIdRef.current) {
+      throw new Error("Game not ready");
+    }
+
+    const missing = RACK_SIZE - playerRack.length;
+    if (missing <= 0) {
+      return playerRack;
+    }
+
+    // Draw the missing tiles from the bag
+    const [drawn, remainingBag] = GameEngine.drawTiles(
+      gameState.tileBag,
+      missing,
+    );
+
+    const repairedRack = [...playerRack, ...drawn];
+    const repairedState = { ...gameState, tileBag: remainingBag };
+
+    // Publish corrected game state with reduced bag
+    const eventId = await syncRef.current.publishGameState(
+      repairedState,
+      lastEventIdRef.current,
+    );
+
+    // Save repaired rack
+    await syncRef.current.savePlayerRack({ rack: repairedRack });
+
+    setGameState(repairedState);
+    setLastEventId(eventId);
+    setPlayerRack(repairedRack);
+
+    return repairedRack;
+  }, [gameState, playerRack]);
+
   return {
     gameState,
     playerRack,
@@ -651,6 +697,7 @@ export function useGame(): UseGameReturn {
     declareAbandoned,
     deleteGame,
     validateMove: validateMoveAction,
+    repairRack,
   };
 }
 

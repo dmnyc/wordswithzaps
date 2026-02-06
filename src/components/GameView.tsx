@@ -15,6 +15,7 @@ import {
   getDisableGameplayZaps,
   subscribeAppSettings,
   addDismissedGame,
+  isGameDismissed,
 } from "../settings/appSettings";
 import ZapNudgeModal from "./ZapNudgeModal";
 import GameOverModal from "./GameOverModal";
@@ -29,6 +30,7 @@ import { fetchProfile } from "../nostr/profiles";
 import { canDeclareAbandoned } from "../utils/gameDecay";
 import { computeGameEndStats, type GameEndStats } from "../utils/gameStats";
 import DevTools from "./DevTools";
+import TileBagInspector from "./TileBagInspector";
 import "./GameView.css";
 
 interface GameViewProps {
@@ -74,6 +76,7 @@ export function GameView({
     resign,
     declareAbandoned,
     deleteGame,
+    repairRack,
   } = useGame();
 
   const [pendingPlacements, setPendingPlacements] = useState<TilePlacement[]>(
@@ -248,6 +251,9 @@ export function GameView({
       }
       setShowZapModal(false);
       setPendingMoveSummary(null);
+
+      // Don't show modal again if user already dismissed it
+      if (isGameDismissed(gameId)) return;
 
       const iWon =
         gameState.meta.status === "completed" &&
@@ -1193,17 +1199,20 @@ export function GameView({
         )}
       </div>
 
-      <Board
-        board={gameState.board}
-        pendingPlacements={pendingPlacements}
-        selectedTileIndex={selectedTileIndex}
-        onPlaceTile={handlePlaceTile}
-        onRemoveTile={handleRemoveTile}
-        onMoveTile={handleMoveTile}
-        disabled={!isMyTurn || gameState.meta.status !== "active"}
-        isFirstMove={(gameState.turn.index ?? 0) === 0}
-        highlightCoords={highlightCoords}
-      />
+      <div className="game-board-row">
+        <Board
+          board={gameState.board}
+          pendingPlacements={pendingPlacements}
+          selectedTileIndex={selectedTileIndex}
+          onPlaceTile={handlePlaceTile}
+          onRemoveTile={handleRemoveTile}
+          onMoveTile={handleMoveTile}
+          disabled={!isMyTurn || gameState.meta.status !== "active"}
+          isFirstMove={(gameState.turn.index ?? 0) === 0}
+          highlightCoords={highlightCoords}
+        />
+        <TileBagInspector tileBag={gameState.tileBag} />
+      </div>
 
       <Rack
         tiles={availableRack}
@@ -1228,6 +1237,7 @@ export function GameView({
         }
         isLoading={isLoading}
         isMyTurn={isMyTurn}
+        gameOver={gameState.meta.status !== "active"}
         pendingScore={validation?.score}
         onPlay={handlePlay}
         onPass={handlePass}
@@ -1437,6 +1447,7 @@ export function GameView({
         onTriggerZapAnimation={triggerZapAnimation}
         onTriggerZapathon={handleDevTriggerZapathon}
         onTriggerAchievement={setPendingAchievement}
+        onRepairRack={repairRack}
       />
     </div>
   );

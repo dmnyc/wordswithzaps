@@ -281,9 +281,17 @@ export class GameEngine {
    */
   static isGameOver(
     state: GameState,
-    _p1Rack: string[],
-    _p2Rack: string[],
+    p1Rack: string[],
+    p2Rack: string[],
   ): boolean {
+    // Game over if bag is empty and a player has no tiles
+    if (
+      state.tileBag.length === 0 &&
+      (p1Rack.length === 0 || p2Rack.length === 0)
+    ) {
+      return true;
+    }
+
     // Game over if both players pass consecutively
     const recentHistory = state.scoring.history.slice(-2);
     if (recentHistory.length === 2) {

@@ -6,6 +6,7 @@ interface GameControlsProps {
   canExchange: boolean;
   isLoading: boolean;
   isMyTurn: boolean;
+  gameOver: boolean;
   pendingScore?: number;
   scorePop?: { id: number; points: number } | null;
   onPlay: () => void;
@@ -21,6 +22,7 @@ export function GameControls({
   canExchange,
   isLoading,
   isMyTurn,
+  gameOver,
   pendingScore,
   scorePop = null,
   onPlay,
@@ -65,7 +67,13 @@ export function GameControls({
             onClick={onPlay}
             disabled={!canPlay || isLoading}
           >
-            {isLoading ? "Playing..." : isMyTurn ? "Play Turn" : "Waiting…"}
+            {isLoading
+              ? "Playing..."
+              : gameOver
+                ? "Game Over"
+                : isMyTurn
+                  ? "Play Turn"
+                  : "Waiting…"}
           </button>
         </div>
       </div>
