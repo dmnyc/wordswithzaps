@@ -765,10 +765,14 @@ export async function listSparkPayments(
   if (!_sdkInstance) throw new Error("Spark SDK not initialized");
 
   try {
-    const response = await _sdkInstance.listPayments({
-      limit: options.limit || 20,
-      offset: options.offset || 0,
-    });
+    const response: any = await withTimeout(
+      _sdkInstance.listPayments({
+        limit: options.limit || 20,
+        offset: options.offset || 0,
+      }),
+      10000,
+      "listPayments",
+    );
 
     const payments = (response?.payments || []).map(mapPayment);
     return payments;
