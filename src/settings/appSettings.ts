@@ -185,6 +185,8 @@ export function addDismissedGame(gameId: string): void {
     if (!dismissed.includes(gameId)) {
       dismissed.push(gameId);
       localStorage.setItem(DISMISSED_GAMES_KEY, JSON.stringify(dismissed));
+      // Sync to relays
+      updateSetting("dismissedGames", dismissed);
     }
   } catch {
     // Ignore storage errors

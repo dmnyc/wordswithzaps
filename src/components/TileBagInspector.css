@@ -1,0 +1,118 @@
+/* Desktop sidebar - hidden on mobile */
+.tile-bag-inspector-desktop {
+    display: block;
+}
+
+.tile-bag-inspector-mobile {
+    display: none;
+}
+
+.tile-bag-inspector-content {
+    width: 150px;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.tile-bag-inspector-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tile-bag-inspector-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #ff6464;
+}
+
+.tile-bag-inspector-total {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffcc00;
+}
+
+.tile-bag-inspector-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.tile-bag-inspector-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.tile-bag-inspector-letter {
+    font-weight: 700;
+    color: #f5f0e0;
+    min-width: 12px;
+    text-align: center;
+}
+
+.tile-bag-inspector-count {
+    font-weight: 600;
+    color: #ffcc00;
+    font-size: 11px;
+}
+
+.tile-bag-inspector-pts {
+    font-size: 9px;
+    color: #666;
+}
+
+.tile-bag-inspector-empty {
+    text-align: center;
+    color: #666;
+    font-size: 12px;
+    padding: 8px 0;
+}
+
+/* Mobile: collapsible tray */
+@media (max-width: 650px) {
+    .tile-bag-inspector-desktop {
+        display: none;
+    }
+
+    .tile-bag-inspector-mobile {
+        display: block;
+        width: 100%;
+    }
+
+    .tile-bag-inspector-mobile .tile-bag-inspector-content {
+        width: 100%;
+        margin-top: 4px;
+    }
+
+    .tile-bag-inspector-toggle {
+        width: 100%;
+        padding: 6px 12px;
+        background: rgba(255, 100, 100, 0.1);
+        border: 1px solid rgba(255, 100, 100, 0.2);
+        border-radius: 6px;
+        color: #ff6464;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .tile-bag-inspector-toggle:hover {
+        background: rgba(255, 100, 100, 0.18);
+    }
+
+    .tile-bag-inspector-mobile .tile-bag-inspector-grid {
+        justify-content: center;
+    }
+}
