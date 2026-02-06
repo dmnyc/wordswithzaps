@@ -1198,20 +1198,17 @@ export function GameView({
         )}
       </div>
 
-      <div className="game-board-row">
-        <Board
-          board={gameState.board}
-          pendingPlacements={pendingPlacements}
-          selectedTileIndex={selectedTileIndex}
-          onPlaceTile={handlePlaceTile}
-          onRemoveTile={handleRemoveTile}
-          onMoveTile={handleMoveTile}
-          disabled={!isMyTurn || gameState.meta.status !== "active"}
-          isFirstMove={(gameState.turn.index ?? 0) === 0}
-          highlightCoords={highlightCoords}
-        />
-        <TileBagInspector tileBag={gameState.tileBag} />
-      </div>
+      <Board
+        board={gameState.board}
+        pendingPlacements={pendingPlacements}
+        selectedTileIndex={selectedTileIndex}
+        onPlaceTile={handlePlaceTile}
+        onRemoveTile={handleRemoveTile}
+        onMoveTile={handleMoveTile}
+        disabled={!isMyTurn || gameState.meta.status !== "active"}
+        isFirstMove={(gameState.turn.index ?? 0) === 0}
+        highlightCoords={highlightCoords}
+      />
 
       <Rack
         tiles={availableRack}
@@ -1245,6 +1242,8 @@ export function GameView({
         onShuffle={handleShuffle}
         scorePop={wordScorePop}
       />
+
+      <TileBagInspector tileBag={gameState.tileBag} />
 
       {gameState.meta.status === "active" &&
         !isMyTurn &&

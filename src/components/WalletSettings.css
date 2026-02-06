@@ -761,6 +761,13 @@
     border-radius: 50%;
 }
 
+.tx-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
 .transaction-info {
     flex: 1;
     min-width: 0;
@@ -769,12 +776,27 @@
     gap: 2px;
 }
 
-.transaction-description {
+.transaction-name {
     color: #fff;
     font-size: 13px;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.transaction-description {
+    color: #ccc;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* When there's no name line, keep description white */
+.transaction-info:not(:has(.transaction-name)) .transaction-description {
+    color: #fff;
+    font-size: 13px;
 }
 
 .transaction-date {
@@ -1007,7 +1029,20 @@
         font-size: 14px;
     }
 
+    .tx-avatar {
+        width: 28px;
+        height: 28px;
+    }
+
+    .transaction-name {
+        font-size: 12px;
+    }
+
     .transaction-description {
+        font-size: 11px;
+    }
+
+    .transaction-info:not(:has(.transaction-name)) .transaction-description {
         font-size: 12px;
     }
 

@@ -22,7 +22,7 @@ export function TileBagInspector({ tileBag }: TileBagInspectorProps) {
   const content = (
     <div className="tile-bag-inspector-content">
       <div className="tile-bag-inspector-header">
-        <span className="tile-bag-inspector-title">Tile Bag</span>
+        <span className="tile-bag-inspector-title">Remaining tiles</span>
         <span className="tile-bag-inspector-total">{tileBag.length}</span>
       </div>
       <div className="tile-bag-inspector-grid">
@@ -56,7 +56,7 @@ export function TileBagInspector({ tileBag }: TileBagInspectorProps) {
           onClick={() => setIsOpen((p) => !p)}
           type="button"
         >
-          Bag ({tileBag.length}) {isOpen ? "▲" : "▼"}
+          Tile Bag ({tileBag.length}) {isOpen ? "▲" : "▼"}
         </button>
         {isOpen && content}
       </div>
