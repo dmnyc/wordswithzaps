@@ -1,6 +1,7 @@
 .player-profile {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Ensure the modal close button floats above the banner */

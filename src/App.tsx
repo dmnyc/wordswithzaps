@@ -150,7 +150,7 @@ function App() {
       toastTimeoutRef.current = window.setTimeout(() => {
         setToast(null);
         toastTimeoutRef.current = null;
-      }, 1800);
+      }, 3500);
     },
     [],
   );
