@@ -501,7 +501,9 @@ function App() {
 
       {toast && (
         <div className={`app-toast ${toast.tone || "success"}`}>
-          {toast.message}
+          {toast.message.length > 80
+            ? toast.message.slice(0, 80) + "…"
+            : toast.message}
         </div>
       )}
 

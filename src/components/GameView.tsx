@@ -289,11 +289,9 @@ export function GameView({
   }, []);
 
   // Sync local rack with latest playerRack.
-  // Only refresh when it's our turn, except for initial load.
+  // Always sync when tile contents differ to pick up newly drawn tiles.
   useEffect(() => {
     if (playerRack.length === 0) return;
-    const isInitialLoad = localRack.length === 0;
-    if (!isInitialLoad && !isMyTurn) return;
     const sameLength = playerRack.length === localRack.length;
     // Compare tile contents (sorted) rather than order to preserve shuffle
     const sameTiles =
@@ -302,7 +300,7 @@ export function GameView({
     if (!sameTiles) {
       setLocalRack(playerRack);
     }
-  }, [playerRack, localRack, isMyTurn]);
+  }, [playerRack, localRack]);
 
   // Detect opponent's achievement when our turn begins
   useEffect(() => {
@@ -506,9 +504,8 @@ export function GameView({
 
     const result = await makeMove(pendingPlacements);
     if (result.valid) {
-      const remainingTiles = availableRack;
+      onToast?.("Move synced", "info");
       setPendingPlacements([]);
-      setLocalRack(remainingTiles);
 
       // Show bingo celebration if all 7 tiles were played
       if (wasBingo) {
@@ -967,6 +964,7 @@ export function GameView({
       }
       if (confirmAction === "pass") {
         await pass();
+        onToast?.("Turn passed", "info");
         setPendingPlacements([]);
         setPendingMoveSummary({
           word: "Turn completed",
@@ -985,6 +983,7 @@ export function GameView({
       }
       if (confirmAction === "delete") {
         await deleteGame();
+        onToast?.("Game deleted", "info");
       }
       setConfirmAction(null);
     } catch (err) {
@@ -1199,20 +1198,17 @@ export function GameView({
         )}
       </div>
 
-      <div className="game-board-row">
-        <Board
-          board={gameState.board}
-          pendingPlacements={pendingPlacements}
-          selectedTileIndex={selectedTileIndex}
-          onPlaceTile={handlePlaceTile}
-          onRemoveTile={handleRemoveTile}
-          onMoveTile={handleMoveTile}
-          disabled={!isMyTurn || gameState.meta.status !== "active"}
-          isFirstMove={(gameState.turn.index ?? 0) === 0}
-          highlightCoords={highlightCoords}
-        />
-        <TileBagInspector tileBag={gameState.tileBag} />
-      </div>
+      <Board
+        board={gameState.board}
+        pendingPlacements={pendingPlacements}
+        selectedTileIndex={selectedTileIndex}
+        onPlaceTile={handlePlaceTile}
+        onRemoveTile={handleRemoveTile}
+        onMoveTile={handleMoveTile}
+        disabled={!isMyTurn || gameState.meta.status !== "active"}
+        isFirstMove={(gameState.turn.index ?? 0) === 0}
+        highlightCoords={highlightCoords}
+      />
 
       <Rack
         tiles={availableRack}
@@ -1246,6 +1242,8 @@ export function GameView({
         onShuffle={handleShuffle}
         scorePop={wordScorePop}
       />
+
+      <TileBagInspector tileBag={gameState.tileBag} />
 
       {gameState.meta.status === "active" &&
         !isMyTurn &&

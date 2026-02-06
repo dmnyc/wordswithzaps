@@ -567,6 +567,10 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [hasMoreTransactions, setHasMoreTransactions] = useState(false);
+  const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
+  const [zapProfiles, setZapProfiles] = useState<
+    Map<string, { name?: string; picture?: string }>
+  >(new Map());
   const TRANSACTIONS_PER_PAGE = 30;
 
   // Wallet removal confirmation state
@@ -626,6 +630,39 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
       loadTransactions(true);
     }
   }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch profiles for zap transactions
+  useEffect(() => {
+    const pubkeys = new Set<string>();
+    for (const tx of transactions) {
+      if (tx.zapPubkey && !zapProfiles.has(tx.zapPubkey)) {
+        pubkeys.add(tx.zapPubkey);
+      }
+    }
+    if (pubkeys.size === 0) return;
+
+    let cancelled = false;
+    for (const pubkey of pubkeys) {
+      fetchProfile(pubkey)
+        .then((profile) => {
+          if (cancelled) return;
+          setZapProfiles((prev) => {
+            const next = new Map(prev);
+            next.set(pubkey, {
+              name: profile?.displayName || profile?.name || undefined,
+              picture: profile?.picture || undefined,
+            });
+            return next;
+          });
+        })
+        .catch(() => {
+          // Ignore — we'll just show the fallback arrow icon
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [transactions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for Nostr backups when entering spark-options view
   useEffect(() => {
@@ -1405,43 +1442,88 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                 <p className="wallet-empty">No transactions yet</p>
               ) : (
                 <>
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className="transaction-item">
-                      <div className="transaction-icon">
-                        {tx.type === "incoming" ? (
-                          <span className="tx-incoming">↓</span>
-                        ) : (
-                          <span className="tx-outgoing">↑</span>
-                        )}
-                      </div>
-                      <div className="transaction-info">
-                        <span className="transaction-description">
-                          {tx.description ||
-                            (tx.type === "incoming" ? "Received" : "Sent")}
-                        </span>
-                        <span className="transaction-date">
-                          {new Date(tx.timestamp * 1000).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="transaction-amount">
-                        <span
-                          className={
-                            tx.type === "incoming"
-                              ? "amount-incoming"
-                              : "amount-outgoing"
-                          }
-                        >
-                          {tx.type === "incoming" ? "+" : "-"}
-                          {tx.amountSats.toLocaleString()} sats
-                        </span>
-                        {tx.feesSats !== undefined && tx.feesSats > 0 && (
-                          <span className="transaction-fee">
-                            Fee: {tx.feesSats} sats
+                  {transactions.map((tx) => {
+                    const zapProfile = tx.zapPubkey
+                      ? zapProfiles.get(tx.zapPubkey)
+                      : undefined;
+                    const displayDesc =
+                      tx.zapComment ||
+                      (tx.zapPubkey
+                        ? tx.type === "incoming"
+                          ? "Zap received"
+                          : "Zap sent"
+                        : tx.description) ||
+                      (tx.type === "incoming" ? "Received" : "Sent");
+                    const hasExpandable = tx.zapComment || tx.description;
+
+                    return (
+                      <div
+                        key={tx.id}
+                        className={`transaction-item ${expandedTxId === tx.id ? "expanded" : ""} ${hasExpandable ? "has-message" : ""}`}
+                        onClick={() =>
+                          hasExpandable
+                            ? setExpandedTxId(
+                                expandedTxId === tx.id ? null : tx.id,
+                              )
+                            : undefined
+                        }
+                      >
+                        <div className="transaction-icon">
+                          {zapProfile?.picture ? (
+                            <img
+                              src={zapProfile.picture}
+                              alt=""
+                              className="tx-avatar"
+                            />
+                          ) : tx.type === "incoming" ? (
+                            <span className="tx-incoming">↓</span>
+                          ) : (
+                            <span className="tx-outgoing">↑</span>
+                          )}
+                        </div>
+                        <div className="transaction-info">
+                          {zapProfile?.name && (
+                            <span className="transaction-name">
+                              {zapProfile.name}
+                            </span>
+                          )}
+                          <span className="transaction-description">
+                            {displayDesc}
                           </span>
+                          <span className="transaction-date">
+                            {new Date(tx.timestamp * 1000).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="transaction-amount">
+                          <span
+                            className={
+                              tx.type === "incoming"
+                                ? "amount-incoming"
+                                : "amount-outgoing"
+                            }
+                          >
+                            {tx.type === "incoming" ? "+" : "-"}
+                            {tx.amountSats.toLocaleString()} sats
+                          </span>
+                          {tx.feesSats !== undefined && tx.feesSats > 0 && (
+                            <span className="transaction-fee">
+                              Fee: {tx.feesSats} sats
+                            </span>
+                          )}
+                        </div>
+                        {expandedTxId === tx.id && hasExpandable && (
+                          <div className="transaction-message">
+                            <span className="transaction-message-label">
+                              Message
+                            </span>
+                            <span className="transaction-message-text">
+                              {tx.zapComment || tx.description}
+                            </span>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {hasMoreTransactions && (
                     <button
                       className="wallet-btn secondary load-more-btn"

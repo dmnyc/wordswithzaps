@@ -503,6 +503,45 @@ export async function zapUser(params: ZapParams): Promise<string> {
 }
 
 /**
+ * Parse a NIP-57 zap request from a payment description.
+ * The description field on Lightning payments may contain the JSON-encoded
+ * kind 9734 zap request event that was attached via LNURL.
+ */
+function parseZapFromDescription(
+  description: string | undefined,
+  isIncoming: boolean,
+): { pubkey: string; comment?: string } | null {
+  if (!description) return null;
+
+  try {
+    const parsed = JSON.parse(description);
+    // Must be a kind 9734 zap request event
+    if (parsed.kind !== 9734 || !parsed.pubkey) return null;
+
+    // For incoming zaps: the sender is the event pubkey
+    // For outgoing zaps: the recipient is in the "p" tag
+    if (isIncoming) {
+      return {
+        pubkey: parsed.pubkey,
+        comment: parsed.content || undefined,
+      };
+    } else {
+      const pTag = parsed.tags?.find((t: string[]) => t[0] === "p");
+      if (pTag?.[1]) {
+        return {
+          pubkey: pTag[1],
+          comment: parsed.content || undefined,
+        };
+      }
+    }
+  } catch {
+    // Not JSON or not a zap request — that's fine
+  }
+
+  return null;
+}
+
+/**
  * Get transaction history from the active wallet
  */
 export async function getTransactionHistory(
@@ -529,15 +568,29 @@ export async function getTransactionHistory(
     switch (wallet.kind) {
       case WalletKind.SPARK: {
         const payments = await listSparkPayments({ limit, offset });
-        const transactions: Transaction[] = payments.map((p) => ({
-          id: p.id,
-          type: p.type,
-          amountSats: p.amountSats,
-          feesSats: p.feesSats,
-          description: p.description,
-          timestamp: p.settledAt || p.createdAt,
-          status: p.status,
-        }));
+        const transactions: Transaction[] = payments.map((p) => {
+          const tx: Transaction = {
+            id: p.id,
+            type: p.type,
+            amountSats: p.amountSats,
+            feesSats: p.feesSats,
+            description: p.description,
+            timestamp: p.settledAt || p.createdAt,
+            status: p.status,
+          };
+
+          // Try to extract zap info from the description
+          const zapInfo = parseZapFromDescription(
+            p.description,
+            p.type === "incoming",
+          );
+          if (zapInfo) {
+            tx.zapPubkey = zapInfo.pubkey;
+            tx.zapComment = zapInfo.comment;
+          }
+
+          return tx;
+        });
         // Spark doesn't have a hasMore flag, estimate based on result count
         return { transactions, hasMore: payments.length === limit };
       }

@@ -23,6 +23,7 @@ Words With Zaps is a serverless, censorship-resistant word game where game state
 - Pass, swap tiles, or forfeit
 - Last-move tile highlighting with animated glow
 - Relay confirmation with retry logic for reliable event publishing
+- Toast notifications for relay sync events (move synced, turn passed, game deleted)
 - Mobile-responsive UI
 
 ## Login Methods

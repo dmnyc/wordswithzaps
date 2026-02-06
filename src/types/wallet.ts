@@ -83,4 +83,6 @@ export interface Transaction {
   description?: string;
   timestamp: number; // Unix timestamp (seconds)
   status: "pending" | "succeeded" | "failed";
+  zapPubkey?: string; // Sender (incoming) or recipient (outgoing) pubkey from NIP-57 zap request
+  zapComment?: string; // Comment from the zap request content field
 }

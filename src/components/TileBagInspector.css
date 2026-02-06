@@ -1,10 +1,37 @@
-/* Desktop sidebar - hidden on mobile */
+/* Always use collapsible tray (never sidebar) */
 .tile-bag-inspector-desktop {
-    display: block;
+    display: none;
 }
 
 .tile-bag-inspector-mobile {
-    display: none;
+    display: block;
+    width: 100%;
+}
+
+.tile-bag-inspector-mobile .tile-bag-inspector-content {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.tile-bag-inspector-mobile .tile-bag-inspector-grid {
+    justify-content: center;
+}
+
+.tile-bag-inspector-toggle {
+    width: 100%;
+    padding: 6px 12px;
+    background: rgba(255, 100, 100, 0.1);
+    border: 1px solid rgba(255, 100, 100, 0.2);
+    border-radius: 6px;
+    color: #ff6464;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.tile-bag-inspector-toggle:hover {
+    background: rgba(255, 100, 100, 0.18);
 }
 
 .tile-bag-inspector-content {
@@ -77,42 +104,4 @@
     color: #666;
     font-size: 12px;
     padding: 8px 0;
-}
-
-/* Mobile: collapsible tray */
-@media (max-width: 650px) {
-    .tile-bag-inspector-desktop {
-        display: none;
-    }
-
-    .tile-bag-inspector-mobile {
-        display: block;
-        width: 100%;
-    }
-
-    .tile-bag-inspector-mobile .tile-bag-inspector-content {
-        width: 100%;
-        margin-top: 4px;
-    }
-
-    .tile-bag-inspector-toggle {
-        width: 100%;
-        padding: 6px 12px;
-        background: rgba(255, 100, 100, 0.1);
-        border: 1px solid rgba(255, 100, 100, 0.2);
-        border-radius: 6px;
-        color: #ff6464;
-        font-size: 11px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-
-    .tile-bag-inspector-toggle:hover {
-        background: rgba(255, 100, 100, 0.18);
-    }
-
-    .tile-bag-inspector-mobile .tile-bag-inspector-grid {
-        justify-content: center;
-    }
 }
