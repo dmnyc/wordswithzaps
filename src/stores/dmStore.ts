@@ -30,6 +30,7 @@ export interface DMConversation {
 
 // --- State ---
 let _conversations: DMConversation[] = [];
+let _sortedConversations: DMConversation[] | null = null;
 const _messageCache = new Map<string, DMMessage[]>();
 
 // State listeners
@@ -37,6 +38,7 @@ type StateListener = () => void;
 const stateListeners: Set<StateListener> = new Set();
 
 function notifyListeners() {
+  _sortedConversations = null; // Invalidate cached sort
   stateListeners.forEach((listener) => {
     try {
       listener();
@@ -103,7 +105,12 @@ if (typeof window !== "undefined") {
 // --- Public API ---
 
 export function getConversations(): DMConversation[] {
-  return _conversations.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+  if (!_sortedConversations) {
+    _sortedConversations = [..._conversations].sort(
+      (a, b) => b.lastMessageAt - a.lastMessageAt,
+    );
+  }
+  return _sortedConversations;
 }
 
 export function getConversation(pubkey: string): DMConversation | undefined {
@@ -118,15 +125,23 @@ export function getTotalUnreadCount(): number {
   return _conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 }
 
-export function addMessage(
-  message: DMMessage,
-  isOwnMessage: boolean,
-): void {
+export function addMessage(message: DMMessage, isOwnMessage: boolean): void {
   const otherPubkey = isOwnMessage ? message.toPubkey : message.fromPubkey;
   const messages = loadMessages(otherPubkey);
 
-  // Deduplicate
+  // Deduplicate by id
   if (messages.some((m) => m.id === message.id)) return;
+
+  // Deduplicate by content+timestamp+sender (catches NIP-17 self-copy arrivals)
+  if (
+    messages.some(
+      (m) =>
+        m.fromPubkey === message.fromPubkey &&
+        m.content === message.content &&
+        Math.abs(m.createdAt - message.createdAt) < 5,
+    )
+  )
+    return;
 
   const updated = [...messages, message]
     .sort((a, b) => a.createdAt - b.createdAt)
