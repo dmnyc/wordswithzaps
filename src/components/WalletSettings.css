@@ -807,6 +807,39 @@
     font-size: 10px;
 }
 
+.transaction-item.has-message {
+    cursor: pointer;
+    flex-wrap: wrap;
+}
+
+.transaction-item.expanded {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.transaction-message {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 4px;
+}
+
+.transaction-message-label {
+    color: #5a5a5a;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.transaction-message-text {
+    color: #ccc;
+    font-size: 12px;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
 .load-more-btn {
     margin-top: 8px;
 }

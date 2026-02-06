@@ -567,6 +567,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [hasMoreTransactions, setHasMoreTransactions] = useState(false);
+  const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
   const TRANSACTIONS_PER_PAGE = 30;
 
   // Wallet removal confirmation state
@@ -1406,7 +1407,17 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
               ) : (
                 <>
                   {transactions.map((tx) => (
-                    <div key={tx.id} className="transaction-item">
+                    <div
+                      key={tx.id}
+                      className={`transaction-item ${expandedTxId === tx.id ? "expanded" : ""} ${tx.description ? "has-message" : ""}`}
+                      onClick={() =>
+                        tx.description
+                          ? setExpandedTxId(
+                              expandedTxId === tx.id ? null : tx.id,
+                            )
+                          : undefined
+                      }
+                    >
                       <div className="transaction-icon">
                         {tx.type === "incoming" ? (
                           <span className="tx-incoming">↓</span>
@@ -1440,6 +1451,16 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                           </span>
                         )}
                       </div>
+                      {expandedTxId === tx.id && tx.description && (
+                        <div className="transaction-message">
+                          <span className="transaction-message-label">
+                            Message
+                          </span>
+                          <span className="transaction-message-text">
+                            {tx.description}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {hasMoreTransactions && (

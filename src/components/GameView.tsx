@@ -289,11 +289,9 @@ export function GameView({
   }, []);
 
   // Sync local rack with latest playerRack.
-  // Only refresh when it's our turn, except for initial load.
+  // Always sync when tile contents differ to pick up newly drawn tiles.
   useEffect(() => {
     if (playerRack.length === 0) return;
-    const isInitialLoad = localRack.length === 0;
-    if (!isInitialLoad && !isMyTurn) return;
     const sameLength = playerRack.length === localRack.length;
     // Compare tile contents (sorted) rather than order to preserve shuffle
     const sameTiles =
@@ -302,7 +300,7 @@ export function GameView({
     if (!sameTiles) {
       setLocalRack(playerRack);
     }
-  }, [playerRack, localRack, isMyTurn]);
+  }, [playerRack, localRack]);
 
   // Detect opponent's achievement when our turn begins
   useEffect(() => {
@@ -507,9 +505,7 @@ export function GameView({
     const result = await makeMove(pendingPlacements);
     if (result.valid) {
       onToast?.("Move synced", "info");
-      const remainingTiles = availableRack;
       setPendingPlacements([]);
-      setLocalRack(remainingTiles);
 
       // Show bingo celebration if all 7 tiles were played
       if (wasBingo) {

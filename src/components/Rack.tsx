@@ -33,11 +33,13 @@ export function Rack({
   const [lastShuffleKey, setLastShuffleKey] = useState(0);
   const [lastTileCount, setLastTileCount] = useState(tiles.length);
 
-  // Cancel animation if tile count changes (e.g., from clear or placing tiles)
+  // Cancel animation and clear stuck drag state if tile count changes
   useEffect(() => {
     if (tiles.length !== lastTileCount) {
       setLastTileCount(tiles.length);
       setShuffleAnimation(false);
+      setDraggingIndex(null);
+      setDragOverIndex(null);
     }
   }, [tiles.length, lastTileCount]);
 
