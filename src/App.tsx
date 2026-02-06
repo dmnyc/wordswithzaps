@@ -462,6 +462,7 @@ function App() {
           <Lobby
             onGameStart={handleGameStart}
             onToast={showToast}
+            onZapSent={() => setShowZapAnimation(true)}
             prefillGameId={prefillGameId}
             prefillError={prefillError}
           />
@@ -495,6 +496,7 @@ function App() {
             onOpenWalletSettings={handleOpenWalletSettings}
             onOpenRelayList={handleOpenRelayList}
             onBackToLobby={handleBackToLobby}
+            onZapSent={() => setShowZapAnimation(true)}
           />
         </>
       )}

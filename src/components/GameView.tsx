@@ -42,6 +42,7 @@ interface GameViewProps {
   onOpenWalletSettings?: () => void;
   onOpenRelayList?: () => void;
   onBackToLobby?: () => void;
+  onZapSent?: () => void;
 }
 
 type WordScorePop = {
@@ -60,6 +61,7 @@ export function GameView({
   onOpenWalletSettings,
   onOpenRelayList,
   onBackToLobby,
+  onZapSent,
 }: GameViewProps) {
   void _onShareGame; // Reserved for share UI
   const {
@@ -498,7 +500,8 @@ export function GameView({
 
   const triggerZapAnimation = useCallback(() => {
     setShowZapAnimation(true);
-  }, []);
+    onZapSent?.();
+  }, [onZapSent]);
 
   const handleZapAnimationComplete = useCallback(() => {
     setShowZapAnimation(false);

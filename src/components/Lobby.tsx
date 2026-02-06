@@ -24,6 +24,7 @@ import "./Lobby.css";
 interface LobbyProps {
   onGameStart: (gameId: string, opponentPubkey: string) => void;
   onToast?: (message: string, tone?: "success" | "error" | "info") => void;
+  onZapSent?: () => void;
   prefillGameId?: string | null;
   prefillError?: string | null;
 }
@@ -31,6 +32,7 @@ interface LobbyProps {
 export function Lobby({
   onGameStart,
   onToast,
+  onZapSent,
   prefillGameId,
   prefillError,
 }: LobbyProps) {
@@ -277,6 +279,7 @@ export function Lobby({
               moveDescription: options.privateMessage,
             })
               .then(() => {
+                onZapSent?.();
                 onToast?.(
                   `Sent ${options.zapAmount} sat${options.zapAmount === 1 ? "" : "s"}!`,
                   "success",
