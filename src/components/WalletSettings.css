@@ -1051,11 +1051,13 @@
         font-size: 12px;
     }
 
-    .wallet-item-actions .btn-label {
+    .wallet-item-actions .btn-label,
+    .ln-address-value .btn-label {
         display: none;
     }
 
-    .wallet-item-actions .btn-icon {
+    .wallet-item-actions .btn-icon,
+    .ln-address-value .btn-icon {
         display: inline;
         font-size: 14px;
     }

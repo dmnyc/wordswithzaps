@@ -1572,8 +1572,10 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                           className="wallet-btn-small danger"
                           onClick={() => setLnAddressToDelete(true)}
                           disabled={loading}
+                          title="Delete address"
                         >
-                          Delete
+                          <span className="btn-label">Delete</span>
+                          <span className="btn-icon">&times;</span>
                         </button>
                       )}
                     </div>

@@ -375,15 +375,7 @@ export async function updateProfileLightningAddress(
     }
   }
 
-  // Ensure we have at least the essential fields from NDK user if no existing profile
-  if (Object.keys(existingMetadata).length === 0) {
-    // Don't create an empty profile - require existing profile data
-    throw new Error(
-      "No existing profile found. Please set up your profile first.",
-    );
-  }
-
-  // Update only the lud16 field
+  // Update the lud16 field (creates a minimal profile if none exists)
   existingMetadata.lud16 = newLud16;
 
   // Create and publish the updated profile event
