@@ -1362,3 +1362,20 @@
         font-size: 11px;
     }
 }
+
+/* Glow pulse for buttons needing attention */
+.glow-pulse {
+    animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+    0%,
+    100% {
+        box-shadow: 0 0 4px rgba(255, 204, 0, 0.3);
+    }
+    50% {
+        box-shadow:
+            0 0 16px rgba(255, 204, 0, 0.6),
+            0 0 32px rgba(255, 204, 0, 0.2);
+    }
+}

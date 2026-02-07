@@ -588,7 +588,9 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [viewMnemonic, setViewMnemonic] = useState<string | null>(null);
   // Lightning address state
-  const [sparkLnAddress, setSparkLnAddress] = useState<string | null>(null);
+  const [sparkLnAddress, setSparkLnAddress] = useState<string | null>(
+    getSparkLightningAddress,
+  );
   const [sparkLnAddressLoading, setSparkLnAddressLoading] = useState(false);
   const [profileLnAddress, setProfileLnAddress] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState("");
@@ -1171,7 +1173,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
               <div className="wallet-section">
                 <h3>Lightning Address</h3>
                 <button
-                  className="wallet-btn secondary"
+                  className={`wallet-btn secondary${!sparkLnAddress ? " glow-pulse" : ""}`}
                   onClick={() => setView("lightning-address")}
                   style={{ width: "100%" }}
                 >
