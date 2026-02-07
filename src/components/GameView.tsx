@@ -639,7 +639,25 @@ export function GameView({
       let sharePromise: Promise<void> | null = null;
       if (options.shareMode !== "none") {
         let shareText = "";
-        if (pendingMoveSummary?.kind === "skip") {
+        if (pendingMoveSummary?.isFirstMove) {
+          const isPublicShare =
+            options.shareMode === "public" ||
+            options.shareMode === "public-reply";
+          const publicTarget = opponentPubkey
+            ? `nostr:${opponentNpub}`
+            : opponentLabel
+              ? `@${opponentLabel}`
+              : "you";
+          const challengeTarget = isPublicShare ? publicTarget : "you";
+          const joinLine = isPublicShare
+            ? "Join or start a new game here:"
+            : "Join the game here:";
+          if (pendingMoveSummary?.kind === "skip") {
+            shareText = `I'm challenging ${challengeTarget} to play #WordsWithZaps.\n\n${joinLine}\n\n${gameLink}`;
+          } else {
+            shareText = `I'm challenging ${challengeTarget} to play #WordsWithZaps.\n\nI just played ${word} for ${points} point${points === 1 ? "" : "s"}.\n\n${joinLine}\n\n${gameLink}`;
+          }
+        } else if (pendingMoveSummary?.kind === "skip") {
           const action =
             pendingMoveSummary.skipReason === "swap"
               ? "swapped tiles"
@@ -656,20 +674,6 @@ export function GameView({
             ? `Over to you, ${opponentRef}!`
             : "Over to you!";
           shareText = `I just ${action} in #WordsWithZaps.\n\n${turnLine}\n\n${gameLink}`;
-        } else if (pendingMoveSummary?.isFirstMove) {
-          const isPublicShare =
-            options.shareMode === "public" ||
-            options.shareMode === "public-reply";
-          const publicTarget = opponentPubkey
-            ? `nostr:${opponentNpub}`
-            : opponentLabel
-              ? `@${opponentLabel}`
-              : "you";
-          const challengeTarget = isPublicShare ? publicTarget : "you";
-          const joinLine = isPublicShare
-            ? "Join or start a new game here:"
-            : "Join the game here:";
-          shareText = `I'm challenging ${challengeTarget} to play #WordsWithZaps.\n\nI just played ${word} for ${points} point${points === 1 ? "" : "s"}.\n\n${joinLine}\n\n${gameLink}`;
         } else {
           let opponentRef = "";
           if (opponentPubkey) {
@@ -759,6 +763,20 @@ export function GameView({
     if (!pendingMoveSummary) {
       return { public: "", private: "" };
     }
+    if (pendingMoveSummary.isFirstMove) {
+      const publicTarget = opponentLabel ? `@${opponentLabel}` : "you";
+      if (pendingMoveSummary.kind === "skip") {
+        return {
+          public: `I'm challenging ${publicTarget} to play #WordsWithZaps.\n\nJoin or start a new game here:\n\n${gameLink}`,
+          private: `I'm challenging you to play #WordsWithZaps.\n\nJoin the game here:\n\n${gameLink}`,
+        };
+      }
+      const points = pendingMoveSummary.points;
+      return {
+        public: `I'm challenging ${publicTarget} to play #WordsWithZaps.\n\nI just played ${pendingMoveSummary.word} for ${points} point${points === 1 ? "" : "s"}.\n\nJoin or start a new game here:\n\n${gameLink}`,
+        private: `I'm challenging you to play #WordsWithZaps.\n\nI just played ${pendingMoveSummary.word} for ${points} point${points === 1 ? "" : "s"}.\n\nJoin the game here:\n\n${gameLink}`,
+      };
+    }
     if (pendingMoveSummary.kind === "skip") {
       const action =
         pendingMoveSummary.skipReason === "swap"
@@ -771,14 +789,6 @@ export function GameView({
       return {
         public: `I just ${action} in #WordsWithZaps.\n\n${publicTurnLine}\n\n${gameLink}`,
         private: `I just ${action} in #WordsWithZaps.\n\n${privateTurnLine}\n\n${gameLink}`,
-      };
-    }
-    const points = pendingMoveSummary.points;
-    if (pendingMoveSummary.isFirstMove) {
-      const publicTarget = opponentLabel ? `@${opponentLabel}` : "you";
-      return {
-        public: `I'm challenging ${publicTarget} to play #WordsWithZaps.\n\nI just played ${pendingMoveSummary.word} for ${points} point${points === 1 ? "" : "s"}.\n\nJoin or start a new game here:\n\n${gameLink}`,
-        private: `I'm challenging you to play #WordsWithZaps.\n\nI just played ${pendingMoveSummary.word} for ${points} point${points === 1 ? "" : "s"}.\n\nJoin the game here:\n\n${gameLink}`,
       };
     }
     const turnLine = opponentLabel
@@ -828,7 +838,7 @@ export function GameView({
         points: 0,
         myScore: gameState?.scoring.p1Score || 0,
         opponentScore: gameState?.scoring.p2Score || 0,
-        isFirstMove: false,
+        isFirstMove: (gameState?.turn.index ?? 0) === 0,
         kind: "skip",
         skipReason: "swap",
       });
@@ -1028,7 +1038,7 @@ export function GameView({
           points: 0,
           myScore: gameState?.scoring.p1Score || 0,
           opponentScore: gameState?.scoring.p2Score || 0,
-          isFirstMove: false,
+          isFirstMove: (gameState?.turn.index ?? 0) === 0,
           kind: "skip",
           skipReason: "pass",
         });
