@@ -381,7 +381,6 @@ export async function updateProfileLightningAddress(
     const defaultName = getGameLabel(currentUser.pubkey);
     existingMetadata = {
       display_name: defaultName,
-      name: defaultName,
       about: "Words With Zaps player",
       picture: "https://i.nostr.build/NfbS2gOmKYOfo52V.png",
       banner: "https://i.nostr.build/NAxPhmBYGM68t3ca.png",
