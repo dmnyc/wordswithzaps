@@ -122,6 +122,10 @@ export function GameView({
   const [pendingAchievement, setPendingAchievement] =
     useState<Achievement | null>(null);
   const [showBingoCelebration, setShowBingoCelebration] = useState(false);
+  const [showBonusCelebration, setShowBonusCelebration] = useState(false);
+  const [bonusCelebrationWords, setBonusCelebrationWords] = useState<string[]>(
+    [],
+  );
   const [showVictoryCelebration, setShowVictoryCelebration] = useState(false);
   const [wordScorePop, setWordScorePop] = useState<WordScorePop | null>(null);
   const [showZapAnimation, setShowZapAnimation] = useState(false);
@@ -139,6 +143,7 @@ export function GameView({
   const wordScoreTimeoutRef = useRef<number | null>(null);
   const postMoveModalTimeoutRef = useRef<number | null>(null);
   const bingoTimeoutRef = useRef<number | null>(null);
+  const bonusCelebrationTimeoutRef = useRef<number | null>(null);
 
   const opponentLabel = opponentDisplayName || "Opponent";
   const opponentNpub = useMemo(() => {
@@ -274,7 +279,7 @@ export function GameView({
           setShowVictoryCelebration(false);
           setShowGameOverModal(true);
           victoryCelebrationRef.current = null;
-        }, 5000);
+        }, 8000);
       } else {
         setShowGameOverModal(true);
       }
@@ -294,6 +299,9 @@ export function GameView({
       }
       if (victoryCelebrationRef.current !== null) {
         window.clearTimeout(victoryCelebrationRef.current);
+      }
+      if (bonusCelebrationTimeoutRef.current !== null) {
+        window.clearTimeout(bonusCelebrationTimeoutRef.current);
       }
     };
   }, []);
@@ -335,6 +343,7 @@ export function GameView({
         lastMove.word,
         lastMove.score,
         lastMove.coords,
+        lastMove.bonusWords,
       );
       if (achievement) {
         setPendingAchievement(achievement);
@@ -552,6 +561,20 @@ export function GameView({
         }, 2500);
       }
 
+      // Show bonus word celebration
+      const bonusWords = validation.bonusWords;
+      if (bonusWords && bonusWords.length > 0) {
+        setBonusCelebrationWords(bonusWords);
+        setShowBonusCelebration(true);
+        if (bonusCelebrationTimeoutRef.current !== null) {
+          window.clearTimeout(bonusCelebrationTimeoutRef.current);
+        }
+        bonusCelebrationTimeoutRef.current = window.setTimeout(() => {
+          setShowBonusCelebration(false);
+          bonusCelebrationTimeoutRef.current = null;
+        }, 2500);
+      }
+
       triggerWordScorePop(points);
 
       setPendingMoveSummary(moveSummary);
@@ -572,6 +595,7 @@ export function GameView({
     myPubkey,
     pendingPlacements,
     triggerWordScorePop,
+    triggerZapAnimation,
     validation,
   ]);
 
@@ -1069,7 +1093,7 @@ export function GameView({
     victoryCelebrationRef.current = window.setTimeout(() => {
       setShowVictoryCelebration(false);
       victoryCelebrationRef.current = null;
-    }, 3000);
+    }, 8000);
   }, []);
 
   const handleDevTriggerGameOver = useCallback(
@@ -1157,6 +1181,17 @@ export function GameView({
     bingoTimeoutRef.current = window.setTimeout(() => {
       setShowBingoCelebration(false);
       bingoTimeoutRef.current = null;
+    }, 2500);
+  }, []);
+
+  const handleDevTriggerBonusCelebration = useCallback(() => {
+    setBonusCelebrationWords(["BITCOIN"]);
+    setShowBonusCelebration(true);
+    if (bonusCelebrationTimeoutRef.current)
+      window.clearTimeout(bonusCelebrationTimeoutRef.current);
+    bonusCelebrationTimeoutRef.current = window.setTimeout(() => {
+      setShowBonusCelebration(false);
+      bonusCelebrationTimeoutRef.current = null;
     }, 2500);
   }, []);
 
@@ -1457,16 +1492,49 @@ export function GameView({
         </div>
       )}
 
+      {showBonusCelebration && (
+        <div className="bonus-celebration">
+          <div className="bonus-celebration-confetti">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div
+                key={i}
+                className="confetti-piece bonus-confetti-piece"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 0.5}s`,
+                  animationDuration: `${2 + Math.random() * 1}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="bonus-celebration-content">
+            <img
+              src="/assets/bonus_word.svg"
+              alt="Bonus Word"
+              className="bonus-celebration-graphic"
+            />
+            <div className="bonus-celebration-words">
+              {bonusCelebrationWords.map((w) => (
+                <span key={w} className="bonus-celebration-word">
+                  {w}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showVictoryCelebration && (
         <div className="victory-celebration">
           <div className="victory-confetti">
-            {Array.from({ length: 40 }).map((_, i) => (
+            {Array.from({ length: 100 }).map((_, i) => (
               <div
                 key={i}
                 className="confetti-piece victory-confetti-piece"
                 style={{
                   left: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 0.8}s`,
+                  top: `${-10 - Math.random() * 20}%`,
+                  animationDelay: `${Math.random() * 3}s`,
                   animationDuration: `${2.5 + Math.random() * 1.5}s`,
                 }}
               />
@@ -1495,6 +1563,7 @@ export function GameView({
         onTriggerGameOver={handleDevTriggerGameOver}
         onTriggerZapAnimation={triggerZapAnimation}
         onTriggerZapathon={handleDevTriggerZapathon}
+        onTriggerBonusCelebration={handleDevTriggerBonusCelebration}
         onTriggerAchievement={setPendingAchievement}
         onRepairRack={repairRack}
         onPlaceBonusWord={handleDevPlaceBonusWord}

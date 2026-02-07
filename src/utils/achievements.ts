@@ -1,5 +1,6 @@
 export type AchievementType =
   | "bingo"
+  | "bonus-word"
   | "zap-bonus"
   | "double-word"
   | "high-score";
@@ -35,6 +36,7 @@ export function detectAchievement(
   word: string,
   score: number,
   coords: string[],
+  bonusWords?: string[],
 ): Achievement | null {
   // Skip passes and exchanges
   if (word.startsWith("(")) {
@@ -48,6 +50,17 @@ export function detectAchievement(
       word,
       score,
       message: "ZAPATHON! All 7 tiles played!",
+    };
+  }
+
+  // Check for bonus word (Bitcoin/Nostr themed)
+  if (bonusWords && bonusWords.length > 0) {
+    const bonusDisplay = bonusWords.join(", ");
+    return {
+      type: "bonus-word",
+      word: bonusDisplay,
+      score,
+      message: `2x score for ${bonusDisplay}!`,
     };
   }
 
