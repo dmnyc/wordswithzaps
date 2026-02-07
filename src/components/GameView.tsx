@@ -1365,7 +1365,7 @@ export function GameView({
         />
       )}
 
-      {pendingMoveSummary && (
+      {pendingMoveSummary && !showVictoryCelebration && !showGameOverModal && (
         <ZapNudgeModal
           open={showZapModal}
           word={pendingMoveSummary.word}
