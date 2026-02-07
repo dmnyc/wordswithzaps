@@ -379,6 +379,28 @@
     color: #fff;
 }
 
+/* Key backup section */
+.profile-key-backup {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.profile-key-backup-label {
+    color: #9a9a9a;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.profile-key-backup .profile-btn {
+    font-size: 13px;
+    padding: 8px 16px;
+}
+
 /* Hidden file input */
 .profile-file-input {
     display: none;

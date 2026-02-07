@@ -7,6 +7,7 @@ import {
   createEvent,
   publishEvent,
 } from "./client";
+import { getGameLabel } from "../utils/gameLabel";
 
 const PROFILE_KIND = 0;
 const PROFILE_FETCH_LIMIT = 1000;
@@ -375,7 +376,19 @@ export async function updateProfileLightningAddress(
     }
   }
 
-  // Update the lud16 field (creates a minimal profile if none exists)
+  // If no existing profile, create a default one
+  if (Object.keys(existingMetadata).length === 0) {
+    const defaultName = getGameLabel(currentUser.pubkey);
+    existingMetadata = {
+      display_name: defaultName,
+      name: defaultName,
+      about: "Words With Zaps player",
+      picture: "https://i.nostr.build/NfbS2gOmKYOfo52V.png",
+      banner: "https://i.nostr.build/NAxPhmBYGM68t3ca.png",
+      website: "https://wordswithzaps.top",
+    };
+  }
+
   existingMetadata.lud16 = newLud16;
 
   // Create and publish the updated profile event

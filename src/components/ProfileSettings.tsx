@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getCurrentUser } from "../nostr/client";
+import { nip19 } from "nostr-tools";
+import { hexToBytes } from "@noble/hashes/utils";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { getCurrentUser, getNDK } from "../nostr/client";
 import { fetchProfileMetadata, updateProfile } from "../nostr/profiles";
 import { uploadImage } from "../nostr/imageUpload";
 import { CameraIcon } from "./icons/LoginIcons";
@@ -48,6 +51,7 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const user = getCurrentUser();
+  const isNsecUser = getNDK().signer instanceof NDKPrivateKeySigner;
 
   const loadProfile = useCallback(async () => {
     if (!user?.pubkey) {
@@ -201,6 +205,35 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
     },
     [onClose],
   );
+
+  const downloadKeyBackup = useCallback(() => {
+    const signer = getNDK().signer;
+    if (!(signer instanceof NDKPrivateKeySigner)) return;
+    const privKeyHex = signer.privateKey;
+    if (!privKeyHex || !user?.npub) return;
+
+    const nsec = nip19.nsecEncode(hexToBytes(privKeyHex));
+    const date = new Date().toISOString().split("T")[0];
+    const content = `Words With Zaps - Nostr Keys Backup
+Generated: ${new Date().toLocaleString()}
+
+PRIVATE KEY (keep secret!):
+${nsec}
+
+PUBLIC KEY (safe to share):
+${user.npub}
+
+WARNING: Never share your private key. Store this file securely.`;
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wordswithzaps-keys-${date}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    onToast?.("Key backup downloaded", "success");
+  }, [user?.npub, onToast]);
 
   const displayNameForPreview =
     formState.displayName || formState.name || "You";
@@ -451,6 +484,20 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
                 <span className="profile-form-hint">For receiving zaps</span>
               </div>
             </div>
+
+            {/* Key backup for nsec users */}
+            {isNsecUser && (
+              <div className="profile-key-backup">
+                <span className="profile-key-backup-label">Key Backup</span>
+                <button
+                  className="profile-btn secondary"
+                  onClick={downloadKeyBackup}
+                  type="button"
+                >
+                  Download nsec backup
+                </button>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="profile-actions">
