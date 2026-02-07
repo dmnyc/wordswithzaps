@@ -95,6 +95,12 @@ export function GameRulesModal({ open, onClose }: GameRulesModalProps) {
             <li>One player uses all tiles (runs out)</li>
             <li>A player forfeits</li>
           </ul>
+          <p className="rules-note">
+            When a player runs out, the value of the opponent's remaining tiles
+            is added to their score and subtracted from the opponent's. If the
+            game ends by passing, both players lose the value of their remaining
+            tiles.
+          </p>
         </section>
 
         <section className="rules-section">
