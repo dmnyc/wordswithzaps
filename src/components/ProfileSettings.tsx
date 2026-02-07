@@ -336,20 +336,23 @@ WARNING: Never share your private key. Store this file securely.`;
             {/* Npub */}
             {npub && (
               <div className="profile-npub">
-                <span className="profile-npub-text">
-                  {npub.slice(0, 12)}...{npub.slice(-8)}
-                </span>
-                <button
-                  className="profile-npub-copy"
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(npub);
-                    setCopiedNpub(true);
-                    setTimeout(() => setCopiedNpub(false), 2000);
-                  }}
-                >
-                  {copiedNpub ? "Copied!" : "Copy"}
-                </button>
+                <span className="profile-form-label">Public Key</span>
+                <div className="profile-npub-row">
+                  <span className="profile-npub-text">
+                    {npub.slice(0, 12)}...{npub.slice(-8)}
+                  </span>
+                  <button
+                    className="profile-npub-copy"
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(npub);
+                      setCopiedNpub(true);
+                      setTimeout(() => setCopiedNpub(false), 2000);
+                    }}
+                  >
+                    {copiedNpub ? "Copied!" : "Copy"}
+                  </button>
+                </div>
               </div>
             )}
 

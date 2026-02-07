@@ -195,9 +195,15 @@
 /* Npub display */
 .profile-npub {
     display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.profile-npub-row {
+    display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
 }
 
 .profile-npub-text {
