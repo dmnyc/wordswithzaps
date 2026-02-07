@@ -1643,13 +1643,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                 receiving zaps.
               </p>
 
-              {profileLnAddress && (
-                <div className="ln-address-current">
-                  <span className="ln-address-label">Current:</span>
-                  <span className="ln-address-text">{profileLnAddress}</span>
-                </div>
-              )}
-
               {/* Show update option if active wallet has an address different from profile */}
               {(() => {
                 const activeAddr = getActiveWalletLightningAddress();
@@ -1659,13 +1652,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                 if (needsUpdate) {
                   return (
                     <div className="ln-address-update">
-                      <p
-                        className="wallet-hint"
-                        style={{ marginBottom: "8px" }}
-                      >
-                        Your active Spark wallet has address:{" "}
-                        <strong>{activeAddr}</strong>
-                      </p>
                       <button
                         className="wallet-btn primary"
                         onClick={() =>
@@ -1674,9 +1660,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                         disabled={loading}
                         style={{ width: "100%" }}
                       >
-                        {loading
-                          ? "Updating..."
-                          : `Update Profile to ${activeAddr}`}
+                        {loading ? "Updating..." : "Update Profile"}
                       </button>
                     </div>
                   );
