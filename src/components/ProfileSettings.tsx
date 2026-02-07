@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { nip19 } from "nostr-tools";
 import { hexToBytes } from "@noble/hashes/utils";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
@@ -52,6 +52,11 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
 
   const user = getCurrentUser();
   const isNsecUser = getNDK().signer instanceof NDKPrivateKeySigner;
+  const npub = useMemo(
+    () => user?.npub || (user?.pubkey ? nip19.npubEncode(user.pubkey) : null),
+    [user?.npub, user?.pubkey],
+  );
+  const [copiedNpub, setCopiedNpub] = useState(false);
 
   const loadProfile = useCallback(async () => {
     if (!user?.pubkey) {
@@ -327,6 +332,26 @@ WARNING: Never share your private key. Store this file securely.`;
                 </span>
               </div>
             </div>
+
+            {/* Npub */}
+            {npub && (
+              <div className="profile-npub">
+                <span className="profile-npub-text">
+                  {npub.slice(0, 12)}...{npub.slice(-8)}
+                </span>
+                <button
+                  className="profile-npub-copy"
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(npub);
+                    setCopiedNpub(true);
+                    setTimeout(() => setCopiedNpub(false), 2000);
+                  }}
+                >
+                  {copiedNpub ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            )}
 
             {/* Hidden file inputs */}
             <input

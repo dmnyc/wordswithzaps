@@ -192,6 +192,35 @@
     font-size: 12px;
 }
 
+/* Npub display */
+.profile-npub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.profile-npub-text {
+    color: #7a7a7a;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.profile-npub-copy {
+    background: rgba(255, 255, 255, 0.08);
+    color: #9a9a9a;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.profile-npub-copy:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
 /* Form fields */
 .profile-form {
     display: flex;
