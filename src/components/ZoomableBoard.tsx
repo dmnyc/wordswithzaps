@@ -86,7 +86,8 @@ export function ZoomableBoard({ children, gameId }: ZoomableBoardProps) {
     const container = containerRef.current.getBoundingClientRect();
     const board = innerRef.current.children[0];
     if (!board) return { x: tx, y: ty };
-    // Use the board's unscaled size
+
+    // Board's unscaled dimensions
     const boardRect = board.getBoundingClientRect();
     const boardW = boardRect.width / scaleRef.current;
     const boardH = boardRect.height / scaleRef.current;
@@ -94,18 +95,20 @@ export function ZoomableBoard({ children, gameId }: ZoomableBoardProps) {
     const scaledW = boardW * s;
     const scaledH = boardH * s;
 
-    // If board fits in container, center it
+    // With transform-origin: 0 0, translate(0,0) shows top-left.
+    // To see bottom-right, need negative translate.
+    // Range: -(scaledW - containerW)/s .. 0
     if (scaledW <= container.width) {
       tx = 0;
     } else {
-      const maxTx = (scaledW - container.width) / (2 * s);
-      tx = clamp(tx, -maxTx, maxTx);
+      const minTx = -(scaledW - container.width) / s;
+      tx = clamp(tx, minTx, 0);
     }
     if (scaledH <= container.height) {
       ty = 0;
     } else {
-      const maxTy = (scaledH - container.height) / (2 * s);
-      ty = clamp(ty, -maxTy, maxTy);
+      const minTy = -(scaledH - container.height) / s;
+      ty = clamp(ty, minTy, 0);
     }
     return { x: tx, y: ty };
   }, []);
@@ -297,8 +300,26 @@ export function ZoomableBoard({ children, gameId }: ZoomableBoardProps) {
         {children}
       </div>
       {scale > 1 && (
-        <button className="zoom-reset-btn" onClick={resetZoom} type="button">
-          Reset zoom
+        <button
+          className="zoom-reset-btn"
+          onClick={resetZoom}
+          type="button"
+          aria-label="Reset zoom"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <line x1="8" y1="11" x2="14" y2="11" />
+          </svg>
         </button>
       )}
     </div>

@@ -20,11 +20,14 @@
     background: rgba(0, 0, 0, 0.6);
     color: rgba(255, 255, 255, 0.8);
     border: none;
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 4px;
+    padding: 6px;
+    border-radius: 6px;
     z-index: 10;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
 }
 
 .zoom-reset-btn:active {
