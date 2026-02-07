@@ -257,8 +257,13 @@ export function GameView({
       setShowZapModal(false);
       setPendingMoveSummary(null);
 
-      // Don't show modal again if user already dismissed it
-      if (isGameDismissed(gameId)) return;
+      // Don't show modal again if user already saw it
+      const alreadySeen = isGameDismissed(gameId);
+
+      // Mark as dismissed so it hides from lobby after being viewed once
+      addDismissedGame(gameId);
+
+      if (alreadySeen) return;
 
       const iWon =
         gameState.meta.status === "completed" &&
