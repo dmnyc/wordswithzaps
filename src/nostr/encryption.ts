@@ -1,5 +1,7 @@
 import { nip44 } from "nostr-tools";
-import { getCurrentUser } from "./client";
+import { hexToBytes } from "@noble/hashes/utils";
+import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import { getCurrentUser, getNDK } from "./client";
 
 /**
  * NIP-44 encryption service
@@ -13,7 +15,7 @@ export interface EncryptionProvider {
 
 /**
  * Get the NIP-44 encryption provider
- * Prefers browser extension, falls back to manual implementation
+ * Prefers browser extension, falls back to nostr-tools with private key
  */
 export function getEncryptionProvider(): EncryptionProvider {
   // Check for NIP-07 extension with NIP-44 support
@@ -26,10 +28,28 @@ export function getEncryptionProvider(): EncryptionProvider {
     };
   }
 
-  // Fallback: manual encryption would require private key access
-  // For security, we require NIP-07 extension for encryption
+  // Fallback: use nostr-tools nip44 with private key from NDKPrivateKeySigner
+  const ndk = getNDK();
+  const signer = ndk.signer;
+  if (signer instanceof NDKPrivateKeySigner) {
+    const privKeyHex = signer.privateKey;
+    if (privKeyHex) {
+      const privKeyBytes = hexToBytes(privKeyHex);
+      return {
+        encrypt: async (pubkey: string, plaintext: string) => {
+          const key = nip44.v2.utils.getConversationKey(privKeyBytes, pubkey);
+          return nip44.v2.encrypt(plaintext, key);
+        },
+        decrypt: async (pubkey: string, ciphertext: string) => {
+          const key = nip44.v2.utils.getConversationKey(privKeyBytes, pubkey);
+          return nip44.v2.decrypt(ciphertext, key);
+        },
+      };
+    }
+  }
+
   throw new Error(
-    "NIP-44 encryption requires a browser extension with NIP-44 support (e.g., Alby, nos2x)",
+    "NIP-44 encryption requires a browser extension with NIP-44 support (e.g., Alby, nos2x), or sign in with a private key",
   );
 }
 
