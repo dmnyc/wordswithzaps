@@ -24,6 +24,13 @@ const ACHIEVEMENT_ICONS: Record<
       className="achievement-badge-zapathon"
     />
   ),
+  "bonus-word": (
+    <img
+      src="/assets/bonus_word.svg"
+      alt="Bonus Word"
+      className="achievement-badge-bonus-word"
+    />
+  ),
   "zap-bonus": (
     <img
       src="/assets/bolt-yellow.svg"
@@ -37,6 +44,7 @@ const ACHIEVEMENT_ICONS: Record<
 
 const ACHIEVEMENT_ZAP_MESSAGES: Record<Achievement["type"], string> = {
   bingo: "Nice job on the #Zapathon! ⚡️ #WordsWithZaps",
+  "bonus-word": "Nice bonus word! 2x score! ⚡️ #WordsWithZaps",
   "zap-bonus": "Nice job hitting the Zap Square! ⚡️ #WordsWithZaps",
   "double-word": "Nice job on the Double Word Score! ⚡️ #WordsWithZaps",
   "high-score": "Nice word score! ⚡️ #WordsWithZaps",
@@ -90,7 +98,7 @@ export function AchievementModal({
 
         <div className="achievement-badge">
           <div
-            className={`achievement-badge-icon ${achievement.type === "bingo" ? "bingo" : ""}`}
+            className={`achievement-badge-icon ${achievement.type === "bingo" || achievement.type === "bonus-word" ? achievement.type : ""}`}
           >
             {ACHIEVEMENT_ICONS[achievement.type] ?? (
               <img src="/wow.svg" alt="Wow" className="achievement-badge-img" />
@@ -102,7 +110,9 @@ export function AchievementModal({
           <strong>{opponentName}</strong>{" "}
           {achievement.type === "bingo"
             ? "played a Zapathon!"
-            : "played an awesome word!"}
+            : achievement.type === "bonus-word"
+              ? "found a Bonus Word!"
+              : "played an awesome word!"}
         </p>
 
         <div className="achievement-word-display">

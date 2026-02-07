@@ -15,6 +15,7 @@ interface DevToolsProps {
   ) => void;
   onTriggerZapAnimation: () => void;
   onTriggerZapathon: () => void;
+  onTriggerBonusCelebration: () => void;
   onTriggerAchievement: (achievement: Achievement) => void;
   onRepairRack?: () => Promise<string[]>;
   onPlaceBonusWord?: () => void;
@@ -38,6 +39,15 @@ const SAMPLE_ACHIEVEMENTS: { label: string; achievement: Achievement }[] = [
       word: "JUKEBOX",
       score: 92,
       message: "played a ZAPATHON!",
+    },
+  },
+  {
+    label: "Bonus Word",
+    achievement: {
+      type: "bonus-word",
+      word: "BITCOIN",
+      score: 44,
+      message: "2x score for BITCOIN!",
     },
   },
   {
@@ -65,6 +75,7 @@ export function DevTools({
   onTriggerGameOver,
   onTriggerZapAnimation,
   onTriggerZapathon,
+  onTriggerBonusCelebration,
   onTriggerAchievement,
   onRepairRack,
   onPlaceBonusWord,
@@ -97,6 +108,9 @@ export function DevTools({
             </button>
             <button type="button" onClick={onTriggerZapathon}>
               Zapathon
+            </button>
+            <button type="button" onClick={onTriggerBonusCelebration}>
+              Bonus word
             </button>
           </div>
 

@@ -397,6 +397,87 @@
     }
 }
 
+/* Bonus word celebration overlay */
+.bonus-celebration {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    pointer-events: none;
+    animation: zapathonCelebrationFade 2.5s ease-out forwards;
+}
+
+.bonus-celebration-confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.bonus-confetti-piece:nth-child(odd) {
+    background: #ffcc00;
+}
+
+.bonus-confetti-piece:nth-child(even) {
+    background: #ffd633;
+}
+
+.bonus-confetti-piece:nth-child(3n) {
+    background: #ffb300;
+}
+
+.bonus-confetti-piece:nth-child(4n) {
+    background: #ffe066;
+}
+
+.bonus-confetti-piece:nth-child(5n) {
+    background: #ffa500;
+}
+
+.bonus-celebration-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: zapathonBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.bonus-celebration-graphic {
+    width: min(80%, 250px);
+    height: auto;
+    filter: drop-shadow(0 4px 20px rgba(255, 204, 0, 0.6));
+}
+
+.bonus-celebration-words {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.bonus-celebration-word {
+    display: inline-block;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 6px 18px;
+    border-radius: 8px;
+    box-shadow: 0 0 16px rgba(255, 204, 0, 0.5);
+    animation: bonusPulse 0.8s ease-in-out 0.3s;
+}
+
+@media (max-width: 520px) {
+    .bonus-celebration-graphic {
+        width: min(80%, 200px);
+    }
+    .bonus-celebration-word {
+        font-size: 18px;
+    }
+}
+
 /* Victory celebration overlay */
 .victory-celebration {
     position: fixed;
@@ -407,7 +488,7 @@
     z-index: 2000;
     pointer-events: none;
     background: rgba(0, 0, 0, 0.4);
-    animation: victoryCelebrationFade 5s ease-out forwards;
+    animation: victoryCelebrationFade 8s ease-out forwards;
 }
 
 @keyframes victoryCelebrationFade {
