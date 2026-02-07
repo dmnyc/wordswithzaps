@@ -5,6 +5,7 @@ import { useWallet } from "../hooks/useWallet";
 import { getCurrentUser, createEvent, publishEvent } from "../nostr/client";
 import { publishShareMessage } from "../nostr/share";
 import Board from "./Board";
+import ZoomableBoard from "./ZoomableBoard";
 import Rack from "./Rack";
 import ScoreBoard from "./ScoreBoard";
 import GameControls from "./GameControls";
@@ -1279,22 +1280,24 @@ export function GameView({
         )}
       </div>
 
-      <Board
-        board={
-          devBonusTiles
-            ? { ...gameState.board, ...devBonusTiles }
-            : gameState.board
-        }
-        pendingPlacements={pendingPlacements}
-        selectedTileIndex={selectedTileIndex}
-        onPlaceTile={handlePlaceTile}
-        onRemoveTile={handleRemoveTile}
-        onMoveTile={handleMoveTile}
-        disabled={!isMyTurn || gameState.meta.status !== "active"}
-        isFirstMove={(gameState.turn.index ?? 0) === 0}
-        highlightCoords={highlightCoords}
-        bonusWordCoords={bonusWordCoords}
-      />
+      <ZoomableBoard gameId={gameId}>
+        <Board
+          board={
+            devBonusTiles
+              ? { ...gameState.board, ...devBonusTiles }
+              : gameState.board
+          }
+          pendingPlacements={pendingPlacements}
+          selectedTileIndex={selectedTileIndex}
+          onPlaceTile={handlePlaceTile}
+          onRemoveTile={handleRemoveTile}
+          onMoveTile={handleMoveTile}
+          disabled={!isMyTurn || gameState.meta.status !== "active"}
+          isFirstMove={(gameState.turn.index ?? 0) === 0}
+          highlightCoords={highlightCoords}
+          bonusWordCoords={bonusWordCoords}
+        />
+      </ZoomableBoard>
 
       <Rack
         tiles={availableRack}

@@ -1,0 +1,45 @@
+.zoomable-board-container {
+    overflow: hidden;
+    position: relative;
+    touch-action: none;
+}
+
+.zoomable-board-inner {
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.zoomable-board-inner.animating {
+    transition: transform 0.15s ease-out;
+}
+
+.zoom-reset-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.8);
+    border: none;
+    padding: 6px;
+    border-radius: 6px;
+    z-index: 10;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+.zoom-reset-btn:active {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* Don't show on desktop */
+@media (hover: hover) and (pointer: fine) {
+    .zoomable-board-container {
+        touch-action: auto;
+    }
+    .zoom-reset-btn {
+        display: none;
+    }
+}
