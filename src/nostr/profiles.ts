@@ -237,36 +237,68 @@ export async function fetchProfile(
     return cached.profile;
   }
 
+  // Try NDK's built-in profile fetch first (with timeout)
   try {
     const ndk = getNDK();
     const ndkUser = ndk.getUser({ pubkey });
-    await ndkUser.fetchProfile();
+
+    await Promise.race([
+      ndkUser.fetchProfile(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 8000),
+      ),
+    ]);
 
     const p = ndkUser.profile;
-    if (!p) {
-      profileCache.set(pubkey, { profile: null, fetchedAt: Date.now() });
-      return null;
+    if (p) {
+      const profile = ndkProfileToNostrProfile(pubkey, p);
+      profileCache.set(pubkey, { profile, fetchedAt: Date.now() });
+      return profile;
     }
-
-    const profile: NostrProfile = {
-      pubkey,
-      name: stringOrUndefined(p.name),
-      displayName:
-        stringOrUndefined(p.displayName) ||
-        stringOrUndefined((p as Record<string, unknown>)["display_name"]),
-      about: stringOrUndefined(p.bio),
-      picture: stringOrUndefined(p.image),
-      banner: stringOrUndefined(p.banner),
-      nip05: stringOrUndefined(p.nip05),
-      website: stringOrUndefined(p.website),
-      lud16: stringOrUndefined(p.lud16),
-      lud06: stringOrUndefined((p as Record<string, unknown>)["lud06"]),
-    };
-    profileCache.set(pubkey, { profile, fetchedAt: Date.now() });
-    return profile;
   } catch {
-    return null;
+    // NDK fetch failed or timed out — fall through to direct relay query
   }
+
+  // Fallback: query relays directly for Kind 0
+  try {
+    const events = await fetchEvents({
+      kinds: [PROFILE_KIND],
+      authors: [pubkey],
+      limit: 5,
+    });
+    if (events.length > 0) {
+      const sorted = events.sort(
+        (a, b) => (b.created_at || 0) - (a.created_at || 0),
+      );
+      const profile = parseProfile(pubkey, sorted[0].content);
+      profileCache.set(pubkey, { profile, fetchedAt: Date.now() });
+      return profile;
+    }
+  } catch {
+    // Both methods failed
+  }
+
+  profileCache.set(pubkey, { profile: null, fetchedAt: Date.now() });
+  return null;
+}
+
+function ndkProfileToNostrProfile(
+  pubkey: string,
+  p: Record<string, unknown>,
+): NostrProfile {
+  return {
+    pubkey,
+    name: stringOrUndefined(p.name),
+    displayName:
+      stringOrUndefined(p.displayName) || stringOrUndefined(p["display_name"]),
+    about: stringOrUndefined(p.bio),
+    picture: stringOrUndefined(p.image),
+    banner: stringOrUndefined(p.banner),
+    nip05: stringOrUndefined(p.nip05),
+    website: stringOrUndefined(p.website),
+    lud16: stringOrUndefined(p.lud16),
+    lud06: stringOrUndefined(p["lud06"]),
+  };
 }
 
 /**
