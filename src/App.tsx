@@ -497,6 +497,7 @@ function App() {
             onOpenRelayList={handleOpenRelayList}
             onBackToLobby={handleBackToLobby}
             onZapSent={() => setShowZapAnimation(true)}
+            onMessage={handleOpenMessages}
           />
         </>
       )}

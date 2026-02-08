@@ -25,6 +25,7 @@ interface ScoreBoardProps {
   forfeitDisabled?: boolean;
   onBackToLobby?: () => void;
   onZapUser?: (pubkey: string, amount: number, message: string) => void;
+  onMessage?: (pubkey: string) => void;
   onOpenWalletSettings?: () => void;
 }
 
@@ -47,6 +48,7 @@ export function ScoreBoard({
   forfeitDisabled = false,
   onBackToLobby,
   onZapUser,
+  onMessage,
   onOpenWalletSettings,
 }: ScoreBoardProps) {
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
@@ -385,6 +387,7 @@ export function ScoreBoard({
           onZap={(pubkey, amount, message) => {
             onZapUser?.(pubkey, amount, message);
           }}
+          onMessage={onMessage}
           onClose={() => setProfileModalPubkey(null)}
           onOpenWalletSettings={onOpenWalletSettings}
         />

@@ -11,6 +11,7 @@ interface PlayerProfileModalProps {
   pubkey: string;
   walletConnected: boolean;
   onZap: (pubkey: string, amount: number, message: string) => void;
+  onMessage?: (pubkey: string) => void;
   onClose: () => void;
   onOpenWalletSettings?: () => void;
 }
@@ -21,6 +22,7 @@ export function PlayerProfileModal({
   pubkey,
   walletConnected,
   onZap,
+  onMessage,
   onClose,
   onOpenWalletSettings,
 }: PlayerProfileModalProps) {
@@ -178,6 +180,30 @@ export function PlayerProfileModal({
             <img src="/assets/bolt-yellow.svg" alt="" className="zap-icon" />
             Zap
           </button>
+          {onMessage && (
+            <button
+              type="button"
+              className="player-profile-message-btn"
+              onClick={() => {
+                onMessage(pubkey);
+                onClose();
+              }}
+              title="Send a message"
+            >
+              <svg
+                className="message-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Message
+            </button>
+          )}
           <a
             href={jumbleUrl}
             target="_blank"

@@ -44,6 +44,7 @@ interface GameViewProps {
   onOpenRelayList?: () => void;
   onBackToLobby?: () => void;
   onZapSent?: () => void;
+  onMessage?: (pubkey: string) => void;
 }
 
 type WordScorePop = {
@@ -63,6 +64,7 @@ export function GameView({
   onOpenRelayList,
   onBackToLobby,
   onZapSent,
+  onMessage,
 }: GameViewProps) {
   void _onShareGame; // Reserved for share UI
   const {
@@ -1272,6 +1274,7 @@ export function GameView({
                 onToast?.(`Zap failed: ${msg}`, "error");
               });
           }}
+          onMessage={onMessage}
           onOpenWalletSettings={onOpenWalletSettings}
         />
 
