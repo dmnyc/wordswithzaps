@@ -166,6 +166,10 @@ export async function fetchUserGames(
         summary.activePlayer = cached.activePlayer;
         summary.p1Score = cached.p1Score;
         summary.p2Score = cached.p2Score;
+        // Also reconcile opponentPubkey from cached authoritative data
+        if (cached.opponentPubkey) {
+          summary.opponentPubkey = cached.opponentPubkey;
+        }
         return;
       }
 
@@ -187,6 +191,17 @@ export async function fetchUserGames(
         summary.activePlayer = state.turn.activePlayer;
         summary.p1Score = state.scoring.p1Score;
         summary.p2Score = state.scoring.p2Score;
+
+        // Reconcile opponentPubkey with the authoritative decrypted state.
+        // The p-tags used in Steps 1/2 can be stale due to relay caching or
+        // NDK deduplication on addressable events; the encrypted playerOne/
+        // playerTwo fields are the ground truth.
+        if (state.meta.playerOne === pubkey) {
+          summary.opponentPubkey = state.meta.playerTwo;
+        } else if (state.meta.playerTwo === pubkey) {
+          summary.opponentPubkey = state.meta.playerOne;
+        }
+
         summaryCache.set(summary.eventId, { ...summary });
       } catch {
         // Skip if decryption fails
