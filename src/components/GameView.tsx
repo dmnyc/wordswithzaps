@@ -919,7 +919,7 @@ export function GameView({
       const statsLine = gameEndStats?.highestWord
         ? `Best word: ${gameEndStats.highestWord.toUpperCase()} (${gameEndStats.highestWordScore} pts)`
         : "";
-      return `🏆⚡ I just won ${myScore} to ${oppScore} against ${opponentRef} in #WordsWithZaps!${statsLine ? `\n\n${statsLine}` : ""}\n\n${appLink}`;
+      return `I just won ${myScore} to ${oppScore} against ${opponentRef} in #WordsWithZaps! 🏆⚡${statsLine ? `\n\n${statsLine}` : ""}\n\n${appLink}`;
     }
     return `🤝⚡ Tied ${myScore}-${oppScore} against ${opponentRef} in #WordsWithZaps!\n\n${appLink}`;
   }, [
