@@ -497,8 +497,12 @@ export function useGame(): UseGameReturn {
           lastEventId || "",
         );
 
-        // Update rack
-        const newRack = playerRack.filter((t) => !tiles.includes(t));
+        // Update rack — remove exchanged tiles one-at-a-time to handle duplicates
+        const newRack = [...playerRack];
+        for (const t of tiles) {
+          const idx = newRack.indexOf(t);
+          if (idx !== -1) newRack.splice(idx, 1);
+        }
         newRack.push(...newTiles);
 
         // Publish game state (critical - failure means exchange is lost)
