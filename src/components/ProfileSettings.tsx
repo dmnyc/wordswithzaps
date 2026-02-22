@@ -127,7 +127,7 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
     setError(null);
 
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, "avatar");
       setFormState((prev) => ({ ...prev, picture: url }));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
@@ -142,7 +142,7 @@ export function ProfileSettings({ onClose, onToast }: ProfileSettingsProps) {
     setError(null);
 
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, "banner");
       setFormState((prev) => ({ ...prev, banner: url }));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";

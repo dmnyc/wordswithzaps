@@ -41,7 +41,7 @@ export async function createNip98AuthHeader(
  * Upload an image file to nostr.build with NIP-98 authentication
  * Returns the URL of the uploaded image
  */
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(file: File, mediaType?: "avatar" | "banner"): Promise<string> {
   // Validate file type
   if (!file.type.startsWith("image/")) {
     throw new Error("Only image files are allowed");
@@ -61,6 +61,9 @@ export async function uploadImage(file: File): Promise<string> {
   // Prepare form data
   const formData = new FormData();
   formData.append("file", file);
+  if (mediaType) {
+    formData.append("media_type", mediaType);
+  }
 
   // Upload to nostr.build
   const response = await fetch(NOSTR_BUILD_UPLOAD_URL, {
