@@ -476,6 +476,44 @@ export function GameView({
     setPendingPlacements((prev) => prev.filter((p) => p.x !== x || p.y !== y));
   }, []);
 
+  // Reorder the full localRack to match a reordered availableRack.
+  // The Rack component only sees availableRack (tiles not on the board),
+  // so we map the reorder back into localRack, preserving placed tiles
+  // in their original positions.
+  const handleRackReorder = useCallback(
+    (reorderedAvailable: string[]) => {
+      setLocalRack((prev) => {
+        // Figure out which localRack indices are "used" (on the board)
+        const used = pendingPlacements.map((p) =>
+          p.isBlank ? "BLANK" : p.letter,
+        );
+        const usedRemaining = [...used];
+        const isUsed: boolean[] = prev.map((letter) => {
+          const idx = usedRemaining.indexOf(letter);
+          if (idx !== -1) {
+            usedRemaining.splice(idx, 1);
+            return true;
+          }
+          return false;
+        });
+
+        // Rebuild: walk localRack, keep used tiles in place,
+        // fill available slots with the reordered tiles in order
+        const result: string[] = [];
+        let availIdx = 0;
+        for (let i = 0; i < prev.length; i++) {
+          if (isUsed[i]) {
+            result.push(prev[i]);
+          } else {
+            result.push(reorderedAvailable[availIdx++]);
+          }
+        }
+        return result;
+      });
+    },
+    [pendingPlacements],
+  );
+
   const handleMoveTile = useCallback(
     (fromX: number, fromY: number, toX: number, toY: number) => {
       if (!isMyTurn) return;
@@ -1325,7 +1363,7 @@ export function GameView({
         selectedTile={selectedTileIndex}
         onSelectTile={setSelectedTileIndex}
         onReturnTile={handleRemoveTile}
-        onReorder={setLocalRack}
+        onReorder={handleRackReorder}
         disabled={!isMyTurn || gameState.meta.status !== "active"}
         shuffleKey={shuffleCount}
         exchangeMode={exchangeMode}
