@@ -1,7 +1,7 @@
 {
   "name": "wordswithzaps",
-  "version": "1.0.0",
-  "description": "P2P Scrabble-like word game on Nostr with Lightning payments",
+  "version": "1.0.1",
+  "description": "P2P crossword game on Nostr with Lightning payments",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/dmnyc/wordswithzaps#readme",
   "dependencies": {
-    "@breeztech/breez-sdk-spark": "^0.1.0",
+    "@breeztech/breez-sdk-spark": "0.9.1",
     "@getalby/bitcoin-connect": "^3.8.1",
     "@lottiefiles/lottie-player": "^2.0.12",
     "@noble/hashes": "^1.7.1",

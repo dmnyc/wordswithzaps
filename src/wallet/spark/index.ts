@@ -337,7 +337,7 @@ export async function initializeSdk(
     await initWasm();
 
     // Import SDK functions
-    const { defaultConfig, connect } =
+    const { defaultConfig, SdkBuilder } =
       await import("@breeztech/breez-sdk-spark/web");
 
     const config = defaultConfig("mainnet") as unknown as Record<
@@ -349,17 +349,14 @@ export async function initializeSdk(
 
     const cleanMnemonic = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
 
-    // Connect with 60s timeout (can be slow on first run)
+    // Use SdkBuilder (required for 0.9.x — connect() has broken WASM bindings)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    _sdkInstance = await withTimeout(
-      (connect as any)({
-        config,
-        mnemonic: cleanMnemonic,
-        storageDir: "wordswithzaps-spark",
-      }),
-      60000,
-      "SDK connect",
-    );
+    let builder = (SdkBuilder as any).new(config, {
+      type: "mnemonic",
+      mnemonic: cleanMnemonic,
+    });
+    builder = await builder.withDefaultStorage("wordswithzaps-spark");
+    _sdkInstance = await withTimeout(builder.build(), 15000, "SDK connect");
 
     _currentPubkey = pubkey;
 
@@ -374,8 +371,8 @@ export async function initializeSdk(
     console.log("[Spark] SDK initialized, starting background sync...");
     notifyListeners();
 
-    // Background sync - don't await
-    void Promise.resolve(_sdkInstance.syncWallet({}))
+    // Background sync - don't await, cap at 10s
+    withTimeout(_sdkInstance.syncWallet({}), 10000, "Background sync")
       .then(() => {
         console.log("[Spark] Background sync completed");
         _hasSynced = true;
@@ -383,7 +380,7 @@ export async function initializeSdk(
       })
       .catch(() => {
         console.warn(
-          "[Spark] Background sync failed, will retry on next action",
+          "[Spark] Background sync failed/timed out, will retry on next action",
         );
       });
 
@@ -526,11 +523,11 @@ export async function getSparkBalance(
   if (forceSync) {
     try {
       console.log("[Spark] Force syncing wallet...");
-      await _sdkInstance.syncWallet({});
+      await withTimeout(_sdkInstance.syncWallet({}), 10000, "Force sync");
       _hasSynced = true;
       console.log("[Spark] Sync complete");
     } catch (e) {
-      console.warn("[Spark] Force sync failed:", e);
+      console.warn("[Spark] Force sync failed/timed out:", e);
     }
   }
 
@@ -552,9 +549,7 @@ export async function sendSparkPayment(
     _sparkLoading = true;
     notifyListeners();
 
-    // Import parse function from SDK (it's a standalone function, not on the instance)
-    const { parse } = await import("@breeztech/breez-sdk-spark/web");
-    const parsedInput = await parse(destination);
+    const parsedInput = await _sdkInstance.parse(destination);
 
     // Handle Lightning address / LNURL
     if (
