@@ -28,7 +28,6 @@ let _walletInitialized = false;
 let _sparkLoading = false;
 let _lightningAddress: string | null = null;
 let _recentPayments: SparkPayment[] = [];
-let _hasSynced = false;
 
 function notifyListeners() {
   stateListeners.forEach((listener) => {
@@ -162,7 +161,6 @@ async function setupEventListener(): Promise<void> {
       }
 
       if (event.type === "synced") {
-        _hasSynced = true;
         refreshBalanceInternal();
       }
 
@@ -195,9 +193,8 @@ async function refreshBalanceInternal(): Promise<void> {
       0;
     const nextBalance = Number(balanceValue);
     if (!Number.isFinite(nextBalance)) return;
-    if (nextBalance === 0 && !_hasSynced) {
-      return;
-    }
+    // Show whatever the SDK reports — even 0 before sync.
+    // A momentary 0 is better than an eternal loading spinner.
     _walletBalance = nextBalance;
     notifyListeners();
   } catch (error) {
@@ -405,42 +402,31 @@ export async function initializeSdk(
     });
     builder = builder.withLnurlClient(lnurlClient);
 
-    const t0 = performance.now();
     builder = await builder.withDefaultStorage("wordswithzaps-spark");
-    console.log(
-      `[Spark] withDefaultStorage: ${((performance.now() - t0) / 1000).toFixed(1)}s`,
-    );
-
-    const t1 = performance.now();
     _sdkInstance = await withTimeout(builder.build(), 20000, "SDK connect");
-    console.log(
-      `[Spark] build(): ${((performance.now() - t1) / 1000).toFixed(1)}s`,
-    );
 
     _currentPubkey = pubkey;
 
     // CRITICAL: Set up event listener immediately after connect
     await setupEventListener();
 
-    const t2 = performance.now();
     // Get cached balance immediately (without waiting for sync)
     await refreshBalanceInternal();
-    console.log(
-      `[Spark] refreshBalance: ${((performance.now() - t2) / 1000).toFixed(1)}s`,
-    );
 
     // Mark as initialized
     _walletInitialized = true;
-    console.log(
-      `[Spark] Total init: ${((performance.now() - t0) / 1000).toFixed(1)}s`,
-    );
+    console.log("[Spark] SDK initialized");
     notifyListeners();
 
-    // Let the SDK's built-in auto-sync handle syncing (syncIntervalSecs).
-    // We don't call syncWallet({}) explicitly because on wallets without a
-    // registered lightning address, the /recover endpoint returns 404 and
-    // the SDK retries for ~48 seconds. The event listener catches "synced"
-    // events from the auto-sync and refreshes the balance automatically.
+    // Fire-and-forget sync — uses our custom LNURL client which intercepts
+    // the /recover 404. The SDK's built-in auto-sync bypasses our client
+    // and hits the real fetch, so we trigger our own sync here.
+    _sdkInstance
+      .syncWallet({})
+      .then(() => {
+        refreshBalanceInternal();
+      })
+      .catch(() => {});
 
     // Fetch lightning address in background
     fetchLightningAddress().catch(() => {});
@@ -557,7 +543,6 @@ export async function disconnectWallet(): Promise<void> {
     _walletInitialized = false;
     _lightningAddress = null;
     _recentPayments = [];
-    _hasSynced = false;
     notifyListeners();
   }
 }
@@ -582,7 +567,6 @@ export async function getSparkBalance(
     try {
       console.log("[Spark] Force syncing wallet...");
       await withTimeout(_sdkInstance.syncWallet({}), 10000, "Force sync");
-      _hasSynced = true;
       console.log("[Spark] Sync complete");
     } catch (e) {
       console.warn("[Spark] Force sync failed/timed out:", e);
