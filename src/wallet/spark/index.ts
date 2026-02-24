@@ -356,7 +356,7 @@ export async function initializeSdk(
         seed: { type: "mnemonic", mnemonic: cleanMnemonic },
         storageDir: "wordswithzaps-spark",
       }),
-      60000,
+      15000,
       "SDK connect",
     );
 
@@ -373,8 +373,8 @@ export async function initializeSdk(
     console.log("[Spark] SDK initialized, starting background sync...");
     notifyListeners();
 
-    // Background sync - don't await
-    void Promise.resolve(_sdkInstance.syncWallet({}))
+    // Background sync - don't await, cap at 10s
+    withTimeout(_sdkInstance.syncWallet({}), 10000, "Background sync")
       .then(() => {
         console.log("[Spark] Background sync completed");
         _hasSynced = true;
@@ -382,7 +382,7 @@ export async function initializeSdk(
       })
       .catch(() => {
         console.warn(
-          "[Spark] Background sync failed, will retry on next action",
+          "[Spark] Background sync failed/timed out, will retry on next action",
         );
       });
 
@@ -525,11 +525,11 @@ export async function getSparkBalance(
   if (forceSync) {
     try {
       console.log("[Spark] Force syncing wallet...");
-      await _sdkInstance.syncWallet({});
+      await withTimeout(_sdkInstance.syncWallet({}), 10000, "Force sync");
       _hasSynced = true;
       console.log("[Spark] Sync complete");
     } catch (e) {
-      console.warn("[Spark] Force sync failed:", e);
+      console.warn("[Spark] Force sync failed/timed out:", e);
     }
   }
 
