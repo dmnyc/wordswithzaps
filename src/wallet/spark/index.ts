@@ -337,7 +337,7 @@ export async function initializeSdk(
     await initWasm();
 
     // Import SDK functions
-    const { defaultConfig, connect } =
+    const { defaultConfig, SdkBuilder } =
       await import("@breeztech/breez-sdk-spark/web");
 
     const config = defaultConfig("mainnet") as unknown as Record<
@@ -349,16 +349,14 @@ export async function initializeSdk(
 
     const cleanMnemonic = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
 
+    // Use SdkBuilder (required for 0.9.x — connect() has broken WASM bindings)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    _sdkInstance = await withTimeout(
-      (connect as any)({
-        config,
-        seed: { type: "mnemonic", mnemonic: cleanMnemonic },
-        storageDir: "wordswithzaps-spark",
-      }),
-      15000,
-      "SDK connect",
-    );
+    let builder = (SdkBuilder as any).new(config, {
+      type: "mnemonic",
+      mnemonic: cleanMnemonic,
+    });
+    builder = await builder.withDefaultStorage("wordswithzaps-spark");
+    _sdkInstance = await withTimeout(builder.build(), 15000, "SDK connect");
 
     _currentPubkey = pubkey;
 
