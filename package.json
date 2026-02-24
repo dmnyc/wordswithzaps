@@ -1,7 +1,7 @@
 {
   "name": "wordswithzaps",
-  "version": "1.0.0",
-  "description": "P2P Scrabble-like word game on Nostr with Lightning payments",
+  "version": "1.0.1",
+  "description": "P2P crossword game on Nostr with Lightning payments",
   "type": "module",
   "scripts": {
     "dev": "vite",
