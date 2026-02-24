@@ -377,13 +377,34 @@ export async function initializeSdk(
       },
     };
 
+    // Clear stale IndexedDB from old SDK versions (0.1.x → 0.9.1)
+    // The storage format changed; mnemonic is stored separately so no data is lost.
+    try {
+      const dbs = await indexedDB.databases();
+      const staleDb = dbs.find(
+        (db) => db.name && db.name.includes("wordswithzaps-spark"),
+      );
+      if (staleDb?.name && staleDb.version && staleDb.version < 3) {
+        console.log(
+          `[Spark] Clearing stale IndexedDB: ${staleDb.name} (v${staleDb.version})`,
+        );
+        await new Promise<void>((resolve, reject) => {
+          const req = indexedDB.deleteDatabase(staleDb.name!);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+    } catch {
+      // indexedDB.databases() not supported in all browsers — safe to skip
+    }
+
     // Use SdkBuilder to inject custom LNURL client
     let builder = SdkBuilder.new(config, {
       type: "mnemonic",
       mnemonic: cleanMnemonic,
     });
     builder = builder.withLnurlClient(lnurlClient);
-    builder = await builder.withDefaultStorage("wordswithzaps-spark-v2");
+    builder = await builder.withDefaultStorage("wordswithzaps-spark");
 
     _sdkInstance = await withTimeout(builder.build(), 20000, "SDK connect");
 
