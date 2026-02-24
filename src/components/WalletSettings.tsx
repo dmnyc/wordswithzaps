@@ -830,8 +830,8 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
       setLoading(true);
       const mnemonic = await restoreSparkBackup(currentUser.pubkey, backup);
       await importSparkWallet(mnemonic);
-      // Force sync and refresh balance after restore
-      await refreshBalance(true);
+      // Get cached balance immediately (background sync will update it)
+      await refreshBalance(false);
       setBackupStatus("Spark wallet restored from Nostr");
       setView("main");
     } catch (e) {

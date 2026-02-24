@@ -340,24 +340,20 @@ export async function initializeSdk(
     const { defaultConfig, connect } =
       await import("@breeztech/breez-sdk-spark/web");
 
-    const config = defaultConfig("mainnet") as unknown as Record<
-      string,
-      unknown
-    >;
+    const config = defaultConfig("mainnet");
     config.apiKey = apiKey;
-    (config as Record<string, unknown>).privateEnabledDefault = true;
+    config.privateEnabledDefault = true;
 
     const cleanMnemonic = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
 
-    // Connect with 60s timeout (can be slow on first run)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Connect with 20s timeout (matching zapcooking)
     _sdkInstance = await withTimeout(
-      (connect as any)({
+      connect({
         config,
-        mnemonic: cleanMnemonic,
-        storageDir: "wordswithzaps-spark",
+        seed: { type: "mnemonic", mnemonic: cleanMnemonic },
+        storageDir: "wordswithzaps-spark-v2",
       }),
-      60000,
+      20000,
       "SDK connect",
     );
 
@@ -374,8 +370,14 @@ export async function initializeSdk(
     console.log("[Spark] SDK initialized, starting background sync...");
     notifyListeners();
 
-    // Background sync - don't await
-    void Promise.resolve(_sdkInstance.syncWallet({}))
+    // Background sync - don't await, let it run async
+    // Note: sync can take 30-60s due to breez.tips /recover endpoint retries
+    const syncTimeout = setTimeout(() => {
+      console.warn("[Spark] Sync timeout - clearing loading state");
+    }, 20000);
+
+    _sdkInstance
+      .syncWallet({})
       .then(() => {
         console.log("[Spark] Background sync completed");
         _hasSynced = true;
@@ -385,6 +387,9 @@ export async function initializeSdk(
         console.warn(
           "[Spark] Background sync failed, will retry on next action",
         );
+      })
+      .finally(() => {
+        clearTimeout(syncTimeout);
       });
 
     // Fetch lightning address in background
@@ -552,9 +557,7 @@ export async function sendSparkPayment(
     _sparkLoading = true;
     notifyListeners();
 
-    // Import parse function from SDK (it's a standalone function, not on the instance)
-    const { parse } = await import("@breeztech/breez-sdk-spark/web");
-    const parsedInput = await parse(destination);
+    const parsedInput = await _sdkInstance.parse(destination);
 
     // Handle Lightning address / LNURL
     if (
