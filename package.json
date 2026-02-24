@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/dmnyc/wordswithzaps#readme",
   "dependencies": {
-    "@breeztech/breez-sdk-spark": "^0.1.0",
+    "@breeztech/breez-sdk-spark": "0.8.2",
     "@getalby/bitcoin-connect": "^3.8.1",
     "@lottiefiles/lottie-player": "^2.0.12",
     "@noble/hashes": "^1.7.1",

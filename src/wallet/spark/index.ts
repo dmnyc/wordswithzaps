@@ -349,12 +349,11 @@ export async function initializeSdk(
 
     const cleanMnemonic = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
 
-    // Connect with 60s timeout (can be slow on first run)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     _sdkInstance = await withTimeout(
       (connect as any)({
         config,
-        mnemonic: cleanMnemonic,
+        seed: { type: "mnemonic", mnemonic: cleanMnemonic },
         storageDir: "wordswithzaps-spark",
       }),
       60000,
@@ -552,9 +551,7 @@ export async function sendSparkPayment(
     _sparkLoading = true;
     notifyListeners();
 
-    // Import parse function from SDK (it's a standalone function, not on the instance)
-    const { parse } = await import("@breeztech/breez-sdk-spark/web");
-    const parsedInput = await parse(destination);
+    const parsedInput = await _sdkInstance.parse(destination);
 
     // Handle Lightning address / LNURL
     if (
