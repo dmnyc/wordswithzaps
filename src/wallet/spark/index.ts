@@ -337,7 +337,7 @@ export async function initializeSdk(
     await initWasm();
 
     // Import SDK functions
-    const { defaultConfig, connect } =
+    const { defaultConfig, SdkBuilder } =
       await import("@breeztech/breez-sdk-spark/web");
 
     const config = defaultConfig("mainnet");
@@ -346,16 +346,46 @@ export async function initializeSdk(
 
     const cleanMnemonic = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
 
-    // Connect with 20s timeout (matching zapcooking)
-    _sdkInstance = await withTimeout(
-      connect({
-        config,
-        seed: { type: "mnemonic", mnemonic: cleanMnemonic },
-        storageDir: "wordswithzaps-spark-v2",
-      }),
-      20000,
-      "SDK connect",
-    );
+    // Custom LNURL REST client that short-circuits the /recover endpoint.
+    // The SDK hits POST breez.tips/lnurlpay/.../recover on every connect/sync,
+    // and if the wallet has no registered lightning address it returns 404.
+    // The SDK retries this with backoff for ~48 seconds. By intercepting it
+    // and returning an immediate 200, we skip the retry loop entirely.
+    const lnurlClient = {
+      async getRequest(url: string, headers?: Record<string, string>) {
+        const resp = await fetch(url, { headers });
+        return { status: resp.status, body: await resp.text() };
+      },
+      async postRequest(
+        url: string,
+        headers?: Record<string, string>,
+        body?: string,
+      ) {
+        if (url.includes("/recover")) {
+          return { status: 200, body: "{}" };
+        }
+        const resp = await fetch(url, { method: "POST", headers, body });
+        return { status: resp.status, body: await resp.text() };
+      },
+      async deleteRequest(
+        url: string,
+        headers?: Record<string, string>,
+        body?: string,
+      ) {
+        const resp = await fetch(url, { method: "DELETE", headers, body });
+        return { status: resp.status, body: await resp.text() };
+      },
+    };
+
+    // Use SdkBuilder to inject custom LNURL client
+    let builder = SdkBuilder.new(config, {
+      type: "mnemonic",
+      mnemonic: cleanMnemonic,
+    });
+    builder = builder.withLnurlClient(lnurlClient);
+    builder = await builder.withDefaultStorage("wordswithzaps-spark-v2");
+
+    _sdkInstance = await withTimeout(builder.build(), 20000, "SDK connect");
 
     _currentPubkey = pubkey;
 
@@ -370,27 +400,11 @@ export async function initializeSdk(
     console.log("[Spark] SDK initialized, starting background sync...");
     notifyListeners();
 
-    // Background sync - don't await, let it run async
-    // Note: sync can take 30-60s due to breez.tips /recover endpoint retries
-    const syncTimeout = setTimeout(() => {
-      console.warn("[Spark] Sync timeout - clearing loading state");
-    }, 20000);
-
-    _sdkInstance
-      .syncWallet({})
-      .then(() => {
-        console.log("[Spark] Background sync completed");
-        _hasSynced = true;
-        refreshBalanceInternal();
-      })
-      .catch(() => {
-        console.warn(
-          "[Spark] Background sync failed, will retry on next action",
-        );
-      })
-      .finally(() => {
-        clearTimeout(syncTimeout);
-      });
+    // Let the SDK's built-in auto-sync handle syncing (syncIntervalSecs).
+    // We don't call syncWallet({}) explicitly because on wallets without a
+    // registered lightning address, the /recover endpoint returns 404 and
+    // the SDK retries for ~48 seconds. The event listener catches "synced"
+    // events from the auto-sync and refreshes the balance automatically.
 
     // Fetch lightning address in background
     fetchLightningAddress().catch(() => {});
@@ -531,11 +545,11 @@ export async function getSparkBalance(
   if (forceSync) {
     try {
       console.log("[Spark] Force syncing wallet...");
-      await _sdkInstance.syncWallet({});
+      await withTimeout(_sdkInstance.syncWallet({}), 10000, "Force sync");
       _hasSynced = true;
       console.log("[Spark] Sync complete");
     } catch (e) {
-      console.warn("[Spark] Force sync failed:", e);
+      console.warn("[Spark] Force sync failed/timed out:", e);
     }
   }
 
