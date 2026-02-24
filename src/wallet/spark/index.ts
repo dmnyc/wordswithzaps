@@ -404,21 +404,36 @@ export async function initializeSdk(
       mnemonic: cleanMnemonic,
     });
     builder = builder.withLnurlClient(lnurlClient);
-    builder = await builder.withDefaultStorage("wordswithzaps-spark");
 
+    const t0 = performance.now();
+    builder = await builder.withDefaultStorage("wordswithzaps-spark");
+    console.log(
+      `[Spark] withDefaultStorage: ${((performance.now() - t0) / 1000).toFixed(1)}s`,
+    );
+
+    const t1 = performance.now();
     _sdkInstance = await withTimeout(builder.build(), 20000, "SDK connect");
+    console.log(
+      `[Spark] build(): ${((performance.now() - t1) / 1000).toFixed(1)}s`,
+    );
 
     _currentPubkey = pubkey;
 
     // CRITICAL: Set up event listener immediately after connect
     await setupEventListener();
 
+    const t2 = performance.now();
     // Get cached balance immediately (without waiting for sync)
     await refreshBalanceInternal();
+    console.log(
+      `[Spark] refreshBalance: ${((performance.now() - t2) / 1000).toFixed(1)}s`,
+    );
 
     // Mark as initialized
     _walletInitialized = true;
-    console.log("[Spark] SDK initialized, starting background sync...");
+    console.log(
+      `[Spark] Total init: ${((performance.now() - t0) / 1000).toFixed(1)}s`,
+    );
     notifyListeners();
 
     // Let the SDK's built-in auto-sync handle syncing (syncIntervalSecs).
