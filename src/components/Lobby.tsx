@@ -402,7 +402,7 @@ export function Lobby({
             )}
           </div>
         ) : (
-          <div className="games-list">
+          <div className={`games-list ${isLoadingGames ? "loading" : ""}`}>
             {visibleGames.map((game) => {
               const opponentPubkey =
                 game.opponentPubkey ||

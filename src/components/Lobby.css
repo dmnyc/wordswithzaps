@@ -93,6 +93,26 @@
     gap: 8px;
 }
 
+/* Staggered opacity pulse while loading */
+.games-list.loading .game-card {
+    animation: cardPulse 1.4s ease-in-out infinite;
+}
+
+.games-list.loading .game-card:nth-child(2) { animation-delay: 0.1s; }
+.games-list.loading .game-card:nth-child(3) { animation-delay: 0.2s; }
+.games-list.loading .game-card:nth-child(4) { animation-delay: 0.3s; }
+.games-list.loading .game-card:nth-child(5) { animation-delay: 0.4s; }
+.games-list.loading .game-card:nth-child(6) { animation-delay: 0.5s; }
+.games-list.loading .game-card:nth-child(7) { animation-delay: 0.6s; }
+.games-list.loading .game-card:nth-child(8) { animation-delay: 0.7s; }
+.games-list.loading .game-card:nth-child(9) { animation-delay: 0.8s; }
+.games-list.loading .game-card:nth-child(10) { animation-delay: 0.9s; }
+
+@keyframes cardPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 .show-more-btn {
     width: 100%;
     padding: 10px;
