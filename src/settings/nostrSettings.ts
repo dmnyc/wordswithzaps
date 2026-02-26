@@ -168,13 +168,32 @@ export async function syncSettingsOnLogin(): Promise<void> {
   const relaySettings = await fetchSettingsFromRelays();
 
   if (relaySettings) {
-    // Relay settings exist - use them and update local storage
-    cachedSettings = relaySettings;
+    // Merge dismissed games: union of local + relay so locally-dismissed
+    // games aren't lost if the relay version is stale.
+    const localSettings = getLocalSettings();
+    const mergedDismissed = [
+      ...new Set([
+        ...(localSettings.dismissedGames || []),
+        ...(relaySettings.dismissedGames || []),
+      ]),
+    ];
+    const merged = {
+      ...relaySettings,
+      dismissedGames: mergedDismissed,
+    };
+
+    cachedSettings = merged;
     lastFetchTime = Date.now();
 
-    // Update local storage to match relay settings
-    updateLocalStorage(relaySettings);
+    updateLocalStorage(merged);
     console.log("[NostrSettings] Synced settings from relays");
+
+    // Push merged dismissed list back to relays if it grew
+    if (mergedDismissed.length > (relaySettings.dismissedGames || []).length) {
+      saveSettingsToRelays(merged).catch((error) => {
+        console.error("[NostrSettings] Failed to push merged dismissed games:", error);
+      });
+    }
   } else {
     // No relay settings - push local settings to relays
     const localSettings = getLocalSettings();
