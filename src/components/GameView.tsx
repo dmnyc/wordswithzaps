@@ -311,8 +311,12 @@ export function GameView({
 
   // Sync local rack with latest playerRack.
   // Always sync when tile contents differ to pick up newly drawn tiles.
+  const gameEnded =
+    gameState?.meta.status === "completed" ||
+    gameState?.meta.status === "abandoned";
   useEffect(() => {
-    if (playerRack.length === 0) return;
+    // Allow syncing to empty rack when game has ended (player went out)
+    if (playerRack.length === 0 && !gameEnded) return;
     const sameLength = playerRack.length === localRack.length;
     // Compare tile contents (sorted) rather than order to preserve shuffle
     const sameTiles =
@@ -321,7 +325,7 @@ export function GameView({
     if (!sameTiles) {
       setLocalRack(playerRack);
     }
-  }, [playerRack, localRack]);
+  }, [playerRack, localRack, gameEnded]);
 
   // Detect opponent's achievement when our turn begins
   useEffect(() => {
