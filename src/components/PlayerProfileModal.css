@@ -192,6 +192,7 @@ a.player-profile-meta-item:hover {
 /* Action buttons row */
 .player-profile-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 16px;
     padding-bottom: 20px;
