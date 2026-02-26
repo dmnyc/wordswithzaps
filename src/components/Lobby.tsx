@@ -18,7 +18,7 @@ import { TbHandFingerRight, TbCircleCheck, TbX } from "react-icons/tb";
 import { NudgeModal } from "./NudgeModal";
 import { getDecayTier, type DecayInfo } from "../utils/gameDecay";
 import { useWallet } from "../hooks/useWallet";
-import { isGameDismissed } from "../settings/appSettings";
+import { isGameDismissed, addDismissedGame } from "../settings/appSettings";
 import "./Lobby.css";
 
 interface LobbyProps {
@@ -248,6 +248,17 @@ export function Lobby({
       );
   const visibleGames = filteredGames.slice(0, visibleLimit);
   const hasMore = filteredGames.length > visibleLimit;
+
+  // Auto-dismiss ended games after they've been shown once in the lobby,
+  // so they're hidden on the next visit unless "Show ended" is toggled.
+  useEffect(() => {
+    if (showEndedGames) return;
+    for (const game of visibleGames) {
+      if (isGameEnded(game) && !isGameDismissed(game.gameId)) {
+        addDismissedGame(game.gameId);
+      }
+    }
+  }, [visibleGames, showEndedGames]);
 
   const nudgeGameLink = useMemo(() => {
     if (!nudgeTarget) return "";
