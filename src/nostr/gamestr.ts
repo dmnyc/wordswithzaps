@@ -1,60 +1,12 @@
-import { createEvent, publishEvent, fetchEvents, getCurrentUser } from "./client";
-import { GAMESTR_KIND, GAMESTR_D_TAG } from "../types/nostr";
-import type { GamestrStats } from "../types/gamestr";
-import { EMPTY_GAMESTR_STATS } from "../types/gamestr";
+import { createEvent, publishEvent, getCurrentUser } from "./client";
+import { GAMESTR_KIND, GAMESTR_GAME_ID } from "../types/nostr";
 
-const CACHE_KEY = "wwz_leaderboard_stats";
 const PUBLISHED_GAMES_KEY = "wwz_gamestr_published_games";
 
 /**
- * Fetch the current player's gamestr stats from relays.
- * Returns EMPTY_GAMESTR_STATS if no event found.
- */
-export async function fetchMyGamestrStats(): Promise<GamestrStats> {
-  const user = getCurrentUser();
-  if (!user?.pubkey) return { ...EMPTY_GAMESTR_STATS };
-
-  // Check local cache first
-  const cached = loadCachedStats();
-  if (cached) return cached;
-
-  const events = await fetchEvents({
-    kinds: [GAMESTR_KIND as number],
-    authors: [user.pubkey],
-    "#d": [GAMESTR_D_TAG],
-    limit: 1,
-  });
-
-  if (events.length === 0) return { ...EMPTY_GAMESTR_STATS };
-
-  const latest = events.sort(
-    (a, b) => (b.created_at || 0) - (a.created_at || 0),
-  )[0];
-
-  try {
-    const stats = JSON.parse(latest.content) as Partial<GamestrStats>;
-    const merged = { ...EMPTY_GAMESTR_STATS, ...stats };
-    saveCachedStats(merged);
-    return merged;
-  } catch {
-    return { ...EMPTY_GAMESTR_STATS };
-  }
-}
-
-/**
- * Publish updated gamestr stats to relays.
- */
-export async function publishGamestrStats(stats: GamestrStats): Promise<void> {
-  const event = createEvent(GAMESTR_KIND, JSON.stringify(stats), [
-    ["d", GAMESTR_D_TAG],
-  ]);
-  await publishEvent(event);
-  saveCachedStats(stats);
-}
-
-/**
- * Update stats after a completed game and publish.
- * Returns silently if the game was already published.
+ * Publish a kind 30762 score event to the gamestr leaderboard.
+ * Each completed game publishes a separate score event.
+ * The `d` tag makes it addressable per game/player combo.
  */
 export async function updateGamestrAfterGame(
   gameId: string,
@@ -65,46 +17,33 @@ export async function updateGamestrAfterGame(
 ): Promise<void> {
   if (isGamePublished(gameId)) return;
 
-  const current = await fetchMyGamestrStats();
+  const user = getCurrentUser();
+  if (!user?.pubkey) return;
 
-  const updated: GamestrStats = {
-    wins: current.wins + (outcome === "win" ? 1 : 0),
-    losses: current.losses + (outcome === "loss" ? 1 : 0),
-    ties: current.ties + (outcome === "tie" ? 1 : 0),
-    highScore: Math.max(current.highScore, gameScore),
-    totalGames: current.totalGames + 1,
-    highestWord:
-      bestWordScore > current.highestWordScore ? bestWord : current.highestWord,
-    highestWordScore: Math.max(current.highestWordScore, bestWordScore),
-  };
+  const content = outcome === "win"
+    ? `Won with ${gameScore} points! Best word: ${bestWord.toUpperCase()} (${bestWordScore} pts)`
+    : outcome === "tie"
+      ? `Tied at ${gameScore} points! Best word: ${bestWord.toUpperCase()} (${bestWordScore} pts)`
+      : `Scored ${gameScore} points. Best word: ${bestWord.toUpperCase()} (${bestWordScore} pts)`;
 
-  await publishGamestrStats(updated);
+  const tags: string[][] = [
+    ["d", `${GAMESTR_GAME_ID}:${user.pubkey}:${gameId}`],
+    ["game", GAMESTR_GAME_ID],
+    ["score", String(gameScore)],
+    ["p", user.pubkey],
+    ["state", "completed"],
+    ["mode", "multiplayer"],
+    ["t", "puzzle"],
+    ["t", "multiplayer"],
+  ];
+
+  const event = createEvent(GAMESTR_KIND, content, tags);
+  await publishEvent(event);
   markGamePublished(gameId);
-}
-
-// --- localStorage cache helpers ---
-
-function loadCachedStats(): GamestrStats | null {
-  try {
-    const stored = localStorage.getItem(CACHE_KEY);
-    if (!stored) return null;
-    return JSON.parse(stored) as GamestrStats;
-  } catch {
-    return null;
-  }
-}
-
-function saveCachedStats(stats: GamestrStats): void {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(stats));
-  } catch {
-    // Ignore storage errors
-  }
 }
 
 export function clearGamestrCache(): void {
   try {
-    localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(PUBLISHED_GAMES_KEY);
   } catch {
     // Ignore

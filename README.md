@@ -24,7 +24,7 @@ Words With Zaps is a serverless, censorship-resistant word game where game state
 - Last-move tile highlighting with animated glow
 - Relay confirmation with retry logic for reliable event publishing
 - Toast notifications for relay sync events (move synced, turn passed, game deleted)
-- Gamestr leaderboard integration (NIP-133 / Kind 33334): opt-in publishing of cumulative stats (wins, losses, high score, best word) to the decentralized [gamestr](https://gamestr.io) leaderboard
+- Gamestr leaderboard integration (Kind 30762): opt-in publishing of game scores to the decentralized [gamestr](https://gamestr.io) leaderboard
 - Mobile-responsive UI
 
 ## Login Methods
@@ -96,7 +96,7 @@ src/
 │   ├── client     # NDK connection, signing, relay management
 │   ├── encryption # NIP-44 / NIP-04 encryption
 │   ├── NostrSync  # Game state publish/subscribe via Kind 30078
-│   ├── gamestr    # Gamestr leaderboard publish via Kind 33334
+│   ├── gamestr    # Gamestr leaderboard publish via Kind 30762
 │   └── profiles   # Profile fetching and caching
 ├── wallet/        # Lightning wallet integration
 │   ├── walletManager  # Zap flow (LNURL, NIP-57)
@@ -136,7 +136,7 @@ src/
 | 9734 | NIP-57 | Zap requests (move notifications) |
 | 10002 | NIP-65 | Relay lists |
 | 30078 | NIP-78 | Game state, player racks, settings |
-| 33334 | NIP-133 | Gamestr leaderboard scores |
+| 30762 | Gamestr | Gamestr leaderboard scores |
 
 ### NIPs
 
@@ -151,7 +151,7 @@ src/
 - **NIP-59**: Gift wrap (seals and wraps for NIP-17)
 - **NIP-65**: Relay list metadata
 - **NIP-78**: Arbitrary custom app data
-- **NIP-133**: Gamestr leaderboard scores
+- **Gamestr (Kind 30762)**: Decentralized gaming leaderboard scores
 
 ### Default Relays
 
