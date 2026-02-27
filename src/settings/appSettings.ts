@@ -1,6 +1,7 @@
 import { updateSetting } from "./nostrSettings";
 
 const DISMISSED_GAMES_KEY = "wwz_dismissed_games";
+const GAMEOVER_SEEN_KEY = "wwz_gameover_seen";
 const DISABLE_GAMEPLAY_ZAPS_KEY = "wordswithzaps_disable_gameplay_zaps";
 const DEFAULT_DISABLE_GAMEPLAY_ZAPS = false;
 const SHARE_TO_NOSTR_DEFAULT_KEY = "wordswithzaps_share_to_nostr_default";
@@ -214,6 +215,33 @@ export function addDismissedGame(gameId: string): void {
       localStorage.setItem(DISMISSED_GAMES_KEY, JSON.stringify(dismissed));
       // Sync to relays
       updateSetting("dismissedGames", dismissed);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Tracks whether the user has actually seen the game-over modal for a game.
+ * Separate from "dismissed" which the Lobby sets automatically for timeline hiding.
+ */
+export function isGameOverSeen(gameId: string): boolean {
+  try {
+    const stored = localStorage.getItem(GAMEOVER_SEEN_KEY);
+    if (!stored) return false;
+    return (JSON.parse(stored) as string[]).includes(gameId);
+  } catch {
+    return false;
+  }
+}
+
+export function addGameOverSeen(gameId: string): void {
+  try {
+    const stored = localStorage.getItem(GAMEOVER_SEEN_KEY);
+    const seen: string[] = stored ? JSON.parse(stored) : [];
+    if (!seen.includes(gameId)) {
+      seen.push(gameId);
+      localStorage.setItem(GAMEOVER_SEEN_KEY, JSON.stringify(seen));
     }
   } catch {
     // Ignore storage errors

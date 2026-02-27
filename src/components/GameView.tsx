@@ -16,7 +16,8 @@ import {
   getDisableGameplayZaps,
   subscribeAppSettings,
   addDismissedGame,
-  isGameDismissed,
+  isGameOverSeen,
+  addGameOverSeen,
   getPublishToLeaderboard,
   setPublishToLeaderboard,
 } from "../settings/appSettings";
@@ -272,9 +273,10 @@ export function GameView({
       setPendingMoveSummary(null);
 
       // Don't show modal again if user already saw it
-      const alreadySeen = isGameDismissed(gameId);
+      const alreadySeen = isGameOverSeen(gameId);
 
-      // Mark as dismissed so it hides from lobby after being viewed once
+      // Mark modal as seen and dismiss from lobby
+      addGameOverSeen(gameId);
       addDismissedGame(gameId);
 
       if (alreadySeen) return;
