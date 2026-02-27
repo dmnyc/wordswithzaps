@@ -62,3 +62,7 @@ export const RELAY_LIST_KIND = 10002;
 
 // NIP-17 DM relay preferences kind
 export const DM_RELAY_KIND = 10050;
+
+// NIP-133 Gamestr leaderboard
+export const GAMESTR_KIND = 33334;
+export const GAMESTR_D_TAG = "wordswithzaps";

@@ -18,6 +18,7 @@ export interface UserSettings {
   saveShareSetting: boolean;
   zapNudgeDefaultAmount: number;
   balanceHidden: boolean;
+  publishToLeaderboard: boolean;
   dismissedGames: string[];
 }
 
@@ -28,6 +29,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   saveShareSetting: true,
   zapNudgeDefaultAmount: 0,
   balanceHidden: false,
+  publishToLeaderboard: false,
   dismissedGames: [],
 };
 
@@ -230,6 +232,8 @@ function getLocalSettings(): UserSettings {
         ) || 0,
       balanceHidden:
         localStorage.getItem("wordswithzaps_balance_hidden") === "true",
+      publishToLeaderboard:
+        localStorage.getItem("wordswithzaps_publish_leaderboard") === "true",
       dismissedGames: (() => {
         try {
           const stored = localStorage.getItem("wwz_dismissed_games");
@@ -274,6 +278,10 @@ function updateLocalStorage(settings: UserSettings): void {
     localStorage.setItem(
       "wordswithzaps_balance_hidden",
       String(settings.balanceHidden),
+    );
+    localStorage.setItem(
+      "wordswithzaps_publish_leaderboard",
+      String(settings.publishToLeaderboard),
     );
     localStorage.setItem(
       "wwz_dismissed_games",

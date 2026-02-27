@@ -17,7 +17,10 @@ import {
   subscribeAppSettings,
   addDismissedGame,
   isGameDismissed,
+  getPublishToLeaderboard,
+  setPublishToLeaderboard,
 } from "../settings/appSettings";
+import { updateGamestrAfterGame } from "../nostr/gamestr";
 import ZapNudgeModal from "./ZapNudgeModal";
 import GameOverModal from "./GameOverModal";
 import AchievementModal from "./AchievementModal";
@@ -121,6 +124,9 @@ export function GameView({
   >(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [leaderboardEnabled, setLeaderboardEnabled] = useState(
+    getPublishToLeaderboard,
+  );
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [pendingAchievement, setPendingAchievement] =
     useState<Achievement | null>(null);
@@ -992,6 +998,26 @@ export function GameView({
     }
   }, [sharePreview, onToast, opponentPubkey]);
 
+  const handleToggleLeaderboard = useCallback((enabled: boolean) => {
+    setLeaderboardEnabled(enabled);
+    setPublishToLeaderboard(enabled);
+  }, []);
+
+  const handlePublishLeaderboard = useCallback(async () => {
+    if (!gameState || gameState.meta.status !== "completed") return;
+    const outcome = gameState.meta.winner === myPubkey
+      ? "win"
+      : gameState.meta.winner
+        ? "loss"
+        : "tie";
+    const myScore = gameEndScores.my;
+    const bestWord = gameEndStats?.highestWord || "";
+    const bestWordScore = gameEndStats?.highestWordScore || 0;
+
+    await updateGamestrAfterGame(gameId, outcome, myScore, bestWord, bestWordScore);
+    onToast?.("Leaderboard updated!", "info");
+  }, [gameState, myPubkey, gameEndScores.my, gameEndStats, gameId, onToast]);
+
   const handleAchievementZap = useCallback(
     (amount: number, message: string) => {
       if (!isWalletConnected || !opponentPubkey || !pendingAchievement) return;
@@ -1518,6 +1544,9 @@ export function GameView({
             onOpenCreatorZap?.(() => setShowGameOverModal(true));
           }}
           onOpenWalletSettings={onOpenWalletSettings}
+          leaderboardEnabled={leaderboardEnabled}
+          onToggleLeaderboard={handleToggleLeaderboard}
+          onPublishLeaderboard={handlePublishLeaderboard}
         />
       )}
 
