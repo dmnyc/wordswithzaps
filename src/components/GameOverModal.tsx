@@ -26,6 +26,9 @@ interface GameOverModalProps {
   onShareResult: () => Promise<void>;
   onOpenCreatorZap: () => void;
   onOpenWalletSettings?: () => void;
+  leaderboardEnabled: boolean;
+  onToggleLeaderboard: (enabled: boolean) => void;
+  onPublishLeaderboard?: () => Promise<void>;
 }
 
 const PRESET_AMOUNTS = [50, 100, 500, 1000];
@@ -47,6 +50,9 @@ export function GameOverModal({
   onShareResult,
   onOpenCreatorZap,
   onOpenWalletSettings,
+  leaderboardEnabled,
+  onToggleLeaderboard,
+  onPublishLeaderboard,
 }: GameOverModalProps) {
   const iWon = winner === myPubkey;
   const iLost = !!winner && winner !== myPubkey;
@@ -108,11 +114,13 @@ export function GameOverModal({
 
     const shouldZap = walletConnected && resolvedAmount > 0;
     const shouldShare = canShare && willShare;
+    const shouldPublishLeaderboard =
+      leaderboardEnabled && onPublishLeaderboard;
 
-    // Close modal immediately — zap and share run in the background
+    // Close modal immediately — zap, share, and leaderboard run in the background
     onClose();
 
-    // Fire sequentially: share first, then zap
+    // Fire sequentially: share first, then zap, then leaderboard
     (async () => {
       if (shouldShare) {
         try {
@@ -126,6 +134,13 @@ export function GameOverModal({
           await onSendZap(resolvedAmount);
         } catch {
           // toast handled inside onSendZap
+        }
+      }
+      if (shouldPublishLeaderboard) {
+        try {
+          await onPublishLeaderboard();
+        } catch {
+          // silent — non-critical
         }
       }
     })();
@@ -242,6 +257,20 @@ export function GameOverModal({
               {sharePreview.replace(/nostr:npub1\w+/g, opponentLabel)}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Leaderboard opt-in (completed games only) */}
+      {gameStatus === "completed" && (
+        <div className="gameover-share">
+          <label className="gameover-share-check">
+            <input
+              type="checkbox"
+              checked={leaderboardEnabled}
+              onChange={(e) => onToggleLeaderboard(e.target.checked)}
+            />
+            Publish stats to gamestr leaderboard
+          </label>
         </div>
       )}
 

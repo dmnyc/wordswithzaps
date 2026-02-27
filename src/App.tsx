@@ -19,6 +19,7 @@ import DMPanel from "./components/DMPanel";
 import { sendPayment } from "./wallet/walletManager";
 import { rebroadcastGame } from "./nostr/games";
 import { startSubscriptions, stopSubscriptions } from "./nostr/dm";
+import { clearGamestrCache } from "./nostr/gamestr";
 import "./index.css";
 
 type Screen = "login" | "lobby" | "game";
@@ -415,6 +416,7 @@ function App() {
 
   const handleDisconnect = () => {
     disconnect();
+    clearGamestrCache();
     setGameSession(null);
     setScreen("login");
   };

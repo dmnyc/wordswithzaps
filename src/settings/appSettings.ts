@@ -11,6 +11,8 @@ const SAVE_SHARE_SETTING_KEY = "wordswithzaps_save_share_setting";
 const DEFAULT_SAVE_SHARE_SETTING = true;
 const ZAP_NUDGE_DEFAULT_AMOUNT_KEY = "wordswithzaps_zap_nudge_default_amount";
 const DEFAULT_ZAP_NUDGE_AMOUNT = 0;
+const PUBLISH_LEADERBOARD_KEY = "wordswithzaps_publish_leaderboard";
+const DEFAULT_PUBLISH_LEADERBOARD = false;
 
 type SettingsListener = () => void;
 export type ShareMethod = "public" | "public-reply" | "private" | "private-dm";
@@ -160,6 +162,31 @@ export function setZapNudgeDefaultAmount(amount: number): void {
     localStorage.setItem(ZAP_NUDGE_DEFAULT_AMOUNT_KEY, String(amount));
     // Sync to relays
     updateSetting("zapNudgeDefaultAmount", amount);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function getPublishToLeaderboard(): boolean {
+  if (typeof window === "undefined") return DEFAULT_PUBLISH_LEADERBOARD;
+  try {
+    const stored = localStorage.getItem(PUBLISH_LEADERBOARD_KEY);
+    if (stored === null) return DEFAULT_PUBLISH_LEADERBOARD;
+    return stored === "true";
+  } catch {
+    return DEFAULT_PUBLISH_LEADERBOARD;
+  }
+}
+
+export function setPublishToLeaderboard(enabled: boolean): void {
+  try {
+    const current = getPublishToLeaderboard();
+    localStorage.setItem(PUBLISH_LEADERBOARD_KEY, String(enabled));
+    if (current !== enabled) {
+      notifyListeners();
+      // Sync to relays
+      updateSetting("publishToLeaderboard", enabled);
+    }
   } catch {
     // Ignore storage errors
   }
