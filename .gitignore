@@ -29,8 +29,14 @@ npm-debug.log*
 # Local temp notes
 temp/
 
+# Utility scripts
+scripts/
+
 # Test coverage
 coverage/
+
+# Vercel
+.vercel/
 
 # Vite
 *.local
