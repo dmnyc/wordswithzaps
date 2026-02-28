@@ -37,7 +37,7 @@ Words With Zaps is a serverless, censorship-resistant word game where game state
 
 Lightning wallets are optional and used to zap your opponent after each move:
 
-- **Breez SDK (Spark)**: Self-custodial Lightning wallet via WebAssembly. Full-featured: balance, send, receive, transaction history, lightning address, and encrypted Nostr backup/restore.
+- **Breez SDK (Spark)**: Self-custodial Lightning wallet via WebAssembly. Full-featured: balance, send, receive, transaction history, lightning address, and encrypted Nostr backup/restore. Wallet mnemonic is stored locally using NIP-44 encrypt-to-self — only the user's nsec can decrypt it.
 - **Bitcoin Connect**: Connect an external wallet. Shows balance in the header and wallet settings. Used for zap payments only.
 
 ## Quick Start
