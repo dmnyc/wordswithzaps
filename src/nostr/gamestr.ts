@@ -31,7 +31,7 @@ export async function updateGamestrAfterGame(
     ["game", GAMESTR_GAME_ID],
     ["score", String(gameScore)],
     ["p", user.pubkey],
-    ["state", "completed"],
+    ["state", "active"],
     ["mode", "multiplayer"],
     ["t", "puzzle"],
     ["t", "multiplayer"],
@@ -62,7 +62,7 @@ function getPublishedGames(): string[] {
   }
 }
 
-function isGamePublished(gameId: string): boolean {
+export function isGamePublished(gameId: string): boolean {
   return getPublishedGames().includes(gameId);
 }
 
