@@ -260,8 +260,8 @@ export function GameOverModal({
         </div>
       )}
 
-      {/* Leaderboard opt-in (completed games only) */}
-      {gameStatus === "completed" && (
+      {/* Leaderboard opt-in (completed games only, not yet published) */}
+      {gameStatus === "completed" && onPublishLeaderboard && (
         <div className="gameover-share">
           <label className="gameover-share-check">
             <input

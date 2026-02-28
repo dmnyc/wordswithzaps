@@ -21,7 +21,7 @@ import {
   getPublishToLeaderboard,
   setPublishToLeaderboard,
 } from "../settings/appSettings";
-import { updateGamestrAfterGame } from "../nostr/gamestr";
+import { updateGamestrAfterGame, isGamePublished } from "../nostr/gamestr";
 import ZapNudgeModal from "./ZapNudgeModal";
 import GameOverModal from "./GameOverModal";
 import AchievementModal from "./AchievementModal";
@@ -1012,13 +1012,35 @@ export function GameView({
       : gameState.meta.winner
         ? "loss"
         : "tie";
-    const myScore = gameEndScores.my;
+    // Compute score directly from gameState to avoid memo closure staleness
+    const isPlayerOne = gameState.meta.playerOne === myPubkey;
+    const myScore = isPlayerOne
+      ? gameState.scoring.p1Score
+      : gameState.scoring.p2Score;
     const bestWord = gameEndStats?.highestWord || "";
     const bestWordScore = gameEndStats?.highestWordScore || 0;
 
+    console.log("[Gamestr] Publishing leaderboard:", {
+      gameId,
+      outcome,
+      myScore,
+      bestWord,
+      bestWordScore,
+      p1Score: gameState.scoring.p1Score,
+      p2Score: gameState.scoring.p2Score,
+      playerOne: gameState.meta.playerOne,
+      myPubkey,
+      isPlayerOne,
+    });
+
+    if (myScore <= 0) {
+      console.error("[Gamestr] Refusing to publish score <= 0");
+      return;
+    }
+
     await updateGamestrAfterGame(gameId, outcome, myScore, bestWord, bestWordScore);
     onToast?.("Leaderboard updated!", "info");
-  }, [gameState, myPubkey, gameEndScores.my, gameEndStats, gameId, onToast]);
+  }, [gameState, myPubkey, gameEndStats, gameId, onToast]);
 
   const handleAchievementZap = useCallback(
     (amount: number, message: string) => {
@@ -1546,9 +1568,9 @@ export function GameView({
             onOpenCreatorZap?.(() => setShowGameOverModal(true));
           }}
           onOpenWalletSettings={onOpenWalletSettings}
-          leaderboardEnabled={leaderboardEnabled}
+          leaderboardEnabled={leaderboardEnabled && !isGamePublished(gameId)}
           onToggleLeaderboard={handleToggleLeaderboard}
-          onPublishLeaderboard={handlePublishLeaderboard}
+          onPublishLeaderboard={isGamePublished(gameId) ? undefined : handlePublishLeaderboard}
         />
       )}
 
