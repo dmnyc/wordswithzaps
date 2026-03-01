@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import { QRCodeSVG } from "qrcode.react";
+import { decode } from "nostr-tools/nip19";
 import type { NostrConnectSession } from "../hooks/useNostr";
 import {
   BoltIcon,
@@ -16,9 +17,11 @@ const ENABLE_NOSTRCONNECT_QR = false;
 
 type LoginView =
   | "main"
+  | "other-options"
   | "nip46-options"
   | "nip46-qr"
   | "nip46-bunker"
+  | "nsec-login"
   | "create-keys"
   | "create-profile";
 
@@ -64,6 +67,8 @@ export function LoginScreen({
   const [backupConfirmed, setBackupConfirmed] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [bunkerUri, setBunkerUri] = useState("");
+  const [nsecInput, setNsecInput] = useState("");
+  const [nsecError, setNsecError] = useState<string | null>(null);
   const [nip46Waiting, setNip46Waiting] = useState(false);
   const [nip46Timeout, setNip46Timeout] = useState(60);
   const [copied, setCopied] = useState<string | null>(null);
@@ -99,6 +104,42 @@ export function LoginScreen({
     setGeneratedKeys(keys);
     setView("create-keys");
   }, [generateKeypair]);
+
+  const handleNsecLogin = useCallback(async () => {
+    const trimmed = nsecInput.trim();
+    if (!trimmed) return;
+    setNsecError(null);
+
+    // Detect common wrong key types
+    if (trimmed.startsWith("npub1")) {
+      setNsecError("That's a public key (npub). You need your private key (nsec).");
+      return;
+    }
+    if (trimmed.startsWith("nprofile1") || trimmed.startsWith("nevent1") || trimmed.startsWith("naddr1") || trimmed.startsWith("note1")) {
+      setNsecError("That's not a private key. You need an nsec1... key.");
+      return;
+    }
+    if (!trimmed.startsWith("nsec1")) {
+      setNsecError("Invalid key format. Must start with nsec1...");
+      return;
+    }
+
+    try {
+      const { type, data } = decode(trimmed);
+      if (type !== "nsec") {
+        setNsecError("Invalid key format. Must be an nsec1... private key.");
+        return;
+      }
+      // data is Uint8Array, connectWithPrivateKey expects hex string
+      const hexKey = Array.from(data)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      await connectWithPrivateKey(hexKey);
+      onConnected();
+    } catch {
+      setNsecError("Invalid nsec key. Please check and try again.");
+    }
+  }, [nsecInput, connectWithPrivateKey, onConnected]);
 
   const downloadBackupFile = useCallback(() => {
     if (!generatedKeys) return;
@@ -233,6 +274,8 @@ WARNING: Never share your private key. Store this file securely.`;
     setBackupConfirmed(false);
     setDisplayName("");
     setBunkerUri("");
+    setNsecInput("");
+    setNsecError(null);
     setNip46Waiting(false);
     setNostrConnectUri(null);
     nostrConnectSessionRef.current = null;
@@ -328,21 +371,66 @@ WARNING: Never share your private key. Store this file securely.`;
               </div>
             </button>
 
-            {/* Create Account Option */}
+            {/* Other login options link */}
             <button
-              className="login-option-card create"
-              onClick={handleCreateAccount}
+              className="login-other-options-link"
+              onClick={() => setView("other-options")}
               disabled={isConnecting}
             >
-              <div className="login-option-icon icon-green">
+              Other login options
+            </button>
+          </div>
+        )}
+
+        {/* Other Login Options */}
+        {view === "other-options" && (
+          <div className="login-expanded">
+            <div className="login-expanded-header">
+              <div className="login-option-icon icon-orange">
                 <KeyIcon />
               </div>
-              <div className="login-option-content">
-                <div className="login-option-title">Create New Account</div>
-                <div className="login-option-desc">
-                  Generate a new Nostr key pair
+              <div className="login-option-title">Other Login Options</div>
+            </div>
+
+            <p className="login-hint login-security-note">
+              These options store your private key in the browser. A signer
+              extension or remote signer is recommended for better security.
+            </p>
+
+            <div className="login-suboptions">
+              <button
+                className="login-suboption"
+                onClick={() => setView("nsec-login")}
+              >
+                <span className="login-suboption-icon icon-orange">
+                  <KeyIcon />
+                </span>
+                <div>
+                  <div className="login-suboption-title">Sign in with nsec</div>
+                  <div className="login-suboption-desc">
+                    Paste an existing private key
+                  </div>
                 </div>
-              </div>
+              </button>
+
+              <button
+                className="login-suboption"
+                onClick={handleCreateAccount}
+              >
+                <span className="login-suboption-icon icon-green">
+                  <KeyIcon />
+                </span>
+                <div>
+                  <div className="login-suboption-title">Create New Account</div>
+                  <div className="login-suboption-desc">
+                    Generate a new Nostr key pair
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <button className="login-cancel" onClick={resetToMain}>
+              Cancel
             </button>
           </div>
         )}
@@ -517,6 +605,45 @@ WARNING: Never share your private key. Store this file securely.`;
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Sign in with nsec */}
+        {view === "nsec-login" && (
+          <div className="login-expanded">
+            <div className="login-expanded-header">
+              <div className="login-option-icon icon-orange">
+                <KeyIcon />
+              </div>
+              <div className="login-option-title">Sign in with nsec</div>
+            </div>
+
+            {nsecError && <div className="login-error">{nsecError}</div>}
+
+            <input
+              type="password"
+              className="login-input"
+              placeholder="nsec1..."
+              value={nsecInput}
+              onChange={(e) => { setNsecInput(e.target.value); setNsecError(null); }}
+            />
+
+            <div className="login-btn-row">
+              <button className="login-btn-secondary" onClick={resetToMain}>
+                Cancel
+              </button>
+              <button
+                className="login-btn"
+                onClick={handleNsecLogin}
+                disabled={!nsecInput.trim() || isConnecting}
+              >
+                {isConnecting ? "Connecting..." : "Sign In"}
+              </button>
+            </div>
+
+            <p className="login-hint">
+              Your key stays on this device and is never sent to any server
+            </p>
           </div>
         )}
 

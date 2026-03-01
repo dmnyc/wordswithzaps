@@ -431,6 +431,34 @@
     font-family: inherit;
 }
 
+/* Other options link */
+.login-other-options-link {
+    background: none;
+    border: none;
+    color: #5a5a5a;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 8px 0 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.15s;
+}
+
+.login-other-options-link:hover {
+    color: #9a9a9a;
+}
+
+/* Security note */
+.login-security-note {
+    color: #f97316;
+    background: rgba(249, 115, 22, 0.08);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 0 0 16px;
+    text-align: left;
+    line-height: 1.5;
+}
+
 /* Hint */
 .login-hint {
     font-size: 12px;
