@@ -179,6 +179,8 @@ export const BONUS_WORDS = new Set([
   "HODLER",
   "HODLERS",
   "LIGHTNING",
+  "MAXI",
+  "MAXIS",
   "MEME",
   "MEMES",
   "MEMPOOL",
