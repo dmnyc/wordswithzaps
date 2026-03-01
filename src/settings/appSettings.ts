@@ -13,7 +13,7 @@ const DEFAULT_SAVE_SHARE_SETTING = true;
 const ZAP_NUDGE_DEFAULT_AMOUNT_KEY = "wordswithzaps_zap_nudge_default_amount";
 const DEFAULT_ZAP_NUDGE_AMOUNT = 0;
 const PUBLISH_LEADERBOARD_KEY = "wordswithzaps_publish_leaderboard";
-const DEFAULT_PUBLISH_LEADERBOARD = false;
+const DEFAULT_PUBLISH_LEADERBOARD = true;
 
 type SettingsListener = () => void;
 export type ShareMethod = "public" | "public-reply" | "private" | "private-dm";
