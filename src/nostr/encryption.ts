@@ -1,4 +1,4 @@
-import { nip44 } from "nostr-tools";
+import { nip04, nip44 } from "nostr-tools";
 import { hexToBytes } from "@noble/hashes/utils";
 import { NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import { getCurrentUser, getNDK } from "./client";
@@ -68,11 +68,13 @@ export async function encryptMessage(
 
 /**
  * Encrypt a direct message (kind 4) for a recipient using NIP-04.
+ * Prefers browser extension, falls back to nostr-tools with private key.
  */
 export async function encryptDirectMessage(
   recipientPubkey: string,
   plaintext: string,
 ): Promise<string> {
+  // Check for NIP-07 extension with NIP-04 support
   if (typeof window !== "undefined") {
     const nostr = window.nostr as typeof window.nostr & {
       nip04?: {
@@ -83,18 +85,31 @@ export async function encryptDirectMessage(
       return nostr.nip04.encrypt(recipientPubkey, plaintext);
     }
   }
+
+  // Fallback: use nostr-tools nip04 with private key from NDKPrivateKeySigner
+  const ndk = getNDK();
+  const signer = ndk.signer;
+  if (signer instanceof NDKPrivateKeySigner) {
+    const privKeyHex = signer.privateKey;
+    if (privKeyHex) {
+      return nip04.encrypt(hexToBytes(privKeyHex), recipientPubkey, plaintext);
+    }
+  }
+
   throw new Error(
-    "NIP-04 encryption requires a browser extension with NIP-04 support (e.g., Alby, nos2x)",
+    "NIP-04 encryption requires a browser extension with NIP-04 support (e.g., Alby, nos2x), or sign in with a private key",
   );
 }
 
 /**
  * Decrypt a direct message (kind 4) from a sender using NIP-04.
+ * Prefers browser extension, falls back to nostr-tools with private key.
  */
 export async function decryptDirectMessage(
   senderPubkey: string,
   ciphertext: string,
 ): Promise<string> {
+  // Check for NIP-07 extension with NIP-04 support
   if (typeof window !== "undefined") {
     const nostr = window.nostr as typeof window.nostr & {
       nip04?: {
@@ -105,8 +120,19 @@ export async function decryptDirectMessage(
       return nostr.nip04.decrypt(senderPubkey, ciphertext);
     }
   }
+
+  // Fallback: use nostr-tools nip04 with private key from NDKPrivateKeySigner
+  const ndk = getNDK();
+  const signer = ndk.signer;
+  if (signer instanceof NDKPrivateKeySigner) {
+    const privKeyHex = signer.privateKey;
+    if (privKeyHex) {
+      return nip04.decrypt(hexToBytes(privKeyHex), senderPubkey, ciphertext);
+    }
+  }
+
   throw new Error(
-    "NIP-04 decryption requires a browser extension with NIP-04 support (e.g., Alby, nos2x)",
+    "NIP-04 decryption requires a browser extension with NIP-04 support (e.g., Alby, nos2x), or sign in with a private key",
   );
 }
 
