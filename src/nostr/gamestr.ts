@@ -29,12 +29,16 @@ export async function updateGamestrAfterGame(
   const tags: string[][] = [
     ["d", `${GAMESTR_GAME_ID}:${user.pubkey}:${gameId}`],
     ["game", GAMESTR_GAME_ID],
+    ["matchid", gameId],
     ["score", String(gameScore)],
+    ["score:highestword", String(bestWordScore)],
+    ["highestword", bestWord.toUpperCase()],
     ["p", user.pubkey],
     ["state", "active"],
     ["mode", "multiplayer"],
     ["t", "puzzle"],
     ["t", "multiplayer"],
+    ["alt", `Words With Zaps score: ${gameScore} pts (best word: ${bestWord.toUpperCase()} for ${bestWordScore} pts)`],
   ];
 
   const event = createEvent(GAMESTR_KIND, content, tags);
