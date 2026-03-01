@@ -559,6 +559,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const [newMnemonic, setNewMnemonic] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
   const [checkingBackup, setCheckingBackup] = useState(false);
   const [sparkBackups, setSparkBackups] = useState<SparkBackupEntry[]>([]);
@@ -755,6 +756,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
   const handleCreateSpark = async () => {
     try {
       setLoading(true);
+      setLoadingAction("creating");
       setError(null);
       const mnemonic = await createSparkWallet();
       setNewMnemonic(mnemonic);
@@ -762,6 +764,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
       setError(e instanceof Error ? e.message : "Failed to create wallet");
     } finally {
       setLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -828,6 +831,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
 
     try {
       setLoading(true);
+      setLoadingAction(`restoring:${backup.id}`);
       const mnemonic = await restoreSparkBackup(currentUser.pubkey, backup);
       await importSparkWallet(mnemonic);
       // Force sync and refresh balance after restore
@@ -838,6 +842,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
       setError(e instanceof Error ? e.message : "Restore failed");
     } finally {
       setLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -1252,7 +1257,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                       onClick={() => handleRestoreSparkBackup(backup)}
                       disabled={loading}
                     >
-                      {loading
+                      {loadingAction === `restoring:${backup.id}`
                         ? "Restoring..."
                         : backup.isLegacy
                           ? "Spark Wallet"
@@ -1278,7 +1283,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                 onClick={handleCreateSpark}
                 disabled={loading || checkingBackup}
               >
-                {loading ? "Creating..." : "Create New Wallet"}
+                {loadingAction === "creating" ? "Creating..." : "Create New Wallet"}
               </button>
               <button
                 className="spark-option-btn"
