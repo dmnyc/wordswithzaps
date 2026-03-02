@@ -953,6 +953,8 @@ export function GameView({
     ],
   );
 
+  const GAMESTR_LINK_PLACEHOLDER = "https://gamestr.io/score/... (link added when posted)";
+
   const sharePreview = useMemo(() => {
     if (!gameState || gameState.meta.status !== "completed") return "";
     const iWon = gameState.meta.winner === myPubkey;
@@ -964,30 +966,38 @@ export function GameView({
     const opponentRef = opponentPubkey
       ? `nostr:${opponentNpub}`
       : opponentLabel;
+    const trailingLink = leaderboardEnabled ? GAMESTR_LINK_PLACEHOLDER : appLink;
 
     if (iWon) {
       const statsLine = gameEndStats?.highestWord
         ? `Best word: ${gameEndStats.highestWord.toUpperCase()} (${gameEndStats.highestWordScore} pts)`
         : "";
-      return `I just won ${myScore} to ${oppScore} against ${opponentRef} in #WordsWithZaps! 🏆⚡${statsLine ? `\n\n${statsLine}` : ""}\n\n${appLink}`;
+      return `I just won ${myScore} to ${oppScore} against ${opponentRef} in #WordsWithZaps! 🏆⚡${statsLine ? `\n\n${statsLine}` : ""}\n\n${trailingLink}`;
     }
-    return `🤝⚡ Tied ${myScore}-${oppScore} against ${opponentRef} in #WordsWithZaps!\n\n${appLink}`;
+    return `🤝⚡ Tied ${myScore}-${oppScore} against ${opponentRef} in #WordsWithZaps!\n\n${trailingLink}`;
   }, [
     gameState?.meta.winner,
     gameState?.meta.status,
     gameEndScores,
     gameEndStats,
     appLink,
+    leaderboardEnabled,
     myPubkey,
     opponentLabel,
     opponentNpub,
     opponentPubkey,
   ]);
 
-  const handleShareResult = useCallback(async () => {
+  const handleShareResult = useCallback(async (gamestrEventId?: string) => {
     if (!sharePreview) return;
+    const gamestrUrl = gamestrEventId
+      ? `https://gamestr.io/score/${gamestrEventId}`
+      : null;
+    const content = gamestrUrl
+      ? sharePreview.replace(GAMESTR_LINK_PLACEHOLDER, gamestrUrl)
+      : sharePreview.replace(GAMESTR_LINK_PLACEHOLDER, appLink);
     try {
-      const event = createEvent(1, sharePreview, [
+      const event = createEvent(1, content, [
         ["t", "wordswithzaps"],
         ["client", "Words With Zaps"],
         ...(opponentPubkey ? [["p", opponentPubkey]] : []),
@@ -998,15 +1008,15 @@ export function GameView({
       const errorMsg = err instanceof Error ? err.message : String(err);
       onToast?.(`Sharing failed: ${errorMsg}`, "error");
     }
-  }, [sharePreview, onToast, opponentPubkey]);
+  }, [sharePreview, appLink, onToast, opponentPubkey]);
 
   const handleToggleLeaderboard = useCallback((enabled: boolean) => {
     setLeaderboardEnabled(enabled);
     setPublishToLeaderboard(enabled);
   }, []);
 
-  const handlePublishLeaderboard = useCallback(async () => {
-    if (!gameState || gameState.meta.status !== "completed") return;
+  const handlePublishLeaderboard = useCallback(async (): Promise<string | null> => {
+    if (!gameState || gameState.meta.status !== "completed") return null;
     const outcome = gameState.meta.winner === myPubkey
       ? "win"
       : gameState.meta.winner
@@ -1035,11 +1045,18 @@ export function GameView({
 
     if (myScore <= 0) {
       console.error("[Gamestr] Refusing to publish score <= 0");
-      return;
+      return null;
     }
 
-    await updateGamestrAfterGame(gameId, outcome, myScore, bestWord, bestWordScore);
-    onToast?.("Leaderboard updated!", "info");
+    try {
+      const eventId = await updateGamestrAfterGame(gameId, outcome, myScore, bestWord, bestWordScore);
+      onToast?.("Leaderboard updated!", "info");
+      return eventId;
+    } catch (err) {
+      console.error("[Gamestr] Failed to publish:", err);
+      onToast?.("Unable to publish to gamestr leaderboard", "error");
+      return null;
+    }
   }, [gameState, myPubkey, gameEndStats, gameId, onToast]);
 
   const handleAchievementZap = useCallback(

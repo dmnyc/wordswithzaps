@@ -14,11 +14,11 @@ export async function updateGamestrAfterGame(
   gameScore: number,
   bestWord: string,
   bestWordScore: number,
-): Promise<void> {
-  if (isGamePublished(gameId)) return;
+): Promise<string | null> {
+  if (isGamePublished(gameId)) return null;
 
   const user = getCurrentUser();
-  if (!user?.pubkey) return;
+  if (!user?.pubkey) return null;
 
   const content = outcome === "win"
     ? `Won with ${gameScore} points! Best word: ${bestWord.toUpperCase()} (${bestWordScore} pts)`
@@ -45,6 +45,7 @@ export async function updateGamestrAfterGame(
   const event = createEvent(GAMESTR_KIND, content, tags);
   await publishEvent(event);
   markGamePublished(gameId);
+  return event.id ?? null;
 }
 
 export function clearGamestrCache(): void {

@@ -23,12 +23,12 @@ interface GameOverModalProps {
   opponentPicture?: string | null;
   onClose: () => void;
   onSendZap: (amount: number) => Promise<void>;
-  onShareResult: () => Promise<void>;
+  onShareResult: (gamestrEventId?: string) => Promise<void>;
   onOpenCreatorZap: () => void;
   onOpenWalletSettings?: () => void;
   leaderboardEnabled: boolean;
   onToggleLeaderboard: (enabled: boolean) => void;
-  onPublishLeaderboard?: () => Promise<void>;
+  onPublishLeaderboard?: () => Promise<string | null>;
 }
 
 const PRESET_AMOUNTS = [50, 100, 500, 1000];
@@ -120,11 +120,19 @@ export function GameOverModal({
     // Close modal immediately — zap, share, and leaderboard run in the background
     onClose();
 
-    // Fire sequentially: share first, then zap, then leaderboard
+    // Fire sequentially: leaderboard first (to get event ID for share), then share, then zap
     (async () => {
+      let gamestrEventId: string | null = null;
+      if (shouldPublishLeaderboard) {
+        try {
+          gamestrEventId = await onPublishLeaderboard();
+        } catch {
+          // toast handled inside onPublishLeaderboard
+        }
+      }
       if (shouldShare) {
         try {
-          await onShareResult();
+          await onShareResult(gamestrEventId ?? undefined);
         } catch {
           // toast handled inside onShareResult
         }
@@ -134,13 +142,6 @@ export function GameOverModal({
           await onSendZap(resolvedAmount);
         } catch {
           // toast handled inside onSendZap
-        }
-      }
-      if (shouldPublishLeaderboard) {
-        try {
-          await onPublishLeaderboard();
-        } catch {
-          // silent — non-critical
         }
       }
     })();
