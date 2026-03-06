@@ -63,8 +63,8 @@ const SHARE_OPTIONS: ShareOption[] = [
   { value: "none", label: "Don't share" },
   { value: "public", label: "Public Nostr post" },
   { value: "public-reply", label: "Public Nostr reply" },
-  { value: "private", label: "Standard DM (Most compatible, less secure)" },
-  { value: "private-dm", label: "Giftwrap DM (More secure, less compatible)" },
+  { value: "private", label: "Direct message" },
+  // { value: "private-dm", label: "Giftwrap DM (More secure, less compatible)" }, // TODO: re-enable once NIP-17 client compatibility is resolved
 ];
 
 export function ZapNudgeModal({
@@ -91,7 +91,9 @@ export function ZapNudgeModal({
   });
   const [shareMode, setShareMode] = useState<ShareMode>(() => {
     if (!getShareToNostrDefault()) return "none";
-    return getShareMethodDefault();
+    const saved = getShareMethodDefault();
+    // Temporarily fall back private-dm to private until NIP-17 compatibility is resolved
+    return saved === "private-dm" ? "private" : saved;
   });
   const [replyTo, setReplyTo] = useState("");
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
