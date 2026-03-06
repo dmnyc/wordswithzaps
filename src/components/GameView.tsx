@@ -953,7 +953,7 @@ export function GameView({
     ],
   );
 
-  const GAMESTR_LINK_PLACEHOLDER = "https://gamestr.io/score/... (link added when posted)";
+  const GAMESTR_LINK_PLACEHOLDER = "https://gamestr.io/wordswithzaps/score/... (link added when posted)";
 
   const sharePreview = useMemo(() => {
     if (!gameState || gameState.meta.status !== "completed") return "";
@@ -991,7 +991,7 @@ export function GameView({
   const handleShareResult = useCallback(async (gamestrEventId?: string) => {
     if (!sharePreview) return;
     const gamestrUrl = gamestrEventId
-      ? `https://gamestr.io/score/${gamestrEventId}`
+      ? `https://gamestr.io/wordswithzaps/score/${gamestrEventId}`
       : null;
     const content = gamestrUrl
       ? sharePreview.replace(GAMESTR_LINK_PLACEHOLDER, gamestrUrl)
