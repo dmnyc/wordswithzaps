@@ -190,6 +190,8 @@ export const BONUS_WORDS = new Set([
   "NONCE",
   "NONCES",
   "NOSTR",
+  "PLEB",
+  "PLEBS",
   "NYM",
   "NYMS",
   "PUBKEY",
