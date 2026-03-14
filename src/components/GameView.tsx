@@ -1105,7 +1105,7 @@ export function GameView({
     if (confirmAction === "forfeit") {
       return {
         title: "Forfeit game?",
-        message: "You will lose and the game will end.",
+        message: "You will lose and the game will end. Consider passing your turn instead — two consecutive passes will end the game automatically.",
         confirmLabel: "Forfeit game",
         tone: "danger",
         showCancel: true,
@@ -1395,6 +1395,12 @@ export function GameView({
               <span className="status-completed">
                 Game Over! Winner:{" "}
                 {gameState.meta.winner === myPubkey ? "You!" : "Opponent"}
+              </span>
+            ) : gameState.meta.status === "abandoned" && gameState.meta.winner ? (
+              <span className="status-completed">
+                {gameState.meta.winner === myPubkey
+                  ? "You win by forfeit!"
+                  : "You lose — opponent wins by forfeit"}
               </span>
             ) : gameState.meta.status === "abandoned" ? (
               <span className="status-abandoned">Game Abandoned</span>
