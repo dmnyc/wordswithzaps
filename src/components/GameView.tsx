@@ -1093,8 +1093,16 @@ export function GameView({
   );
 
   const handleForfeit = useCallback(() => {
-    setConfirmAction("forfeit");
-  }, []);
+    if (
+      !isMyTurn &&
+      gameState &&
+      canDeclareAbandoned(Math.floor(gameState.turn.timestamp / 1000))
+    ) {
+      setConfirmAction("abandon");
+    } else {
+      setConfirmAction("forfeit");
+    }
+  }, [isMyTurn, gameState]);
 
   const handleDeleteGame = useCallback(() => {
     if (!isCreator) return;
@@ -1105,7 +1113,9 @@ export function GameView({
     if (confirmAction === "forfeit") {
       return {
         title: "Forfeit game?",
-        message: "You will lose and the game will end. Consider passing your turn instead — two consecutive passes will end the game automatically.",
+        message: isMyTurn
+          ? "You will lose and the game will end. Consider passing your turn instead — two consecutive passes will end the game automatically."
+          : "You will lose and the game will end.",
         confirmLabel: "Forfeit game",
         tone: "danger",
         showCancel: true,
@@ -1140,7 +1150,7 @@ export function GameView({
       };
     }
     return null;
-  }, [confirmAction]);
+  }, [confirmAction, isMyTurn]);
 
   const handleConfirmAction = useCallback(async () => {
     if (!confirmAction) return;
@@ -1472,19 +1482,6 @@ export function GameView({
 
       <TileBagInspector tileBag={gameState.tileBag} />
 
-      {gameState.meta.status === "active" &&
-        !isMyTurn &&
-        canDeclareAbandoned(Math.floor(gameState.turn.timestamp / 1000)) && (
-          <div className="abandon-hint">
-            <button
-              className="abandon-hint-btn"
-              onClick={() => setConfirmAction("abandon")}
-              disabled={isLoading}
-            >
-              Declare abandoned
-            </button>
-          </div>
-        )}
 
       <ExchangeTilesModal
         open={exchangeMode}
