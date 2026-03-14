@@ -171,7 +171,7 @@ export function GameOverModal({
         />
 
         {/* Score display */}
-        {gameStatus === "completed" && (
+        {(gameStatus === "completed" || (gameStatus === "abandoned" && winner)) && (
           <div className="gameover-scores">
             <div className={`gameover-score ${iWon || isTie ? "winner" : ""}`}>
               <span className="gameover-score-name">You</span>

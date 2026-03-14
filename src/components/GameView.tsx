@@ -281,9 +281,7 @@ export function GameView({
 
       if (alreadySeen) return;
 
-      const iWon =
-        gameState.meta.status === "completed" &&
-        gameState.meta.winner === myPubkey;
+      const iWon = gameState.meta.winner === myPubkey;
       if (iWon) {
         setShowVictoryCelebration(true);
         victoryCelebrationRef.current = window.setTimeout(() => {
@@ -956,9 +954,11 @@ export function GameView({
   const GAMESTR_LINK_PLACEHOLDER = "https://gamestr.io/wordswithzaps/score/... (link added when posted)";
 
   const sharePreview = useMemo(() => {
-    if (!gameState || gameState.meta.status !== "completed") return "";
+    if (!gameState) return "";
+    const status = gameState.meta.status;
+    if (status !== "completed" && status !== "abandoned") return "";
     const iWon = gameState.meta.winner === myPubkey;
-    const isTie = !gameState.meta.winner;
+    const isTie = status === "completed" && !gameState.meta.winner;
     if (!iWon && !isTie) return "";
 
     const myScore = gameEndScores.my;
