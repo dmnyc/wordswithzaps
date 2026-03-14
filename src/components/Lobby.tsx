@@ -57,6 +57,7 @@ export function Lobby({
     decay: DecayInfo;
   } | null>(null);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLoadingRef = useRef(false);
 
   const { createGame } = useGame();
   const { zapUser, state: walletState } = useWallet();
@@ -84,6 +85,7 @@ export function Lobby({
 
   const loadGames = useCallback(async () => {
     if (!user?.pubkey) return;
+    isLoadingRef.current = true;
     setIsLoadingGames(true);
     try {
       const cached = loadCachedGames(user.pubkey);
@@ -93,11 +95,14 @@ export function Lobby({
     } catch (err) {
       console.error("Failed to load games:", err);
     } finally {
+      isLoadingRef.current = false;
       setIsLoadingGames(false);
     }
   }, [user?.pubkey]);
 
   const scheduleRefresh = useCallback(() => {
+    // Skip if a load is already in progress
+    if (isLoadingRef.current) return;
     if (refreshTimeoutRef.current) return;
     refreshTimeoutRef.current = setTimeout(() => {
       refreshTimeoutRef.current = null;
@@ -131,50 +136,6 @@ export function Lobby({
     if (!user?.pubkey) return;
     loadGames();
   }, [user?.pubkey, loadGames]);
-
-  // Load profiles for opponents
-  useEffect(() => {
-    if (!user?.pubkey) return;
-    const pubkeys = new Set<string>();
-    for (const game of games) {
-      if (game.opponentPubkey) {
-        pubkeys.add(game.opponentPubkey);
-      }
-    }
-
-    const toFetch = Array.from(pubkeys);
-    if (toFetch.length === 0) return;
-
-    let cancelled = false;
-
-    const loadProfiles = async () => {
-      const results = await Promise.all(
-        toFetch.map(async (pubkey) => {
-          try {
-            return await fetchProfile(pubkey);
-          } catch {
-            return null;
-          }
-        }),
-      );
-
-      if (cancelled) return;
-
-      setProfiles((prev) => {
-        const next = { ...prev };
-        toFetch.forEach((pubkey, index) => {
-          next[pubkey] = results[index];
-        });
-        return next;
-      });
-    };
-
-    loadProfiles();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.pubkey, games]);
 
   const handleOpponentSelect = (profile: NostrProfile) => {
     setSelectedOpponent(profile);
@@ -249,6 +210,52 @@ export function Lobby({
       );
   const visibleGames = filteredGames.slice(0, visibleLimit);
   const hasMore = filteredGames.length > visibleLimit;
+
+  // Load profiles only for visible opponents (not all games)
+  useEffect(() => {
+    if (!user?.pubkey) return;
+    const pubkeys = new Set<string>();
+    for (const game of visibleGames) {
+      if (game.opponentPubkey) {
+        pubkeys.add(game.opponentPubkey);
+      }
+    }
+
+    // Only fetch profiles we don't already have
+    const toFetch = Array.from(pubkeys).filter((pk) => !(pk in profiles));
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+
+    const loadProfiles = async () => {
+      const results = await Promise.all(
+        toFetch.map(async (pubkey) => {
+          try {
+            return await fetchProfile(pubkey);
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      setProfiles((prev) => {
+        const next = { ...prev };
+        toFetch.forEach((pubkey, index) => {
+          next[pubkey] = results[index];
+        });
+        return next;
+      });
+    };
+
+    loadProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.pubkey, visibleGames]);
 
   // Auto-dismiss ended games after they've been shown once in the lobby,
   // so they're hidden on the next visit unless "Show ended" is toggled.

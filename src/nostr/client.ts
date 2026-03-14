@@ -706,7 +706,7 @@ export function subscribeToEvents(
 /**
  * Fetch events matching a filter (one-time query)
  */
-const FETCH_EVENTS_TIMEOUT_MS = 10000;
+const FETCH_EVENTS_TIMEOUT_MS = 6000;
 
 /**
  * Fetch events matching a filter (one-time query)

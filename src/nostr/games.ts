@@ -147,40 +147,46 @@ export async function fetchUserGames(
     }
   }
 
-  // Batch #d queries for active/non-cached games
+  // Batch #d queries for active/non-cached games (parallel)
   const D_TAG_BATCH_SIZE = 20;
+  const batches: GameSummary[][] = [];
   for (let i = 0; i < gamesToQuery.length; i += D_TAG_BATCH_SIZE) {
-    const batch = gamesToQuery.slice(i, i + D_TAG_BATCH_SIZE);
-    const dTags = batch.map(
-      (s) => `${GAME_D_TAG_PREFIX}${s.gameId}`,
-    );
-    try {
-      const gameEvents = await fetchEvents({
-        kinds: [GAME_KIND],
-        "#d": dTags,
-        limit: batch.length * 5,
-      });
-      for (const event of gameEvents) {
-        const dTag = getTagValues(event.tags, "d")[0];
-        if (!dTag) continue;
-        const gameId = dTag.slice(GAME_D_TAG_PREFIX.length);
-        const summary = map.get(gameId);
-        if (!summary) continue;
-        const updatedAt = event.created_at || 0;
-        if (updatedAt > summary.updatedAt) {
-          const players = getTagValues(event.tags, "p");
-          const opponent = players.find((p) => p !== pubkey) || "";
-          summary.opponentPubkey = opponent || summary.opponentPubkey;
-          summary.players = players.length > 0 ? players : summary.players;
-          summary.updatedAt = updatedAt;
-          summary.eventId = event.id;
-        }
-        eventById.set(event.id, event);
-      }
-    } catch {
-      // Fall back to #p results if batch #d fetch fails
-    }
+    batches.push(gamesToQuery.slice(i, i + D_TAG_BATCH_SIZE));
   }
+
+  await Promise.all(
+    batches.map(async (batch) => {
+      const dTags = batch.map(
+        (s) => `${GAME_D_TAG_PREFIX}${s.gameId}`,
+      );
+      try {
+        const gameEvents = await fetchEvents({
+          kinds: [GAME_KIND],
+          "#d": dTags,
+          limit: batch.length * 5,
+        });
+        for (const event of gameEvents) {
+          const dTag = getTagValues(event.tags, "d")[0];
+          if (!dTag) continue;
+          const gameId = dTag.slice(GAME_D_TAG_PREFIX.length);
+          const summary = map.get(gameId);
+          if (!summary) continue;
+          const updatedAt = event.created_at || 0;
+          if (updatedAt > summary.updatedAt) {
+            const players = getTagValues(event.tags, "p");
+            const opponent = players.find((p) => p !== pubkey) || "";
+            summary.opponentPubkey = opponent || summary.opponentPubkey;
+            summary.players = players.length > 0 ? players : summary.players;
+            summary.updatedAt = updatedAt;
+            summary.eventId = event.id;
+          }
+          eventById.set(event.id, event);
+        }
+      } catch {
+        // Fall back to #p results if batch #d fetch fails
+      }
+    }),
+  );
 
   const summaries = Array.from(map.values()).sort(
     (a, b) => b.updatedAt - a.updatedAt,
