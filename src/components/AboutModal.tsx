@@ -5,7 +5,7 @@ const CREATOR_NPUB =
   "npub1aeh2zw4elewy5682lxc6xnlqzjnxksq303gwu2npfaxd49vmde6qcq4nwx";
 const GITHUB_ISSUES_URL = "https://github.com/dmnyc/wordswithzaps/issues";
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "1.0.3";
-const BREEZ_SDK_VERSION = "0.9.1";
+const BREEZ_SDK_VERSION = "0.11.0";
 const COMMIT_HASH =
   import.meta.env.VITE_COMMIT_SHA || import.meta.env.VITE_GIT_SHA || "dev";
 const SHORT_COMMIT = COMMIT_HASH === "dev" ? "dev" : COMMIT_HASH.slice(0, 7);
