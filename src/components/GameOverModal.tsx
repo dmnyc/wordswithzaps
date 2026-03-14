@@ -150,7 +150,8 @@ export function GameOverModal({
   // Determine button label
   const hasZap = !isAbandoned && walletConnected && resolvedAmount > 0;
   const hasShare = canShare && willShare;
-  const hasLeaderboard = leaderboardEnabled && !!onPublishLeaderboard;
+  const showLeaderboard = (gameStatus === "completed" || (gameStatus === "abandoned" && !!winner)) && !!onPublishLeaderboard;
+  const hasLeaderboard = leaderboardEnabled && showLeaderboard;
   const hasAction = hasZap || hasShare || hasLeaderboard;
   let buttonLabel = "Done";
   if (hasZap && hasShare) buttonLabel = "Share & Zap";
@@ -265,7 +266,7 @@ export function GameOverModal({
       )}
 
       {/* Leaderboard opt-in (completed or abandoned wins, not yet published) */}
-      {(gameStatus === "completed" || (gameStatus === "abandoned" && winner)) && onPublishLeaderboard && (
+      {showLeaderboard && (
         <div className="gameover-share">
           <label className="gameover-share-check">
             <input
