@@ -370,6 +370,66 @@
 }
 
 /* New Game Section */
+/* Wallet setup prompt */
+.wallet-prompt {
+    text-align: center;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    background: rgba(255, 204, 0, 0.06);
+    border: 1px solid rgba(255, 204, 0, 0.15);
+    border-radius: 12px;
+    animation: walletPromptGlow 2s ease-in-out infinite;
+}
+
+@keyframes walletPromptGlow {
+    0%, 100% {
+        box-shadow: 0 0 4px rgba(255, 204, 0, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 16px rgba(255, 204, 0, 0.4), 0 0 32px rgba(255, 204, 0, 0.15);
+    }
+}
+
+.wallet-prompt-title {
+    margin: 0 0 4px 0;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.wallet-prompt-desc {
+    margin: 0 0 14px 0;
+    color: #999;
+    font-size: 13px;
+}
+
+.wallet-prompt-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: #ffcc00;
+    color: #1a1a2e;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.wallet-prompt-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.wallet-prompt-btn:hover {
+    background: #e6b800;
+}
+
 .new-game-section {
     background: rgba(255, 255, 255, 0.03);
     border-radius: 12px;

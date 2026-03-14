@@ -25,6 +25,7 @@ interface LobbyProps {
   onGameStart: (gameId: string, opponentPubkey: string) => void;
   onToast?: (message: string, tone?: "success" | "error" | "info") => void;
   onZapSent?: () => void;
+  onOpenWallet?: () => void;
   prefillGameId?: string | null;
   prefillError?: string | null;
 }
@@ -33,6 +34,7 @@ export function Lobby({
   onGameStart,
   onToast,
   onZapSent,
+  onOpenWallet,
   prefillGameId,
   prefillError,
 }: LobbyProps) {
@@ -60,7 +62,7 @@ export function Lobby({
   const isLoadingRef = useRef(false);
 
   const { createGame } = useGame();
-  const { zapUser, state: walletState } = useWallet();
+  const { zapUser, state: walletState, wallets } = useWallet();
   const isWalletConnected = walletState.connected;
   const user = getCurrentUser();
 
@@ -533,6 +535,20 @@ export function Lobby({
           </div>
         )}
       </div>
+
+      {/* Wallet setup prompt for new users */}
+      {wallets.length === 0 && onOpenWallet && (
+        <div className="wallet-prompt">
+          <p className="wallet-prompt-title">Words With Zaps is better with zaps!</p>
+          <p className="wallet-prompt-desc">Connect a wallet for the full experience.</p>
+          <button className="wallet-prompt-btn" onClick={onOpenWallet}>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+              <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
+            </svg>
+            Set Up Wallet
+          </button>
+        </div>
+      )}
 
       {/* New Game */}
       <div className="new-game-section">

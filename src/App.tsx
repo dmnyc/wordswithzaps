@@ -67,6 +67,7 @@ function App() {
     wallets,
     bitcoinConnectConnected,
     refreshBalance,
+    disconnect: disconnectWallet,
   } = useWallet();
   const [showWalletSettings, setShowWalletSettings] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -414,7 +415,15 @@ function App() {
     setScreen("lobby");
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
+    // Disconnect wallet SDK and clear wallet localStorage
+    for (const w of wallets) {
+      try {
+        await disconnectWallet(w.id);
+      } catch {
+        // Best-effort cleanup
+      }
+    }
     disconnect();
     clearGamestrCache();
     setGameSession(null);
@@ -465,6 +474,7 @@ function App() {
             onGameStart={handleGameStart}
             onToast={showToast}
             onZapSent={() => setShowZapAnimation(true)}
+            onOpenWallet={() => setShowWalletSettings(true)}
             prefillGameId={prefillGameId}
             prefillError={prefillError}
           />

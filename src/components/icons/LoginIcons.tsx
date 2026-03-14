@@ -72,6 +72,25 @@ export function CameraIcon({ className }: { className?: string }) {
   );
 }
 
+export function UserIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="8" r="4" fill="currentColor" />
+      <path
+        d="M4 21c0-4 3.6-7 8-7s8 3 8 7"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export function ClipboardIcon({ className }: { className?: string }) {
   return (
     <svg

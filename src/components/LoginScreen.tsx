@@ -9,6 +9,7 @@ import {
   KeyIcon,
   CameraIcon,
   ClipboardIcon,
+  UserIcon,
 } from "./icons/LoginIcons";
 import { ZTileLoader } from "./ZTileLoader";
 import "./LoginScreen.css";
@@ -17,7 +18,6 @@ const ENABLE_NOSTRCONNECT_QR = false;
 
 type LoginView =
   | "main"
-  | "other-options"
   | "nip46-options"
   | "nip46-qr"
   | "nip46-bunker"
@@ -64,7 +64,6 @@ export function LoginScreen({
   );
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [backupDownloaded, setBackupDownloaded] = useState(false);
-  const [backupConfirmed, setBackupConfirmed] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [bunkerUri, setBunkerUri] = useState("");
   const [nsecInput, setNsecInput] = useState("");
@@ -271,7 +270,6 @@ WARNING: Never share your private key. Store this file securely.`;
     setGeneratedKeys(null);
     setShowPrivateKey(false);
     setBackupDownloaded(false);
-    setBackupConfirmed(false);
     setDisplayName("");
     setBunkerUri("");
     setNsecInput("");
@@ -371,66 +369,19 @@ WARNING: Never share your private key. Store this file securely.`;
               </div>
             </button>
 
-            {/* Other login options link */}
+            {/* Private Key Option */}
             <button
-              className="login-other-options-link"
-              onClick={() => setView("other-options")}
+              className="login-option-card nsec"
+              onClick={() => setView("nsec-login")}
               disabled={isConnecting}
             >
-              Other login options
-            </button>
-          </div>
-        )}
-
-        {/* Other Login Options */}
-        {view === "other-options" && (
-          <div className="login-expanded">
-            <div className="login-expanded-header">
               <div className="login-option-icon icon-orange">
                 <KeyIcon />
               </div>
-              <div className="login-option-title">Other Login Options</div>
-            </div>
-
-            <p className="login-hint login-security-note">
-              These options store your private key in the browser. A signer
-              extension or remote signer is recommended for better security.
-            </p>
-
-            <div className="login-suboptions">
-              <button
-                className="login-suboption"
-                onClick={() => setView("nsec-login")}
-              >
-                <span className="login-suboption-icon icon-orange">
-                  <KeyIcon />
-                </span>
-                <div>
-                  <div className="login-suboption-title">Sign in with nsec</div>
-                  <div className="login-suboption-desc">
-                    Paste an existing private key
-                  </div>
-                </div>
-              </button>
-
-              <button
-                className="login-suboption"
-                onClick={handleCreateAccount}
-              >
-                <span className="login-suboption-icon icon-green">
-                  <KeyIcon />
-                </span>
-                <div>
-                  <div className="login-suboption-title">Create New Account</div>
-                  <div className="login-suboption-desc">
-                    Generate a new Nostr key pair
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <button className="login-cancel" onClick={resetToMain}>
-              Cancel
+              <div className="login-option-content">
+                <div className="login-option-title">Private Key</div>
+                <div className="login-option-desc">Enter nsec or create new keys</div>
+              </div>
             </button>
           </div>
         )}
@@ -608,14 +559,14 @@ WARNING: Never share your private key. Store this file securely.`;
           </div>
         )}
 
-        {/* Sign in with nsec */}
+        {/* Sign in with nsec or create new keys */}
         {view === "nsec-login" && (
           <div className="login-expanded">
             <div className="login-expanded-header">
               <div className="login-option-icon icon-orange">
                 <KeyIcon />
               </div>
-              <div className="login-option-title">Sign in with nsec</div>
+              <div className="login-option-title">Private Key</div>
             </div>
 
             {nsecError && <div className="login-error">{nsecError}</div>}
@@ -644,6 +595,17 @@ WARNING: Never share your private key. Store this file securely.`;
             <p className="login-hint">
               Your key stays on this device and is never sent to any server
             </p>
+
+            <div className="login-divider">
+              <span>or</span>
+            </div>
+
+            <button
+              className="login-btn-create"
+              onClick={handleCreateAccount}
+            >
+              Create New Account
+            </button>
           </div>
         )}
 
@@ -706,16 +668,6 @@ WARNING: Never share your private key. Store this file securely.`;
                   ? "✓ Backup Downloaded"
                   : "Download Backup File"}
               </button>
-
-              <label className="login-backup-checkbox">
-                <input
-                  type="checkbox"
-                  checked={backupConfirmed}
-                  onChange={(e) => setBackupConfirmed(e.target.checked)}
-                  disabled={!backupDownloaded}
-                />
-                <span>I saved my backup securely</span>
-              </label>
             </div>
 
             <div className="login-btn-row">
@@ -725,7 +677,7 @@ WARNING: Never share your private key. Store this file securely.`;
               <button
                 className="login-btn"
                 onClick={handleKeysConfirmed}
-                disabled={!backupDownloaded || !backupConfirmed}
+                disabled={!backupDownloaded}
               >
                 Continue
               </button>
@@ -737,7 +689,9 @@ WARNING: Never share your private key. Store this file securely.`;
         {view === "create-profile" && (
           <div className="login-expanded">
             <div className="login-expanded-header">
-              <span className="login-suboption-icon">👤</span>
+              <span className="login-suboption-icon icon-blue">
+                <UserIcon />
+              </span>
               <div className="login-option-title">Set Display Name</div>
             </div>
 

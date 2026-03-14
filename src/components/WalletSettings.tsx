@@ -72,67 +72,6 @@ function WalletOptionCard({
   );
 }
 
-const MNEMONIC_DELAY_SECONDS = 5;
-
-function MnemonicBackupScreen({
-  mnemonic,
-  onConfirmed,
-}: {
-  mnemonic: string;
-  onConfirmed: () => void;
-}) {
-  const [confirmed, setConfirmed] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(MNEMONIC_DELAY_SECONDS);
-
-  useEffect(() => {
-    if (secondsLeft <= 0) return;
-    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [secondsLeft]);
-
-  const canConfirm = secondsLeft === 0;
-  const canProceed = confirmed && canConfirm;
-
-  return (
-    <div className="wallet-settings-overlay">
-      <div className="wallet-settings-modal">
-        <h2>Save Your Recovery Phrase</h2>
-        <div className="mnemonic-display">
-          {mnemonic.split(" ").map((word, i) => (
-            <div key={i} className="mnemonic-word">
-              <span className="mnemonic-num">{i + 1}.</span> {word}
-            </div>
-          ))}
-        </div>
-        <div className="mnemonic-warnings">
-          <p>Write these 12 words on paper and store safely.</p>
-          <p>Do not screenshot or share with anyone.</p>
-        </div>
-        <label
-          className={`wallet-checkbox-label ${!canConfirm ? "disabled" : ""}`}
-        >
-          <input
-            type="checkbox"
-            checked={confirmed}
-            onChange={(e) => setConfirmed(e.target.checked)}
-            disabled={!canConfirm}
-          />
-          <span>I have saved my recovery phrase</span>
-        </label>
-        <button
-          className="wallet-btn primary"
-          onClick={onConfirmed}
-          disabled={!canProceed}
-          style={{ marginTop: "16px" }}
-        >
-          {!canConfirm
-            ? `Please read carefully (${secondsLeft}s)`
-            : "Create My Wallet"}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 type FundsSubView = "main" | "receive" | "send";
 
@@ -556,7 +495,11 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
 
   const [view, setView] = useState<ViewState>("main");
   const [sparkMnemonic, setSparkMnemonic] = useState("");
-  const [newMnemonic, setNewMnemonic] = useState<string | null>(null);
+  const [backupConfirmed, setBackupConfirmed] = useState(() => {
+    const currentUser = getCurrentUser();
+    if (!currentUser?.pubkey) return false;
+    return localStorage.getItem(`wwz_backup_confirmed_${currentUser.pubkey}`) === "true";
+  });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -758,8 +701,9 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
       setLoading(true);
       setLoadingAction("creating");
       setError(null);
-      const mnemonic = await createSparkWallet();
-      setNewMnemonic(mnemonic);
+      await createSparkWallet();
+      // Skip mnemonic screen — glow on "Manage Backups" nudges backup
+      setView("main");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create wallet");
     } finally {
@@ -793,6 +737,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
       setLoading(true);
       await backupSparkToNostr(currentUser.pubkey);
       setBackupStatus("Spark backup saved to Nostr");
+      markBackupConfirmed();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Backup failed");
     } finally {
@@ -872,10 +817,14 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
     }
   };
 
-  const handleMnemonicConfirmed = () => {
-    setNewMnemonic(null);
-    setView("main");
+  const markBackupConfirmed = () => {
+    const currentUser = getCurrentUser();
+    if (currentUser?.pubkey) {
+      localStorage.setItem(`wwz_backup_confirmed_${currentUser.pubkey}`, "true");
+    }
+    setBackupConfirmed(true);
   };
+
 
   // View credentials handlers
   const handleViewMnemonic = async () => {
@@ -956,15 +905,6 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
     return null;
   };
 
-  // Show mnemonic backup screen after creating new wallet
-  if (newMnemonic) {
-    return (
-      <MnemonicBackupScreen
-        mnemonic={newMnemonic}
-        onConfirmed={handleMnemonicConfirmed}
-      />
-    );
-  }
 
   // Wallet removal confirmation modal
   if (walletToRemove) {
@@ -1219,7 +1159,7 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                 <h3>Backup & Restore</h3>
                 <div className="wallet-add-options">
                   <button
-                    className="wallet-btn secondary"
+                    className={`wallet-btn secondary${hasSparkWallet && !backupConfirmed ? " glow-pulse" : ""}`}
                     onClick={() => setView("backup")}
                   >
                     Manage Backups
@@ -1419,6 +1359,17 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                     <p>Keep this phrase safe and secret.</p>
                     <p>Anyone with these words can access your funds.</p>
                   </div>
+                  {!backupConfirmed && (
+                    <label className="wallet-checkbox-label" style={{ marginTop: "12px" }}>
+                      <input
+                        type="checkbox"
+                        onChange={(e) => {
+                          if (e.target.checked) markBackupConfirmed();
+                        }}
+                      />
+                      <span>I have saved my recovery phrase</span>
+                    </label>
+                  )}
                   <button
                     className="wallet-btn primary"
                     onClick={() => {
