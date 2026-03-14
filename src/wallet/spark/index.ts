@@ -346,6 +346,7 @@ export async function initializeSdk(
     >;
     config.apiKey = apiKey;
     (config as Record<string, unknown>).privateEnabledDefault = true;
+    config.supportLnurlVerify = true;
 
     const cleanMnemonic = mnemonic.trim().toLowerCase().replace(/\s+/g, " ");
 
