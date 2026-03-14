@@ -1016,10 +1016,12 @@ export function GameView({
   }, []);
 
   const handlePublishLeaderboard = useCallback(async (): Promise<string | null> => {
-    if (!gameState || gameState.meta.status !== "completed") return null;
-    const outcome = gameState.meta.winner === myPubkey
+    if (!gameState) return null;
+    const { status, winner } = gameState.meta;
+    if (status !== "completed" && !(status === "abandoned" && winner)) return null;
+    const outcome = winner === myPubkey
       ? "win"
-      : gameState.meta.winner
+      : winner
         ? "loss"
         : "tie";
     // Compute score directly from gameState to avoid memo closure staleness
