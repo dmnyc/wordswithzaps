@@ -86,7 +86,8 @@ export function Lobby({
     if (!user?.pubkey) return;
     setIsLoadingGames(true);
     try {
-      const results = await fetchUserGames(user.pubkey);
+      const cached = loadCachedGames(user.pubkey);
+      const results = await fetchUserGames(user.pubkey, 200, cached);
       setGames(results);
       saveCachedGames(user.pubkey, results);
     } catch (err) {

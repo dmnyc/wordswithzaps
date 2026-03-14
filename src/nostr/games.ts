@@ -77,9 +77,16 @@ export function optimisticMovePlayed(
   saveCachedGames(userPubkey, games);
 }
 
+const TERMINAL_STATUSES: Set<GameStatus> = new Set([
+  "completed",
+  "abandoned",
+  "deleted",
+]);
+
 export async function fetchUserGames(
   pubkey: string,
   limit: number = 200,
+  cachedGames?: GameSummary[],
 ): Promise<GameSummary[]> {
   // Step 1: Discover games via #p query
   const events = await fetchEvents({
@@ -113,43 +120,81 @@ export async function fetchUserGames(
     }
   }
 
-  // Step 2: For each game, fetch by #d tag to get the true latest event.
+  // Build index of cached terminal games for skip optimization
+  const terminalCache = new Map<string, GameSummary>();
+  if (cachedGames) {
+    for (const cg of cachedGames) {
+      if (cg.status && TERMINAL_STATUSES.has(cg.status)) {
+        terminalCache.set(cg.gameId, cg);
+      }
+    }
+  }
+
+  // Step 2: Fetch by #d tag to get the true latest event.
   // The #p query can miss events due to relay indexing quirks on addressable events.
-  // Build a lookup of all events we already have by id for reuse.
+  // Skip terminal games whose cached state is already up-to-date, and batch
+  // the remaining active games into fewer relay queries.
   const eventById = new Map(events.map((e) => [e.id, e]));
 
-  await Promise.all(
-    Array.from(map.values()).map(async (summary) => {
-      try {
-        const dTag = `${GAME_D_TAG_PREFIX}${summary.gameId}`;
-        const gameEvents = await fetchEvents({
-          kinds: [GAME_KIND],
-          "#d": [dTag],
-          limit: 5,
-        });
-        // Find the latest event across both queries
-        for (const event of gameEvents) {
-          const updatedAt = event.created_at || 0;
-          if (updatedAt > summary.updatedAt) {
-            const players = getTagValues(event.tags, "p");
-            const opponent = players.find((p) => p !== pubkey) || "";
-            summary.opponentPubkey = opponent || summary.opponentPubkey;
-            summary.players = players.length > 0 ? players : summary.players;
-            summary.updatedAt = updatedAt;
-            summary.eventId = event.id;
-          }
-          // Store for decryption step
-          eventById.set(event.id, event);
+  const gamesToQuery: GameSummary[] = [];
+  for (const summary of map.values()) {
+    const cached = terminalCache.get(summary.gameId);
+    if (cached && cached.updatedAt >= summary.updatedAt) {
+      // Terminal game with no newer event — reuse cached data entirely
+      Object.assign(summary, cached);
+    } else {
+      gamesToQuery.push(summary);
+    }
+  }
+
+  // Batch #d queries for active/non-cached games
+  const D_TAG_BATCH_SIZE = 20;
+  for (let i = 0; i < gamesToQuery.length; i += D_TAG_BATCH_SIZE) {
+    const batch = gamesToQuery.slice(i, i + D_TAG_BATCH_SIZE);
+    const dTags = batch.map(
+      (s) => `${GAME_D_TAG_PREFIX}${s.gameId}`,
+    );
+    try {
+      const gameEvents = await fetchEvents({
+        kinds: [GAME_KIND],
+        "#d": dTags,
+        limit: batch.length * 5,
+      });
+      for (const event of gameEvents) {
+        const dTag = getTagValues(event.tags, "d")[0];
+        if (!dTag) continue;
+        const gameId = dTag.slice(GAME_D_TAG_PREFIX.length);
+        const summary = map.get(gameId);
+        if (!summary) continue;
+        const updatedAt = event.created_at || 0;
+        if (updatedAt > summary.updatedAt) {
+          const players = getTagValues(event.tags, "p");
+          const opponent = players.find((p) => p !== pubkey) || "";
+          summary.opponentPubkey = opponent || summary.opponentPubkey;
+          summary.players = players.length > 0 ? players : summary.players;
+          summary.updatedAt = updatedAt;
+          summary.eventId = event.id;
         }
-      } catch {
-        // Fall back to #p result if #d fetch fails
+        eventById.set(event.id, event);
       }
-    }),
-  );
+    } catch {
+      // Fall back to #p results if batch #d fetch fails
+    }
+  }
 
   const summaries = Array.from(map.values()).sort(
     (a, b) => b.updatedAt - a.updatedAt,
   );
+
+  // Seed in-memory summaryCache from localStorage cache to avoid redundant
+  // NIP-44 decryption after page reload
+  if (cachedGames) {
+    for (const cg of cachedGames) {
+      if (cg.eventId && cg.status && !summaryCache.has(cg.eventId)) {
+        summaryCache.set(cg.eventId, cg);
+      }
+    }
+  }
 
   // Step 3: Decrypt latest state to get status + turn info (parallel)
   // Use cache to skip decryption for events we've already processed
