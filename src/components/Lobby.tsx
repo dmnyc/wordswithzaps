@@ -114,13 +114,13 @@ export function Lobby({
     if (!user?.pubkey) return;
 
     const subscription = subscribeToEvents(
-      { kinds: [GAME_KIND], "#p": [user.pubkey] },
+      { kinds: [GAME_KIND], "#p": [user.pubkey], since: Math.floor(Date.now() / 1000) },
       () => scheduleRefresh(),
     );
 
     const intervalId = window.setInterval(() => {
       loadGames();
-    }, 60000);
+    }, 180000);
 
     return () => {
       subscription.unsubscribe();
@@ -203,12 +203,19 @@ export function Lobby({
     game.status === "abandoned" ||
     game.status === "deleted";
 
-  const filteredGames = showEndedGames
-    ? games
-    : games.filter(
-        (game) => !isGameEnded(game) || !isGameDismissed(game.gameId),
-      );
-  const visibleGames = filteredGames.slice(0, visibleLimit);
+  const filteredGames = useMemo(
+    () =>
+      showEndedGames
+        ? games
+        : games.filter(
+            (game) => !isGameEnded(game) || !isGameDismissed(game.gameId),
+          ),
+    [games, showEndedGames],
+  );
+  const visibleGames = useMemo(
+    () => filteredGames.slice(0, visibleLimit),
+    [filteredGames, visibleLimit],
+  );
   const hasMore = filteredGames.length > visibleLimit;
 
   // Load profiles only for visible opponents (not all games)
