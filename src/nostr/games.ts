@@ -5,6 +5,7 @@ import type { GameState, GameStatus } from "../types/game";
 import { GameEngine } from "../engine/GameEngine";
 import { NostrSync } from "./NostrSync";
 import {
+  DEFAULT_RELAYS,
   GAME_D_TAG_PREFIX,
   GAME_KIND,
   RACK_D_TAG_PREFIX,
@@ -326,11 +327,31 @@ export async function fetchGamePlayers(gameId: string): Promise<{
   eventId: string;
 } | null> {
   const dTag = `${GAME_D_TAG_PREFIX}${gameId}`;
-  const events = await fetchEvents({
+  const filter = {
     kinds: [GAME_KIND],
     "#d": [dTag],
     limit: 10,
+  };
+
+  // Force the request to the full default relay set with connect-on-subscribe.
+  // Without an explicit relay set, NDK only counts relays already connected at
+  // subscribe time when deciding when to emit EOSE — during cold start that
+  // can be a small subset that doesn't have the event, causing an early empty
+  // result. Pinning the relays makes NDK wait for them.
+  let events = await fetchEvents(filter, {
+    relayUrls: DEFAULT_RELAYS,
+    timeoutMs: 8000,
   });
+
+  // One retry after a short delay handles transient relay slowness and lets
+  // any in-flight relay connections complete.
+  if (events.length === 0) {
+    await new Promise((r) => setTimeout(r, 2000));
+    events = await fetchEvents(filter, {
+      relayUrls: DEFAULT_RELAYS,
+      timeoutMs: 8000,
+    });
+  }
 
   if (events.length === 0) return null;
 

@@ -711,13 +711,30 @@ const FETCH_EVENTS_TIMEOUT_MS = 6000;
 /**
  * Fetch events matching a filter (one-time query)
  * Uses a timeout to avoid hanging if relays never send EOSE.
+ *
+ * If `relayUrls` is provided, the request is sent to that explicit relay set
+ * (with `connectOnSubscribe=true`). Without it, NDK would only consider relays
+ * that happen to be connected at subscribe time — during cold start, that can
+ * be a small subset that doesn't have the event, causing NDK to emit EOSE
+ * early with no results.
  */
-export async function fetchEvents(filter: NDKFilter): Promise<NDKEvent[]> {
+export async function fetchEvents(
+  filter: NDKFilter,
+  options: { relayUrls?: string[]; timeoutMs?: number } = {},
+): Promise<NDKEvent[]> {
   const ndk = getNDK();
+  const timeoutMs = options.timeoutMs ?? FETCH_EVENTS_TIMEOUT_MS;
+  const relaySet =
+    options.relayUrls && options.relayUrls.length > 0
+      ? NDKRelaySet.fromRelayUrls(options.relayUrls, ndk, true)
+      : undefined;
 
   return new Promise((resolve) => {
     const events = new Map<string, NDKEvent>();
-    const subscription = ndk.subscribe(filter, { closeOnEose: true });
+    const subscription = ndk.subscribe(filter, {
+      closeOnEose: true,
+      ...(relaySet ? { relaySet } : {}),
+    });
     let settled = false;
 
     const finalize = () => {
@@ -730,7 +747,7 @@ export async function fetchEvents(filter: NDKFilter): Promise<NDKEvent[]> {
     const timeoutId = setTimeout(() => {
       // Timed out waiting for EOSE — return whatever we have
       finalize();
-    }, FETCH_EVENTS_TIMEOUT_MS);
+    }, timeoutMs);
 
     subscription.on("event", (event: NDKEvent) => {
       const dedupKey =
