@@ -3,7 +3,7 @@ import { nip19 } from "nostr-tools";
 import { useNostr } from "./hooks/useNostr";
 import { useWallet } from "./hooks/useWallet";
 import { getDictionary } from "./engine/Dictionary";
-import { fetchGamePlayers } from "./nostr/games";
+import { fetchGamePlayers, loadCachedGames } from "./nostr/games";
 import { fetchProfile } from "./nostr/profiles";
 import { getCurrentUser } from "./nostr/client";
 import LoginScreen from "./components/LoginScreen";
@@ -360,7 +360,24 @@ function App() {
 
     const resolveOpponent = async () => {
       try {
-        const meta = await fetchGamePlayers(prefillGameId);
+        let meta = await fetchGamePlayers(prefillGameId);
+
+        // Fallback: if relays didn't return the event in time, use the
+        // local lobby cache. The user already sees the game in their list,
+        // so the players are known even when the d-tag query times out.
+        if (!meta || meta.players.length === 0) {
+          const cached = loadCachedGames(user.pubkey).find(
+            (g) => g.gameId === prefillGameId,
+          );
+          if (cached && cached.players.length > 0) {
+            meta = {
+              players: cached.players,
+              updatedAt: cached.updatedAt,
+              eventId: cached.eventId,
+            };
+          }
+        }
+
         if (!meta || meta.players.length === 0) {
           if (!cancelled) {
             setPrefillError("Game not found on relays yet.");
