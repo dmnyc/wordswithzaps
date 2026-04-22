@@ -41,6 +41,30 @@
     margin-bottom: 20px;
 }
 
+.about-version-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.about-version-copy {
+    font-family: inherit;
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #888;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.about-version-copy:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ccc;
+}
+
 .about-links {
     display: flex;
     gap: 10px;

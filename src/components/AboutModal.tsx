@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import Modal from "./Modal";
 import "./AboutModal.css";
 
@@ -18,6 +19,15 @@ interface AboutModalProps {
 
 export function AboutModal({ open, onClose, onZapCreator }: AboutModalProps) {
   const profileUrl = `https://zap.cooking/user/${CREATOR_NPUB}`;
+  const [copied, setCopied] = useState(false);
+  const versionString = `Version ${APP_VERSION} (${SHORT_COMMIT})`;
+
+  const handleCopyVersion = useCallback(() => {
+    navigator.clipboard.writeText(versionString).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [versionString]);
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -46,7 +56,18 @@ export function AboutModal({ open, onClose, onZapCreator }: AboutModalProps) {
         </div>
 
         <div className="about-version">
-          Version {APP_VERSION} ({SHORT_COMMIT})
+          <span className="about-version-row">
+            {versionString}
+            <button
+              type="button"
+              className="about-version-copy"
+              onClick={handleCopyVersion}
+              aria-label="Copy version"
+              title="Copy version"
+            >
+              {copied ? "copied" : "copy"}
+            </button>
+          </span>
           <br />
           Breez SDK {BREEZ_SDK_VERSION}
         </div>
