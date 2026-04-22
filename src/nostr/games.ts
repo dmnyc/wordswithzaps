@@ -1,11 +1,18 @@
-import { fetchEvents, fetchUserRelayList, getNDK } from "./client";
+import {
+  fetchEvents,
+  fetchUserRelayList,
+  getCurrentUser,
+  getDiscoveryRelayUrls,
+  getNDK,
+  getRelayUrls,
+  mergeRelayUrls,
+} from "./client";
 import { NDKRelaySet } from "@nostr-dev-kit/ndk";
 import { decryptGameState } from "./encryption";
 import type { GameState, GameStatus } from "../types/game";
 import { GameEngine } from "../engine/GameEngine";
 import { NostrSync } from "./NostrSync";
 import {
-  DEFAULT_RELAYS,
   GAME_D_TAG_PREFIX,
   GAME_KIND,
   RACK_D_TAG_PREFIX,
@@ -30,6 +37,11 @@ export interface GameSummary {
 
 const getTagValues = (tags: string[][], name: string): string[] =>
   tags.filter((tag) => tag[0] === name && tag[1]).map((tag) => tag[1]);
+
+const getEventKey = (event: { id: string; deduplicationKey?: () => string }) =>
+  typeof event.deduplicationKey === "function"
+    ? event.deduplicationKey()
+    : event.id;
 
 // Cache decrypted game summaries by eventId to avoid redundant NIP-44 decryption
 const summaryCache = new Map<string, GameSummary>();
@@ -89,12 +101,43 @@ export async function fetchUserGames(
   limit: number = 200,
   cachedGames?: GameSummary[],
 ): Promise<GameSummary[]> {
-  // Step 1: Discover games via #p query
-  const events = await fetchEvents({
-    kinds: [GAME_KIND],
-    "#p": [pubkey],
-    limit,
-  });
+  const relayUrls = await getDiscoveryRelayUrls([pubkey]);
+
+  // Step 1: Discover games via #p query, with an authors fallback for relays
+  // that are inconsistent about indexing p-tags on addressable events.
+  const [taggedEvents, authoredEvents] = await Promise.all([
+    fetchEvents(
+      {
+        kinds: [GAME_KIND],
+        "#p": [pubkey],
+        limit,
+      },
+      {
+        relayUrls,
+        timeoutMs: 8000,
+      },
+    ),
+    fetchEvents(
+      {
+        kinds: [GAME_KIND],
+        authors: [pubkey],
+        limit,
+      },
+      {
+        relayUrls,
+        timeoutMs: 8000,
+      },
+    ),
+  ]);
+
+  const events = Array.from(
+    new Map(
+      [...taggedEvents, ...authoredEvents].map((event) => [
+        getEventKey(event),
+        event,
+      ]),
+    ).values(),
+  );
 
   const map = new Map<string, GameSummary>();
 
@@ -165,6 +208,9 @@ export async function fetchUserGames(
           kinds: [GAME_KIND],
           "#d": dTags,
           limit: batch.length * 5,
+        }, {
+          relayUrls,
+          timeoutMs: 8000,
         });
         for (const event of gameEvents) {
           const dTag = getTagValues(event.tags, "d")[0];
@@ -326,6 +372,10 @@ export async function fetchGamePlayers(gameId: string): Promise<{
   updatedAt: number;
   eventId: string;
 } | null> {
+  const currentUser = getCurrentUser();
+  const relayUrls = await getDiscoveryRelayUrls(
+    currentUser?.pubkey ? [currentUser.pubkey] : [],
+  );
   const dTag = `${GAME_D_TAG_PREFIX}${gameId}`;
   const filter = {
     kinds: [GAME_KIND],
@@ -333,13 +383,10 @@ export async function fetchGamePlayers(gameId: string): Promise<{
     limit: 10,
   };
 
-  // Force the request to the full default relay set with connect-on-subscribe.
-  // Without an explicit relay set, NDK only counts relays already connected at
-  // subscribe time when deciding when to emit EOSE — during cold start that
-  // can be a small subset that doesn't have the event, causing an early empty
-  // result. Pinning the relays makes NDK wait for them.
+  // Query an explicit relay set so direct game open doesn't depend on which
+  // pool relays happened to connect first.
   let events = await fetchEvents(filter, {
-    relayUrls: DEFAULT_RELAYS,
+    relayUrls,
     timeoutMs: 8000,
   });
 
@@ -348,7 +395,7 @@ export async function fetchGamePlayers(gameId: string): Promise<{
   if (events.length === 0) {
     await new Promise((r) => setTimeout(r, 2000));
     events = await fetchEvents(filter, {
-      relayUrls: DEFAULT_RELAYS,
+      relayUrls,
       timeoutMs: 8000,
     });
   }
@@ -373,12 +420,22 @@ export async function fetchGamePlayers(gameId: string): Promise<{
  * Useful when opponents can't find the game event on their relays
  */
 export async function rebroadcastGame(gameId: string): Promise<number> {
+  const currentUser = getCurrentUser();
+  const discoveryRelays = await getDiscoveryRelayUrls(
+    currentUser?.pubkey ? [currentUser.pubkey] : [],
+  );
   const dTag = `${GAME_D_TAG_PREFIX}${gameId}`;
-  const events = await fetchEvents({
-    kinds: [GAME_KIND],
-    "#d": [dTag],
-    limit: 10,
-  });
+  const events = await fetchEvents(
+    {
+      kinds: [GAME_KIND],
+      "#d": [dTag],
+      limit: 10,
+    },
+    {
+      relayUrls: discoveryRelays,
+      timeoutMs: 8000,
+    },
+  );
 
   if (events.length === 0) {
     throw new Error("Game event not found");
@@ -405,8 +462,11 @@ export async function rebroadcastGame(gameId: string): Promise<number> {
 
   // Build relay set: pool relays + player relays (without modifying global pool)
   const ndk = getNDK();
-  const poolRelayUrls = Array.from(ndk.pool.relays.values()).map((r) => r.url);
-  const allRelayUrls = [...new Set([...poolRelayUrls, ...playerRelays])];
+  const allRelayUrls = mergeRelayUrls(
+    getRelayUrls(),
+    discoveryRelays,
+    playerRelays,
+  );
 
   // Create temporary relay set for this publish only
   const relaySet = NDKRelaySet.fromRelayUrls(allRelayUrls, ndk, true);

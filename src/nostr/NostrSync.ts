@@ -13,6 +13,7 @@ import {
   createEvent,
   subscribeToEvents,
   fetchUserRelayList,
+  getDiscoveryRelayUrls,
 } from "./client";
 import {
   encryptGameState,
@@ -68,7 +69,22 @@ export class NostrSync {
       "#d": [this.getGameDTag()],
     };
 
-    const events = await fetchEvents(filter);
+    const relayUrls = await getDiscoveryRelayUrls([
+      user.pubkey,
+      this.opponentPubkey,
+    ]);
+    let events = await fetchEvents(filter, {
+      relayUrls,
+      timeoutMs: 8000,
+    });
+
+    if (events.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      events = await fetchEvents(filter, {
+        relayUrls,
+        timeoutMs: 8000,
+      });
+    }
 
     if (events.length === 0) {
       return null;
@@ -169,7 +185,11 @@ export class NostrSync {
       "#d": [this.getRackDTag()],
     };
 
-    const events = await fetchEvents(filter);
+    const relayUrls = await getDiscoveryRelayUrls([user.pubkey]);
+    const events = await fetchEvents(filter, {
+      relayUrls,
+      timeoutMs: 8000,
+    });
 
     if (events.length === 0) {
       return null;

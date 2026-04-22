@@ -54,6 +54,29 @@ let currentUser: NDKUser | null = null;
 // Cache for user relay lists
 let userRelayCache: Map<string, string[]> = new Map();
 
+function normalizeRelayUrl(relay: string): string {
+  return relay.trim().toLowerCase().replace(/\/+$/, "");
+}
+
+export function mergeRelayUrls(
+  ...relayGroups: Array<string[] | undefined>
+): string[] {
+  const relaySet = new Set<string>();
+
+  for (const relays of relayGroups) {
+    if (!relays) continue;
+
+    for (const relay of relays) {
+      const normalized = normalizeRelayUrl(relay);
+      if (normalized.startsWith("wss://") || normalized.startsWith("ws://")) {
+        relaySet.add(normalized);
+      }
+    }
+  }
+
+  return Array.from(relaySet);
+}
+
 export interface NostrClientOptions {
   relays?: string[];
   autoConnect?: boolean;
@@ -479,21 +502,28 @@ export async function fetchUserRelayList(pubkey: string): Promise<string[]> {
     return cached;
   }
 
-  const ndk = getNDK();
-
   try {
-    // Query kind:10002 relay list metadata
-    const events = await ndk.fetchEvents({
-      kinds: [RELAY_LIST_KIND],
-      authors: [pubkey],
-      limit: 1,
-    });
+    // Query relay metadata on an explicit relay set so cold starts don't only
+    // search the handful of relays that happened to connect first.
+    const events = await fetchEvents(
+      {
+        kinds: [RELAY_LIST_KIND],
+        authors: [pubkey],
+        limit: 5,
+      },
+      {
+        relayUrls: mergeRelayUrls(getRelayUrls(), DEFAULT_RELAYS),
+        timeoutMs: 8000,
+      },
+    );
 
-    if (events.size === 0) {
+    if (events.length === 0) {
       return [];
     }
 
-    const event = Array.from(events)[0];
+    const event = events.sort(
+      (a, b) => (b.created_at || 0) - (a.created_at || 0),
+    )[0];
     const writeRelays: string[] = [];
 
     // Parse relay tags - "r" tags with optional read/write marker
@@ -541,15 +571,14 @@ export function getExpandedRelayList(
 
   // Always include core game relays so existing games stay visible
   for (const relay of pinnedRelays) {
-    const normalized = relay.trim().toLowerCase().replace(/\/+$/, "");
-    relaySet.add(normalized);
+    relaySet.add(normalizeRelayUrl(relay));
   }
 
   // Add user relays next (more likely to have user's data)
   for (const relay of userRelays) {
     if (relaySet.size >= maxRelays) break;
     // Normalize: lowercase, remove trailing slashes
-    const normalized = relay.trim().toLowerCase().replace(/\/+$/, "");
+    const normalized = normalizeRelayUrl(relay);
     if (normalized.startsWith("wss://") || normalized.startsWith("ws://")) {
       relaySet.add(normalized);
     }
@@ -558,11 +587,26 @@ export function getExpandedRelayList(
   // Fill remaining slots with default relays
   for (const relay of DEFAULT_RELAYS) {
     if (relaySet.size >= maxRelays) break;
-    const normalized = relay.trim().toLowerCase().replace(/\/+$/, "");
-    relaySet.add(normalized);
+    relaySet.add(normalizeRelayUrl(relay));
   }
 
   return Array.from(relaySet);
+}
+
+export async function getDiscoveryRelayUrls(pubkeys: string[] = []): Promise<string[]> {
+  const uniquePubkeys = Array.from(new Set(pubkeys.filter(Boolean)));
+  const relayGroups = await Promise.all(
+    uniquePubkeys.map(async (pubkey) => {
+      try {
+        const userRelays = await fetchUserRelayList(pubkey);
+        return getExpandedRelayList(userRelays);
+      } catch {
+        return [];
+      }
+    }),
+  );
+
+  return mergeRelayUrls(getRelayUrls(), DEFAULT_RELAYS, ...relayGroups);
 }
 
 /**
@@ -572,7 +616,7 @@ export async function addRelaysToPool(relays: string[]): Promise<void> {
   const ndk = getNDK();
 
   for (const relay of relays) {
-    const normalized = relay.trim().toLowerCase().replace(/\/+$/, "");
+    const normalized = normalizeRelayUrl(relay);
     // Check if relay is already in pool
     const existingRelay = ndk.pool.relays.get(normalized);
     if (!existingRelay) {
