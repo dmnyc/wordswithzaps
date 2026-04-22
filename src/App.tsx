@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { nip19 } from "nostr-tools";
 import { useNostr } from "./hooks/useNostr";
 import { useWallet } from "./hooks/useWallet";
 import { getDictionary } from "./engine/Dictionary";
 import { fetchGamePlayers } from "./nostr/games";
+import { fetchProfile } from "./nostr/profiles";
 import { getCurrentUser } from "./nostr/client";
 import LoginScreen from "./components/LoginScreen";
 import Lobby from "./components/Lobby";
@@ -29,6 +31,23 @@ interface GameSession {
   opponentPubkey: string;
 }
 
+function truncateNpub(pk: string): string {
+  try {
+    const np = nip19.npubEncode(pk);
+    return np.slice(0, 12) + "…" + np.slice(-4);
+  } catch {
+    return pk.slice(0, 12) + "…";
+  }
+}
+
+function buildMismatchMessage(playerLabels: string[], me: string): string {
+  const between =
+    playerLabels.length === 2
+      ? `${playerLabels[0]} and ${playerLabels[1]}`
+      : playerLabels.join(", ");
+  return `This game is for ${between}. You're signed in as ${me}.`;
+}
+
 function App() {
   const [screen, setScreen] = useState<Screen>("login");
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
@@ -36,6 +55,10 @@ function App() {
   const [dictionaryError, setDictionaryError] = useState<string | null>(null);
   const [prefillGameId, setPrefillGameId] = useState<string | null>(null);
   const [prefillError, setPrefillError] = useState<string | null>(null);
+  const [pendingEnrichment, setPendingEnrichment] = useState<{
+    players: string[];
+    myPubkey: string;
+  } | null>(null);
   const [toast, setToast] = useState<{
     message: string;
     tone?: "success" | "error" | "info";
@@ -346,14 +369,20 @@ function App() {
         }
 
         if (!meta.players.includes(user.pubkey)) {
-          if (!cancelled) {
-            setPrefillGameId(null);
-            setPrefillError(null);
-            const url = new URL(window.location.href);
-            url.searchParams.delete("gameId");
-            window.history.replaceState({}, "", url.toString());
-            setScreen("lobby");
-          }
+          if (cancelled) return;
+          const initialLabels = meta.players.map(truncateNpub);
+          setPrefillGameId(null);
+          setPrefillError(
+            buildMismatchMessage(initialLabels, truncateNpub(user.pubkey)),
+          );
+          const url = new URL(window.location.href);
+          url.searchParams.delete("gameId");
+          window.history.replaceState({}, "", url.toString());
+          setScreen("lobby");
+          setPendingEnrichment({
+            players: meta.players,
+            myPubkey: user.pubkey,
+          });
           return;
         }
 
@@ -385,6 +414,35 @@ function App() {
       cancelled = true;
     };
   }, [prefillGameId, isConnected, screen]);
+
+  // Enrich the "wrong account" error with display names once profiles load
+  useEffect(() => {
+    if (!pendingEnrichment) return;
+    const { players, myPubkey } = pendingEnrichment;
+    let cancelled = false;
+    Promise.all([
+      ...players.map((pk) => fetchProfile(pk).catch(() => null)),
+      fetchProfile(myPubkey).catch(() => null),
+    ]).then((profiles) => {
+      if (cancelled) return;
+      const labelFor = (
+        pk: string,
+        profile: { displayName?: string; name?: string } | null,
+      ) => profile?.displayName || profile?.name || truncateNpub(pk);
+      const playerProfiles = profiles.slice(0, players.length);
+      const myProfile = profiles[profiles.length - 1];
+      const enrichedLabels = players.map((pk, i) =>
+        labelFor(pk, playerProfiles[i]),
+      );
+      setPrefillError(
+        buildMismatchMessage(enrichedLabels, labelFor(myPubkey, myProfile)),
+      );
+      setPendingEnrichment(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingEnrichment]);
 
   // Start/stop notification & DM subscriptions based on connection state
   useEffect(() => {
