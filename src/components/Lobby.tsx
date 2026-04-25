@@ -62,7 +62,7 @@ export function Lobby({
   const isLoadingRef = useRef(false);
 
   const { createGame } = useGame();
-  const { zapUser, state: walletState, wallets } = useWallet();
+  const { zapUser, state: walletState } = useWallet();
   const isWalletConnected = walletState.connected;
   const user = getCurrentUser();
 
@@ -374,6 +374,98 @@ export function Lobby({
     <div className="lobby">
       {error && <div className="lobby-error">{error}</div>}
 
+      {/* New Game (top so it's not buried below long game lists) */}
+      <div className="new-game-section">
+        <h2>New Game</h2>
+
+        <OpponentSearch
+          value={opponentInput}
+          onChange={(val) => {
+            setOpponentInput(val);
+            if (selectedOpponent) setSelectedOpponent(null);
+            if (error) setError(null);
+          }}
+          onSelect={handleOpponentSelect}
+        />
+
+        {selectedOpponent && (
+          <div className="selected-opponent">
+            {selectedOpponent.picture ? (
+              <img
+                src={selectedOpponent.picture}
+                alt=""
+                className="opponent-avatar"
+              />
+            ) : (
+              <div className="opponent-avatar fallback">
+                {(selectedOpponent.displayName || selectedOpponent.name || "?")
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+            )}
+            <div className="selected-opponent-info">
+              <div className="selected-opponent-name">
+                {selectedOpponent.displayName ||
+                  selectedOpponent.name ||
+                  "Anonymous"}
+              </div>
+              {selectedOpponent.nip05 && (
+                <div className="selected-opponent-nip05">
+                  {selectedOpponent.nip05}
+                </div>
+              )}
+            </div>
+            <button
+              className="clear-btn"
+              onClick={() => {
+                setSelectedOpponent(null);
+                setOpponentInput("");
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
+        <button
+          className="create-btn"
+          onClick={handleCreateGame}
+          disabled={isCreating || (!selectedOpponent && !opponentInput.trim())}
+        >
+          {isCreating ? "Creating..." : "Create Game"}
+        </button>
+
+        {/* Join existing game - collapsed by default */}
+        <div className="join-toggle">
+          <button
+            className="join-toggle-btn"
+            onClick={() => setShowJoinForm((prev) => !prev)}
+          >
+            {showJoinForm ? "Cancel" : "Join existing game →"}
+          </button>
+        </div>
+
+        {showJoinForm && (
+          <div className="join-form">
+            <input
+              type="text"
+              placeholder="Game ID"
+              value={joinGameId}
+              onChange={(e) => setJoinGameId(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Opponent npub or pubkey"
+              value={joinOpponent}
+              onChange={(e) => setJoinOpponent(e.target.value)}
+            />
+            <button className="join-btn" onClick={handleJoinGame}>
+              Join Game
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Games List */}
       <div className="games-section">
         <div className="games-header">
@@ -536,8 +628,9 @@ export function Lobby({
         )}
       </div>
 
-      {/* Wallet setup prompt for new users */}
-      {wallets.length === 0 && onOpenWallet && (
+      {/* Wallet setup prompt for users without any connected wallet
+          (Spark or Bitcoin Connect — isWalletConnected covers both). */}
+      {!isWalletConnected && onOpenWallet && (
         <div className="wallet-prompt">
           <p className="wallet-prompt-title">Words With Zaps is better with zaps!</p>
           <p className="wallet-prompt-desc">Connect a wallet for the full experience.</p>
@@ -549,98 +642,6 @@ export function Lobby({
           </button>
         </div>
       )}
-
-      {/* New Game */}
-      <div className="new-game-section">
-        <h2>New Game</h2>
-
-        <OpponentSearch
-          value={opponentInput}
-          onChange={(val) => {
-            setOpponentInput(val);
-            if (selectedOpponent) setSelectedOpponent(null);
-            if (error) setError(null);
-          }}
-          onSelect={handleOpponentSelect}
-        />
-
-        {selectedOpponent && (
-          <div className="selected-opponent">
-            {selectedOpponent.picture ? (
-              <img
-                src={selectedOpponent.picture}
-                alt=""
-                className="opponent-avatar"
-              />
-            ) : (
-              <div className="opponent-avatar fallback">
-                {(selectedOpponent.displayName || selectedOpponent.name || "?")
-                  .charAt(0)
-                  .toUpperCase()}
-              </div>
-            )}
-            <div className="selected-opponent-info">
-              <div className="selected-opponent-name">
-                {selectedOpponent.displayName ||
-                  selectedOpponent.name ||
-                  "Anonymous"}
-              </div>
-              {selectedOpponent.nip05 && (
-                <div className="selected-opponent-nip05">
-                  {selectedOpponent.nip05}
-                </div>
-              )}
-            </div>
-            <button
-              className="clear-btn"
-              onClick={() => {
-                setSelectedOpponent(null);
-                setOpponentInput("");
-              }}
-            >
-              Clear
-            </button>
-          </div>
-        )}
-
-        <button
-          className="create-btn"
-          onClick={handleCreateGame}
-          disabled={isCreating || (!selectedOpponent && !opponentInput.trim())}
-        >
-          {isCreating ? "Creating..." : "Create Game"}
-        </button>
-
-        {/* Join existing game - collapsed by default */}
-        <div className="join-toggle">
-          <button
-            className="join-toggle-btn"
-            onClick={() => setShowJoinForm((prev) => !prev)}
-          >
-            {showJoinForm ? "Cancel" : "Join existing game →"}
-          </button>
-        </div>
-
-        {showJoinForm && (
-          <div className="join-form">
-            <input
-              type="text"
-              placeholder="Game ID"
-              value={joinGameId}
-              onChange={(e) => setJoinGameId(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Opponent npub or pubkey"
-              value={joinOpponent}
-              onChange={(e) => setJoinOpponent(e.target.value)}
-            />
-            <button className="join-btn" onClick={handleJoinGame}>
-              Join Game
-            </button>
-          </div>
-        )}
-      </div>
 
       {nudgeTarget && (
         <NudgeModal
