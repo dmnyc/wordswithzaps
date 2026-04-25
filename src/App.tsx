@@ -82,6 +82,7 @@ function App() {
     relayCount,
     relayUrls,
     connectedRelayUrls,
+    nip46Progress,
   } = useNostr();
   const {
     state: walletState,
@@ -524,6 +525,7 @@ function App() {
           startNostrConnect={startNostrConnect}
           waitForNostrConnect={waitForNostrConnect}
           cancelNostrConnect={cancelNostrConnect}
+          nip46Progress={nip46Progress}
         />
       )}
 

@@ -7,7 +7,6 @@ import NDK, {
   NDKUser,
   NDKNip07Signer,
   NDKPrivateKeySigner,
-  NDKNip46Signer,
   type NostrEvent,
 } from "@nostr-dev-kit/ndk";
 import { generateSecretKey, getPublicKey } from "nostr-tools/pure";
@@ -15,9 +14,10 @@ import { nip19 } from "nostr-tools";
 import {
   BunkerSigner,
   createNostrConnectURI,
+  parseBunkerInput,
   type BunkerPointer,
 } from "nostr-tools/nip46";
-import { bytesToHex } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import { DEFAULT_RELAYS, RELAY_LIST_KIND } from "../types/nostr";
 
 // Timeout configuration
@@ -248,50 +248,102 @@ export async function connectWithPrivateKey(
 }
 
 /**
- * Connect with NIP-46 bunker URI
+ * Stage signal for NIP-46 connect progress, surfaced to the UI.
+ * - parsing: validating the bunker URL
+ * - connecting: opening the NIP-46 subscription on bunker relays
+ * - awaiting-approval: connect RPC sent, waiting for the signer to respond
+ * - auth-url: signer returned an auth_url challenge that the user must open
+ * - finalizing: pubkey received, fetching profile / wiring NDK
+ */
+export type Nip46Stage =
+  | "parsing"
+  | "connecting"
+  | "awaiting-approval"
+  | "auth-url"
+  | "finalizing";
+
+export interface ConnectWithBunkerOptions {
+  onStage?: (stage: Nip46Stage, payload?: { authUrl?: string }) => void;
+}
+
+/**
+ * Connect with NIP-46 bunker URI using nostr-tools' BunkerSigner.
+ *
+ * Replaces the previous NDKNip46Signer path, which had no internal timeout
+ * and no granularity around where in the handshake it was hanging. We now:
+ *  - parse + validate the URI up front (fail fast on missing relays)
+ *  - send connect() with a 30s budget (signer push notifications wake apps)
+ *  - send get_public_key() with a separate 10s budget
+ *  - bridge nostr-tools' signer into NDK via the existing BunkerSignerWrapper
+ *  - report stage transitions so the UI can show actionable progress
  */
 export async function connectWithBunker(
   bunkerUri: string,
   localSignerKey?: string,
+  options: ConnectWithBunkerOptions = {},
 ): Promise<{ user: NDKUser; localKey: string }> {
+  const { onStage } = options;
   const ndk = getNDK();
 
-  // Use existing local signer key or generate new one
-  const localSigner = localSignerKey
-    ? new NDKPrivateKeySigner(localSignerKey)
-    : NDKPrivateKeySigner.generate();
-
-  // Create NIP-46 signer from bunker URI
-  const nip46Signer = new NDKNip46Signer(ndk, bunkerUri, localSigner);
-
-  // Wait for connection with timeout
-  const user = await withTimeout(
-    nip46Signer.blockUntilReady(),
-    60000,
-    "NIP-46 bunker connection",
-  );
-
-  ndk.signer = nip46Signer;
-  ndk.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ ndk });
-
-  // Fetch profile with timeout (non-critical, can fail gracefully)
-  try {
-    await withTimeout(user.fetchProfile(), 10000, "Profile fetch");
-  } catch (err) {
-    console.warn("Failed to fetch profile:", err);
+  onStage?.("parsing");
+  const bp = await parseBunkerInput(bunkerUri);
+  if (!bp) {
+    throw new Error("Invalid bunker URL. Generate a new one in your signer.");
+  }
+  if (bp.relays.length === 0) {
+    throw new Error(
+      "Bunker URL is missing relay info. Generate a new one in your signer.",
+    );
   }
 
-  currentUser = user;
+  const secretKey = localSignerKey
+    ? hexToBytes(localSignerKey)
+    : generateSecretKey();
 
-  // Load user's NIP-65 relays in background
-  loadUserRelays(user.pubkey).catch((err) =>
-    console.warn("Failed to load user relays:", err),
-  );
+  onStage?.("connecting");
+  const signer = BunkerSigner.fromBunker(secretKey, bp, {
+    onauth: (authUrl: string) => {
+      onStage?.("auth-url", { authUrl });
+    },
+  });
 
-  // Get the local signer's private key for persistence
-  const localKey = localSignerKey || ((await localSigner.privateKey) as string);
+  try {
+    onStage?.("awaiting-approval");
+    await withTimeout(signer.connect(), 30000, "Signer approval");
+    const userPubkey = await withTimeout(
+      signer.getPublicKey(),
+      10000,
+      "Signer pubkey",
+    );
 
-  return { user, localKey };
+    onStage?.("finalizing");
+    ndk.signer = new BunkerSignerWrapper(signer, userPubkey, ndk);
+    ndk.relayAuthDefaultPolicy = NDKRelayAuthPolicies.signIn({ ndk });
+
+    const user = ndk.getUser({ pubkey: userPubkey });
+    try {
+      await withTimeout(user.fetchProfile(), 10000, "Profile fetch");
+    } catch (err) {
+      console.warn("Failed to fetch profile:", err);
+    }
+
+    currentUser = user;
+
+    loadUserRelays(user.pubkey).catch((err) =>
+      console.warn("Failed to load user relays:", err),
+    );
+
+    return { user, localKey: bytesToHex(secretKey) };
+  } catch (err) {
+    // Close the underlying subscription so we don't leak a long-lived
+    // listener on a failed handshake.
+    try {
+      await signer.close();
+    } catch {
+      // ignore
+    }
+    throw err;
+  }
 }
 
 // Store for active nostrconnect session
@@ -461,11 +513,25 @@ class BunkerSignerWrapper {
     return signed.sig;
   }
 
-  async encrypt(recipient: NDKUser, value: string): Promise<string> {
+  async encrypt(
+    recipient: NDKUser,
+    value: string,
+    scheme: "nip44" | "nip04" = "nip44",
+  ): Promise<string> {
+    if (scheme === "nip04") {
+      return this.bunkerSigner.nip04Encrypt(recipient.pubkey, value);
+    }
     return this.bunkerSigner.nip44Encrypt(recipient.pubkey, value);
   }
 
-  async decrypt(sender: NDKUser, value: string): Promise<string> {
+  async decrypt(
+    sender: NDKUser,
+    value: string,
+    scheme: "nip44" | "nip04" = "nip44",
+  ): Promise<string> {
+    if (scheme === "nip04") {
+      return this.bunkerSigner.nip04Decrypt(sender.pubkey, value);
+    }
     return this.bunkerSigner.nip44Decrypt(sender.pubkey, value);
   }
 }

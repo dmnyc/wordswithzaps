@@ -16,6 +16,7 @@ import {
   getRelayUrls,
   getConnectedRelayUrls,
   disconnect,
+  type Nip46Stage,
 } from "../nostr/client";
 import {
   syncSettingsOnLogin,
@@ -30,6 +31,11 @@ export interface NostrConnectSession {
   secret: string;
 }
 
+export interface Nip46Progress {
+  stage: Nip46Stage;
+  authUrl?: string;
+}
+
 export interface UseNostrReturn {
   user: NDKUser | null;
   isConnected: boolean;
@@ -39,6 +45,7 @@ export interface UseNostrReturn {
   relayCount: number;
   relayUrls: string[];
   connectedRelayUrls: string[];
+  nip46Progress: Nip46Progress | null;
   connect: () => Promise<void>;
   connectWithPrivateKey: (privateKeyHex: string) => Promise<void>;
   connectWithBunker: (bunkerUri: string) => Promise<void>;
@@ -84,7 +91,28 @@ function formatNip46UiError(err: unknown): string {
   if (lower.includes("expired") || lower.includes("revoked")) {
     return "Link expired. Create a new bunker URL in your signer.";
   }
-  if (lower.includes("timeout")) {
+  if (lower.includes("missing relay") || lower.includes("no relays")) {
+    return "Bunker URL is missing relay info. Generate a new one in your signer.";
+  }
+  if (lower.includes("invalid bunker")) {
+    return "That doesn't look like a valid bunker URL. It should start with bunker:// and include relay info.";
+  }
+  if (lower.includes("signer approval")) {
+    return "Signer didn't respond. Make sure your signer app is open and approved this connection.";
+  }
+  if (lower.includes("signer pubkey")) {
+    return "Signer connected but didn't return a public key. Try again.";
+  }
+  if (lower.includes("could not reach")) {
+    return "Could not reach signer relays. Check your network and try again.";
+  }
+  if (lower.includes("rejected") || lower.includes("unauthorized")) {
+    return "Signer rejected the connection. Approve in your signer app.";
+  }
+  if (lower.includes("failed to decrypt")) {
+    return "Signer encryption mismatch. Update your signer app and try again.";
+  }
+  if (lower.includes("timeout") || lower.includes("timed out")) {
     return "Connection timed out. Create a new bunker URL in your signer.";
   }
   if (baseMessage.length > 80) {
@@ -102,6 +130,9 @@ export function useNostr(): UseNostrReturn {
   const [relayCount, setRelayCount] = useState(0);
   const [relayUrls, setRelayUrls] = useState<string[]>([]);
   const [connectedRelayUrls, setConnectedRelayUrls] = useState<string[]>([]);
+  const [nip46Progress, setNip46Progress] = useState<Nip46Progress | null>(
+    null,
+  );
   const nostrConnectCancelledRef = useRef(false);
 
   // Check for existing connection on mount
@@ -289,11 +320,19 @@ export function useNostr(): UseNostrReturn {
   const connectWithBunker = useCallback(async (bunkerUri: string) => {
     setConnecting(true);
     setError(null);
+    setNip46Progress({ stage: "parsing" });
 
     try {
       await initializeNDK();
-      const { user: connectedUser, localKey } =
-        await clientConnectWithBunker(bunkerUri);
+      const { user: connectedUser, localKey } = await clientConnectWithBunker(
+        bunkerUri,
+        undefined,
+        {
+          onStage: (stage, payload) => {
+            setNip46Progress({ stage, authUrl: payload?.authUrl });
+          },
+        },
+      );
       setUser(connectedUser);
       setAuthMethod("nip46");
       if (typeof window !== "undefined") {
@@ -309,6 +348,7 @@ export function useNostr(): UseNostrReturn {
       throw err;
     } finally {
       setConnecting(false);
+      setNip46Progress(null);
     }
   }, []);
 
@@ -332,12 +372,15 @@ export function useNostr(): UseNostrReturn {
       nostrConnectCancelledRef.current = false;
 
       try {
-        const { user: connectedUser, remotePubkey } =
-          await clientWaitForNostrConnect(
-            session.localKeyHex,
-            session.secret,
-            120000,
-          );
+        const {
+          user: connectedUser,
+          remotePubkey,
+          bunkerPointer,
+        } = await clientWaitForNostrConnect(
+          session.localKeyHex,
+          session.secret,
+          120000,
+        );
 
         if (nostrConnectCancelledRef.current) {
           return;
@@ -346,11 +389,13 @@ export function useNostr(): UseNostrReturn {
         setUser(connectedUser);
         setAuthMethod("nip46");
 
-        // Build bunker URI for session restore
+        // Build bunker URI for session restore using the actual relays the
+        // signer agreed on (NOT a hardcoded list — relay.nsec.app is dead).
+        // Omit the secret: nostrconnect secrets are one-time handshake
+        // matchers; on reconnect the signer identifies us by our pubkey.
         if (typeof window !== "undefined") {
-          const relays = ["wss://relay.nsec.app", "wss://relay.damus.io"];
           const bunkerParams = new URLSearchParams();
-          relays.forEach((r) => bunkerParams.append("relay", r));
+          bunkerPointer.relays.forEach((r) => bunkerParams.append("relay", r));
           const bunkerUri = `bunker://${remotePubkey}?${bunkerParams.toString()}`;
 
           window.localStorage.setItem(AUTO_CONNECT_KEY, "1");
@@ -424,6 +469,7 @@ export function useNostr(): UseNostrReturn {
     relayCount,
     relayUrls,
     connectedRelayUrls,
+    nip46Progress,
     connect,
     connectWithPrivateKey,
     connectWithBunker,

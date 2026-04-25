@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import { QRCodeSVG } from "qrcode.react";
 import { decode } from "nostr-tools/nip19";
-import type { NostrConnectSession } from "../hooks/useNostr";
+import type { Nip46Progress, NostrConnectSession } from "../hooks/useNostr";
 import {
   BoltIcon,
   LockIcon,
@@ -14,7 +14,7 @@ import {
 import { ZTileLoader } from "./ZTileLoader";
 import "./LoginScreen.css";
 
-const ENABLE_NOSTRCONNECT_QR = false;
+const ENABLE_NOSTRCONNECT_QR = true;
 
 type LoginView =
   | "main"
@@ -43,6 +43,7 @@ interface LoginScreenProps {
   startNostrConnect: () => Promise<NostrConnectSession>;
   waitForNostrConnect: (session: NostrConnectSession) => Promise<void>;
   cancelNostrConnect: () => void;
+  nip46Progress: Nip46Progress | null;
 }
 
 export function LoginScreen({
@@ -57,6 +58,7 @@ export function LoginScreen({
   startNostrConnect,
   waitForNostrConnect,
   cancelNostrConnect,
+  nip46Progress,
 }: LoginScreenProps) {
   const [view, setView] = useState<LoginView>("main");
   const [generatedKeys, setGeneratedKeys] = useState<GeneratedKeys | null>(
@@ -69,7 +71,7 @@ export function LoginScreen({
   const [nsecInput, setNsecInput] = useState("");
   const [nsecError, setNsecError] = useState<string | null>(null);
   const [nip46Waiting, setNip46Waiting] = useState(false);
-  const [nip46Timeout, setNip46Timeout] = useState(60);
+  const [nip46Timeout, setNip46Timeout] = useState(40);
   const [copied, setCopied] = useState<string | null>(null);
   const [nostrConnectUri, setNostrConnectUri] = useState<string | null>(null);
   const [qrTimedOut, setQrTimedOut] = useState(false);
@@ -184,7 +186,7 @@ WARNING: Never share your private key. Store this file securely.`;
     if (!bunkerUri.trim()) return;
 
     setNip46Waiting(true);
-    setNip46Timeout(60);
+    setNip46Timeout(40);
 
     // Start countdown timer
     timeoutRef.current = window.setInterval(() => {
@@ -256,7 +258,7 @@ WARNING: Never share your private key. Store this file securely.`;
       clearInterval(timeoutRef.current);
     }
     setNip46Waiting(false);
-    setNip46Timeout(60);
+    setNip46Timeout(40);
   }, []);
 
   const copyToClipboard = useCallback((text: string, key: string) => {
@@ -479,6 +481,10 @@ WARNING: Never share your private key. Store this file securely.`;
                   <ZTileLoader size="sm" />
                   <span>Waiting for connection...</span>
                 </div>
+                <p className="login-hint">
+                  Best with Primal. Amber users should use the Bunker URL flow
+                  instead.
+                </p>
                 {qrTimedOut && (
                   <div className="login-qr-timeout-hint">
                     If your connection is taking too long, try resetting your
@@ -543,8 +549,27 @@ WARNING: Never share your private key. Store this file securely.`;
               <div className="login-waiting">
                 <ZTileLoader />
                 <p className="login-waiting-text">
-                  Waiting for approval from remote signer...
+                  {nip46Progress?.stage === "parsing"
+                    ? "Validating bunker URL..."
+                    : nip46Progress?.stage === "connecting"
+                      ? "Connecting to signer relays..."
+                      : nip46Progress?.stage === "auth-url"
+                        ? "Open this URL to approve the connection:"
+                        : nip46Progress?.stage === "finalizing"
+                          ? "Almost there..."
+                          : "Waiting for your signer to approve..."}
                 </p>
+                {nip46Progress?.stage === "auth-url" &&
+                  nip46Progress.authUrl && (
+                    <a
+                      href={nip46Progress.authUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="login-link"
+                    >
+                      {nip46Progress.authUrl}
+                    </a>
+                  )}
                 <p className="login-waiting-timeout">
                   Timeout in {nip46Timeout}s
                 </p>
