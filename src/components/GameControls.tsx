@@ -45,7 +45,7 @@ export function GameControls({
         <button
           className="control-btn secondary"
           onClick={onClear}
-          disabled={isLoading}
+          disabled={isLoading || !isMyTurn || gameOver}
           title="Return tiles to rack"
         >
           Clear
