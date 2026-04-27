@@ -281,10 +281,13 @@ a.player-profile-meta-item:hover {
     height: 16px;
 }
 
-/* Mobile: expand zap & message buttons to fill width */
+/* Mobile: expand zap & message buttons to fill width, drop Jumble link to its own row */
 @media (max-width: 400px) {
     .player-profile-zap-btn,
     .player-profile-message-btn {
         flex: 1;
+    }
+    .player-profile-link {
+        flex-basis: 100%;
     }
 }
