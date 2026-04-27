@@ -455,6 +455,10 @@ export function getBitcoinConnectBalance(): number | null {
   return _balance;
 }
 
+// Timeout for NWC payments — requests hang indefinitely if the provider has
+// revoked the connection on their side, causing silent failures with no error.
+const BC_PAYMENT_TIMEOUT_MS = 30000;
+
 /**
  * Create a BOLT11 invoice on the connected NWC wallet.
  * Used for "top up" / receive flow. Throws if the connected wallet doesn't
@@ -564,8 +568,26 @@ export async function payWithBitcoinConnect(
     const provider = await requestProvider();
     setBitcoinConnectProvider(provider);
 
-    // Pay the invoice
-    const result = await provider.sendPayment(invoice);
+    // Pay the invoice, with a timeout to catch the case where the NWC
+    // provider has been removed/revoked — in that case the relay request
+    // hangs indefinitely and the user would never see an error.
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(
+        () =>
+          reject(
+            new Error(
+              "Payment timed out. Your wallet connection may have been removed by the provider.",
+            ),
+          ),
+        BC_PAYMENT_TIMEOUT_MS,
+      );
+    });
+
+    const result = await Promise.race([
+      provider.sendPayment(invoice),
+      timeoutPromise,
+    ]).finally(() => clearTimeout(timeoutId));
 
     // Refresh balance after payment
     fetchBitcoinConnectBalance();
