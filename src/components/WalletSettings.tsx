@@ -80,6 +80,9 @@ const RECEIVE_PRESET_AMOUNTS = [1000, 5000, 10000, 21000];
 interface FundsViewProps {
   balance?: number;
   lightningAddress?: string | null;
+  initialSubView?: FundsSubView;
+  hideSend?: boolean;
+  title?: string;
   onBack: () => void;
   onBalanceChange?: () => void;
   onToast?: (message: string, tone?: "success" | "error" | "info") => void;
@@ -88,11 +91,14 @@ interface FundsViewProps {
 function FundsView({
   balance,
   lightningAddress,
+  initialSubView = "main",
+  hideSend = false,
+  title = "Manage Funds",
   onBack,
   onBalanceChange,
   onToast,
 }: FundsViewProps) {
-  const [subView, setSubView] = useState<FundsSubView>("main");
+  const [subView, setSubView] = useState<FundsSubView>(initialSubView);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -227,7 +233,7 @@ function FundsView({
     <>
       {subView === "main" && (
         <>
-          <h2>Manage Funds</h2>
+          <h2>{title}</h2>
           {error && <div className="wallet-error">{error}</div>}
 
           <div className="funds-balance-display">
@@ -251,13 +257,15 @@ function FundsView({
               <span className="funds-action-icon">↓</span>
               Receive
             </button>
-            <button
-              className="funds-action-btn send"
-              onClick={() => setSubView("send")}
-            >
-              <span className="funds-action-icon">↑</span>
-              Send
-            </button>
+            {!hideSend && (
+              <button
+                className="funds-action-btn send"
+                onClick={() => setSubView("send")}
+              >
+                <span className="funds-action-icon">↑</span>
+                Send
+              </button>
+            )}
           </div>
         </>
       )}
@@ -486,6 +494,8 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
     importSparkWallet,
     hasSparkWallet,
     bitcoinConnectConnected,
+    bitcoinConnectCapabilities,
+    bitcoinConnectLightningAddress,
     connectBitcoinConnect,
     disconnectBitcoinConnect,
     disconnect,
@@ -1008,38 +1018,65 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
                       : "..."}
                   </span>
                 </div>
-                {activeWallet && (
-                  <div className="balance-actions-row">
-                    <button
-                      className="balance-action-btn"
-                      onClick={() => setView("funds")}
-                    >
-                      Manage Funds
-                    </button>
-                    <button
-                      className="balance-action-btn"
-                      onClick={() => setView("transactions")}
-                    >
-                      History
-                    </button>
-                    <button
-                      className={`balance-action-btn icon ${loading ? "is-loading" : ""}`}
-                      onClick={async () => {
-                        const balance = await refreshBalance(true);
-                        if (balance !== null) {
-                          onToast?.("Balance synced", "success");
-                        } else {
-                          onToast?.("Balance sync failed", "error");
-                        }
-                      }}
-                      disabled={loading}
-                      aria-label="Sync balance"
-                      title="Sync balance"
-                    >
-                      <TbRefresh />
-                    </button>
-                  </div>
-                )}
+                {/* Action buttons row.
+                    Spark: full Manage Funds + History + Refresh.
+                    Bitcoin Connect: only show buttons the connected NWC
+                    wallet supports (capabilities feature-detected via
+                    NIP-47 get_info). Hide the row entirely when nothing
+                    is supported and there's no active wallet. */}
+                {(() => {
+                  const isBC = !activeWallet && bitcoinConnectConnected;
+                  const showFunds =
+                    !!activeWallet ||
+                    (isBC && bitcoinConnectCapabilities.receive);
+                  const showHistory =
+                    !!activeWallet ||
+                    (isBC && bitcoinConnectCapabilities.history);
+                  const showRefresh = !!activeWallet || isBC;
+                  if (!showFunds && !showHistory && !showRefresh) return null;
+                  return (
+                    <div className="balance-actions-row">
+                      {showFunds && (
+                        <button
+                          className="balance-action-btn"
+                          onClick={() => setView("funds")}
+                        >
+                          {/* For Spark, the funds view does Send + Receive ("Manage Funds").
+                              For Bitcoin Connect users, sending typically happens in
+                              their own wallet UI; we mainly use this to top up.
+                              Use "Top Up" copy for clarity in the BC case. */}
+                          {isBC ? "Top Up" : "Manage Funds"}
+                        </button>
+                      )}
+                      {showHistory && (
+                        <button
+                          className="balance-action-btn"
+                          onClick={() => setView("transactions")}
+                        >
+                          History
+                        </button>
+                      )}
+                      {showRefresh && (
+                        <button
+                          className={`balance-action-btn icon ${loading ? "is-loading" : ""}`}
+                          onClick={async () => {
+                            const balance = await refreshBalance(true);
+                            if (balance !== null) {
+                              onToast?.("Balance synced", "success");
+                            } else {
+                              onToast?.("Balance sync failed", "error");
+                            }
+                          }}
+                          disabled={loading}
+                          aria-label="Sync balance"
+                          title="Sync balance"
+                        >
+                          <TbRefresh />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </>
             )}
 
@@ -1675,7 +1712,26 @@ export function WalletSettings({ onClose, onToast }: WalletSettingsProps) {
         {view === "funds" && (
           <FundsView
             balance={state.balance}
-            lightningAddress={getActiveWalletLightningAddress()}
+            // Spark exposes its in-app Lightning Address; Bitcoin Connect
+            // surfaces the wallet's lud16 from the NIP-47 get_info response
+            // (when the wallet provides one).
+            lightningAddress={
+              !activeWallet && bitcoinConnectConnected
+                ? bitcoinConnectLightningAddress
+                : getActiveWalletLightningAddress()
+            }
+            // Bitcoin Connect users land directly on Receive (this is a top-up
+            // flow) and don't need the in-app Send view since their own wallet
+            // UI handles outgoing payments.
+            initialSubView={
+              !activeWallet && bitcoinConnectConnected ? "receive" : "main"
+            }
+            hideSend={!activeWallet && bitcoinConnectConnected}
+            title={
+              !activeWallet && bitcoinConnectConnected
+                ? "Top Up"
+                : "Manage Funds"
+            }
             onBack={() => setView("main")}
             onBalanceChange={() => refreshBalance(true)}
             onToast={onToast}

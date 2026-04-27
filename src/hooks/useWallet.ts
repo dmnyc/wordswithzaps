@@ -39,6 +39,11 @@ export interface UseWalletReturn {
   // Bitcoin Connect
   bitcoinConnectEnabled: boolean;
   bitcoinConnectConnected: boolean;
+  bitcoinConnectCapabilities: {
+    history: boolean;
+    receive: boolean;
+  };
+  bitcoinConnectLightningAddress: string | null;
   connectBitcoinConnect: () => Promise<void>;
   disconnectBitcoinConnect: () => Promise<void>;
 
@@ -204,6 +209,11 @@ export function useWallet(): UseWalletReturn {
 
     bitcoinConnectEnabled: bcState.enabled,
     bitcoinConnectConnected: bcState.connected,
+    bitcoinConnectCapabilities: bcState.capabilities ?? {
+      history: false,
+      receive: false,
+    },
+    bitcoinConnectLightningAddress: bcState.lightningAddress ?? null,
     connectBitcoinConnect: handleConnectBitcoinConnect,
     disconnectBitcoinConnect: handleDisconnectBitcoinConnect,
 

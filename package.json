@@ -1,6 +1,6 @@
 {
   "name": "wordswithzaps",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "P2P crossword game on Nostr with Lightning payments",
   "type": "module",
   "scripts": {

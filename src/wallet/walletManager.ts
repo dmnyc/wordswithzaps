@@ -38,7 +38,11 @@ import {
 } from "./spark";
 import {
   isBitcoinConnectEnabled,
+  isBitcoinConnectConnected,
   payWithBitcoinConnect,
+  makeBitcoinConnectInvoice,
+  listBitcoinConnectTransactions,
+  getBitcoinConnectCapabilities,
   initBitcoinConnect,
 } from "./bitcoinConnect";
 import { getCurrentUser } from "../nostr/client";
@@ -218,7 +222,22 @@ export async function refreshBalance(
 ): Promise<number | null> {
   const wallet = getActiveWallet();
 
+  // Bitcoin Connect path — refresh the external wallet's balance.
   if (!wallet) {
+    if (isBitcoinConnectEnabled() && isBitcoinConnectConnected()) {
+      try {
+        const { fetchBitcoinConnectBalance } = await import(
+          "./bitcoinConnect"
+        );
+        return await fetchBitcoinConnectBalance();
+      } catch (e) {
+        console.warn(
+          "[WalletManager] Bitcoin Connect balance refresh failed:",
+          e,
+        );
+        return null;
+      }
+    }
     setWalletBalance(null);
     return null;
   }
@@ -346,14 +365,22 @@ export async function createInvoice(
   amountSats: number,
   description?: string,
 ): Promise<{ invoice: string; paymentHash?: string }> {
-  const wallet = getActiveWallet();
-
-  if (!wallet) {
-    throw new Error("No wallet connected");
-  }
-
   if (amountSats <= 0) {
     throw new Error("Amount must be greater than 0");
+  }
+
+  const wallet = getActiveWallet();
+
+  // Bitcoin Connect path (NWC) — used when no embedded Spark wallet is active.
+  if (!wallet) {
+    if (
+      isBitcoinConnectEnabled() &&
+      isBitcoinConnectConnected() &&
+      getBitcoinConnectCapabilities().receive
+    ) {
+      return await makeBitcoinConnectInvoice(amountSats, description);
+    }
+    throw new Error("No wallet connected");
   }
 
   try {
@@ -551,13 +578,41 @@ export async function getTransactionHistory(
   } = {},
 ): Promise<{ transactions: Transaction[]; hasMore: boolean }> {
   const wallet = getActiveWallet();
-
-  if (!wallet) {
-    return { transactions: [], hasMore: false };
-  }
-
   const limit = options.limit || 30;
   const offset = options.offset || 0;
+
+  // Bitcoin Connect path (NWC) — used when no embedded Spark wallet is active.
+  if (!wallet) {
+    if (
+      isBitcoinConnectEnabled() &&
+      isBitcoinConnectConnected() &&
+      getBitcoinConnectCapabilities().history
+    ) {
+      try {
+        const result = await listBitcoinConnectTransactions({ limit, offset });
+        // Try to enrich with zap info from descriptions, same as Spark path.
+        const enriched = result.transactions.map((tx) => {
+          const zapInfo = parseZapFromDescription(
+            tx.description,
+            tx.type === "incoming",
+          );
+          if (zapInfo) {
+            tx.zapPubkey = zapInfo.pubkey;
+            tx.zapComment = zapInfo.comment;
+          }
+          return tx;
+        });
+        return { transactions: enriched, hasMore: result.hasMore };
+      } catch (e) {
+        console.error(
+          "[WalletManager] Bitcoin Connect history failed:",
+          e,
+        );
+        return { transactions: [], hasMore: false };
+      }
+    }
+    return { transactions: [], hasMore: false };
+  }
 
   try {
     const connected = await ensureWalletConnected(wallet);
