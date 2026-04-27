@@ -36,6 +36,8 @@ import { canDeclareAbandoned } from "../utils/gameDecay";
 import { computeGameEndStats, type GameEndStats } from "../utils/gameStats";
 import DevTools from "./DevTools";
 import TileBagInspector from "./TileBagInspector";
+import GameChatPanel from "./GameChatPanel";
+import { useGameChat } from "../hooks/useGameChat";
 import "./GameView.css";
 
 interface GameViewProps {
@@ -148,6 +150,7 @@ export function GameView({
     scores: { my: number; opponent: number };
     stats: GameEndStats | null;
   } | null>(null);
+  const [showChatPanel, setShowChatPanel] = useState(false);
   const lastValidationErrorRef = useRef<string | null>(null);
   const lastAchievementTurnRef = useRef<number | null>(null);
   const wordScoreTimeoutRef = useRef<number | null>(null);
@@ -168,6 +171,15 @@ export function GameView({
   const user = getCurrentUser();
   const myPubkey = user?.pubkey || "";
   const isCreator = gameState?.meta.playerOne === myPubkey;
+
+  // Game chat (NIP-22 kind 1111). Subscribes whenever the creator pubkey
+  // is known; renders a panel when toggled open from the scoreboard.
+  const chatCreatorPubkey = gameState?.meta.playerOne || "";
+  const { unreadCount: chatUnreadCount, markRead: markChatRead } = useGameChat({
+    gameId,
+    creatorPubkey: chatCreatorPubkey,
+    otherPlayerPubkey: opponentPubkey,
+  });
   const { zapUser, state: walletState, bitcoinConnectConnected } = useWallet();
   const isWalletConnected = walletState.connected || bitcoinConnectConnected;
 
@@ -1397,6 +1409,11 @@ export function GameView({
           }}
           onMessage={onMessage}
           onOpenWalletSettings={onOpenWalletSettings}
+          onOpenChat={chatCreatorPubkey ? () => {
+            markChatRead();
+            setShowChatPanel(true);
+          } : undefined}
+          chatUnreadCount={chatUnreadCount}
         />
 
         {gameState.meta.status !== "active" && (
@@ -1710,6 +1727,21 @@ export function GameView({
         onPlaceBonusWord={handleDevPlaceBonusWord}
         onClearBonusWord={devBonusTiles ? handleDevClearBonusWord : undefined}
       />
+
+      {chatCreatorPubkey && (
+        <GameChatPanel
+          open={showChatPanel}
+          onClose={() => setShowChatPanel(false)}
+          gameId={gameId}
+          creatorPubkey={chatCreatorPubkey}
+          otherPlayerPubkey={opponentPubkey}
+          participantPubkeys={[
+            gameState.meta.playerOne,
+            gameState.meta.playerTwo,
+          ].filter(Boolean)}
+          onToast={onToast}
+        />
+      )}
     </div>
   );
 }

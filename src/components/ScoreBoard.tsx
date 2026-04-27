@@ -27,6 +27,8 @@ interface ScoreBoardProps {
   onZapUser?: (pubkey: string, amount: number, message: string) => void;
   onMessage?: (pubkey: string) => void;
   onOpenWalletSettings?: () => void;
+  onOpenChat?: () => void;
+  chatUnreadCount?: number;
 }
 
 function truncatePubkey(pubkey: string): string {
@@ -50,6 +52,8 @@ export function ScoreBoard({
   onZapUser,
   onMessage,
   onOpenWalletSettings,
+  onOpenChat,
+  chatUnreadCount = 0,
 }: ScoreBoardProps) {
   const [profiles, setProfiles] = useState<Record<string, NostrProfile | null>>(
     {},
@@ -230,6 +234,31 @@ export function ScoreBoard({
               </svg>
             </button>
           )}
+          {onOpenChat && (
+            <button
+              className="chat-btn"
+              onClick={onOpenChat}
+              title="Game chat"
+              type="button"
+            >
+              <svg
+                className="action-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z" />
+              </svg>
+              {chatUnreadCount > 0 && (
+                <span className="chat-unread-badge">
+                  {chatUnreadCount > 9 ? "9+" : chatUnreadCount}
+                </span>
+              )}
+            </button>
+          )}
           {onShare && (
             <button
               className="share-btn"
@@ -354,6 +383,31 @@ export function ScoreBoard({
                 <path d="M3 22v-6h6" />
                 <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
               </svg>
+            </button>
+          )}
+          {onOpenChat && (
+            <button
+              className="chat-btn"
+              onClick={onOpenChat}
+              title="Game chat"
+              type="button"
+            >
+              <svg
+                className="action-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z" />
+              </svg>
+              {chatUnreadCount > 0 && (
+                <span className="chat-unread-badge">
+                  {chatUnreadCount > 9 ? "9+" : chatUnreadCount}
+                </span>
+              )}
             </button>
           )}
           {onShare && (
