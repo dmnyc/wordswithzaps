@@ -11,6 +11,7 @@ import {
   subscribeToGameChat,
 } from "../nostr/gameChat";
 import { getCurrentUser } from "../nostr/client";
+import type { ShareImageAttachment } from "../nostr/share";
 
 interface UseGameChatArgs {
   gameId: string;
@@ -22,7 +23,7 @@ interface UseGameChatReturn {
   messages: GameChatMessage[];
   unreadCount: number;
   myPubkey: string;
-  send: (text: string) => Promise<void>;
+  send: (text: string, image?: ShareImageAttachment) => Promise<void>;
   markRead: () => void;
 }
 
@@ -87,14 +88,15 @@ export function useGameChat({
   const snapshot = useSyncExternalStore(subscribe, stableGetSnapshot);
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, image?: ShareImageAttachment) => {
       const trimmed = text.trim();
-      if (!trimmed) return;
+      if (!trimmed && !image) return;
       await sendGameChatMessage({
         gameId,
         creatorPubkey,
         otherPlayerPubkey,
         content: trimmed,
+        image,
       });
     },
     [gameId, creatorPubkey, otherPlayerPubkey],

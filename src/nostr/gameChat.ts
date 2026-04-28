@@ -24,6 +24,7 @@ import {
   updateChatMessageStatus,
   type GameChatMessage,
 } from "../stores/gameChatStore";
+import type { ShareImageAttachment } from "./share";
 
 const CHAT_KIND = 1111;
 
@@ -82,6 +83,17 @@ interface SendOptions {
   creatorPubkey: string;
   otherPlayerPubkey: string;
   content: string;
+  image?: ShareImageAttachment;
+}
+
+function buildImetaTag(image: ShareImageAttachment): string[] {
+  const parts = [`url ${image.url}`];
+  if (image.mime) parts.push(`m ${image.mime}`);
+  if (image.hash) parts.push(`x ${image.hash}`);
+  if (image.width && image.height)
+    parts.push(`dim ${image.width}x${image.height}`);
+  if (image.alt) parts.push(`alt ${image.alt}`);
+  return ["imeta", ...parts];
 }
 
 /**
@@ -94,15 +106,24 @@ export async function sendGameChatMessage({
   creatorPubkey,
   otherPlayerPubkey,
   content,
+  image,
 }: SendOptions): Promise<GameChatMessage> {
   const trimmed = content.trim();
-  if (!trimmed) throw new Error("Message is empty");
+  if (!trimmed && !image) throw new Error("Message is empty");
 
   const user = getCurrentUser();
   if (!user?.pubkey) throw new Error("Not connected");
 
   const coord = gameChatCoordinate(gameId, creatorPubkey);
   const now = Math.floor(Date.now() / 1000);
+
+  // If we have an image but no text, the URL becomes the message body.
+  // If both, append the URL on a new line.
+  let body = trimmed;
+  if (image) {
+    if (!body) body = image.url;
+    else if (!body.includes(image.url)) body = `${body}\n\n${image.url}`;
+  }
 
   const tags: string[][] = [
     // NIP-22 root scope (uppercase)
@@ -117,10 +138,11 @@ export async function sendGameChatMessage({
     ...(otherPlayerPubkey && otherPlayerPubkey !== creatorPubkey
       ? [["p", otherPlayerPubkey]]
       : []),
+    ...(image ? [buildImetaTag(image)] : []),
     ["client", "Words With Zaps"],
   ];
 
-  const event = createEvent(CHAT_KIND, trimmed, tags);
+  const event = createEvent(CHAT_KIND, body, tags);
 
   // Optimistic placeholder so the sender sees their message immediately
   const tempId = `pending_${now}_${Math.random().toString(36).slice(2, 8)}`;
@@ -128,7 +150,7 @@ export async function sendGameChatMessage({
     id: tempId,
     gameId,
     fromPubkey: user.pubkey,
-    content: trimmed,
+    content: body,
     createdAt: now,
     pending: true,
   };

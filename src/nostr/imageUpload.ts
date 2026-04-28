@@ -88,3 +88,22 @@ export async function uploadImage(file: File, mediaType?: "avatar" | "banner"): 
 
   return result.data[0].url;
 }
+
+/**
+ * Upload an in-memory Blob (e.g. a rendered canvas snapshot) to nostr.build.
+ * Returns the URL of the uploaded image.
+ */
+export async function uploadImageBlob(
+  blob: Blob,
+  filename: string = "snapshot.png",
+): Promise<string> {
+  if (blob.size > MAX_FILE_SIZE) {
+    throw new Error("File size must be less than 10MB");
+  }
+
+  const file = new File([blob], filename, {
+    type: blob.type || "image/png",
+  });
+
+  return uploadImage(file);
+}

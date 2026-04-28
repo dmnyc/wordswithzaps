@@ -53,6 +53,7 @@ interface ZapNudgeModalProps {
     zapAmount: number;
     shareMode: ShareMode;
     replyTo?: string;
+    attachSnapshot?: boolean;
   }) => void | Promise<void>;
   onClose: () => void;
   onOpenWalletSettings?: () => void;
@@ -101,6 +102,7 @@ export function ZapNudgeModal({
   const [saveShareSetting, setSaveShareSetting] = useState(() =>
     getSaveShareSettingDefault(),
   );
+  const [attachSnapshot, setAttachSnapshot] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isMountedRef = useRef(true);
 
@@ -117,6 +119,7 @@ export function ZapNudgeModal({
         saved > 0 && !PRESET_AMOUNTS.includes(saved) ? String(saved) : "",
       );
       setSaveShareSetting(getSaveShareSettingDefault());
+      setAttachSnapshot(false);
       if (!getShareToNostrDefault()) {
         setShareMode("none");
       } else {
@@ -366,6 +369,17 @@ export function ZapNudgeModal({
               {isPublicMode ? "Public note preview" : "DM preview"}
             </div>
             <pre className="zap-preview-content">{sharePreviewText}</pre>
+            {isPublicMode && (
+              <label className="zap-snapshot-toggle">
+                <input
+                  type="checkbox"
+                  checked={attachSnapshot}
+                  disabled={isSubmitting}
+                  onChange={(e) => setAttachSnapshot(e.target.checked)}
+                />
+                <span>Attach board snapshot (PNG)</span>
+              </label>
+            )}
             {shareMode === "public-reply" && (
               <div className="zap-reply-to">
                 <label className="zap-reply-to-label" htmlFor="reply-to-input">
@@ -426,6 +440,8 @@ export function ZapNudgeModal({
                     shareMode === "public-reply" && replyTo
                       ? replyTo
                       : undefined,
+                  attachSnapshot:
+                    isPublicMode && attachSnapshot ? true : undefined,
                 }),
               )
                 .catch(() => {

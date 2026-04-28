@@ -11,22 +11,57 @@ export type ShareMode =
   | "private"
   | "private-dm";
 
+export interface ShareImageAttachment {
+  url: string;
+  hash?: string; // sha256 hex
+  mime?: string; // e.g. "image/png"
+  width?: number;
+  height?: number;
+  alt?: string;
+}
+
+function buildImetaTag(image: ShareImageAttachment): string[] {
+  const parts = [`url ${image.url}`];
+  if (image.mime) parts.push(`m ${image.mime}`);
+  if (image.hash) parts.push(`x ${image.hash}`);
+  if (image.width && image.height)
+    parts.push(`dim ${image.width}x${image.height}`);
+  if (image.alt) parts.push(`alt ${image.alt}`);
+  return ["imeta", ...parts];
+}
+
+function appendImageToText(text: string, url: string): string {
+  if (!url) return text;
+  if (text.includes(url)) return text;
+  return text.trim() + "\n\n" + url;
+}
+
 /**
  * Publish a message to Nostr using one of the supported share modes.
+ *
+ * If `image` is provided, public modes append the URL to the text and
+ * include a NIP-92 `imeta` tag for previewers. Private modes only append
+ * the URL (DMs don't carry imeta).
  */
 export async function publishShareMessage(options: {
   text: string;
   shareMode: "public" | "public-reply" | "private" | "private-dm";
   recipientPubkey: string;
   replyTo?: string;
+  image?: ShareImageAttachment;
 }): Promise<void> {
-  const { text, shareMode, recipientPubkey, replyTo } = options;
+  const { shareMode, recipientPubkey, replyTo, image } = options;
+  const text = image
+    ? appendImageToText(options.text, image.url)
+    : options.text;
+  const imetaTag = image ? [buildImetaTag(image)] : [];
 
   if (shareMode === "public") {
     const event = createEvent(1, text, [
       ["t", "wordswithzaps"],
       ["client", "Words With Zaps"],
       ...(recipientPubkey ? [["p", recipientPubkey]] : []),
+      ...imetaTag,
     ]);
     await publishEvent(event);
   } else if (shareMode === "public-reply") {
@@ -48,6 +83,7 @@ export async function publishShareMessage(options: {
       ["t", "wordswithzaps"],
       ["client", "Words With Zaps"],
       ...(recipientPubkey ? [["p", recipientPubkey]] : []),
+      ...imetaTag,
     ]);
     await publishEvent(replyEvent);
   } else if (shareMode === "private-dm") {

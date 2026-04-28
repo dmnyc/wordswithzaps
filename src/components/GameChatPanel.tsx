@@ -4,6 +4,7 @@ import { SendIcon } from "./icons/NotificationIcons";
 import { useGameChat } from "../hooks/useGameChat";
 import { fetchProfile } from "../nostr/profiles";
 import type { NostrProfile } from "../types/nostr";
+import type { ShareImageAttachment } from "../nostr/share";
 import "./GameChatPanel.css";
 
 interface GameChatPanelProps {
@@ -14,6 +15,10 @@ interface GameChatPanelProps {
   otherPlayerPubkey: string;
   participantPubkeys: string[];
   onToast?: (message: string, tone?: "success" | "error" | "info") => void;
+  // If provided, enables a "Send board snapshot" button. The handler
+  // renders + uploads the current board and resolves with the
+  // attachment metadata; the panel then sends it as a chat message.
+  onCaptureSnapshot?: () => Promise<ShareImageAttachment | null>;
 }
 
 function truncatePubkey(pubkey: string): string {
@@ -26,6 +31,23 @@ function formatMessageTime(timestamp: number): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+const IMAGE_URL_RE =
+  /(https?:\/\/[^\s)]+\.(?:png|jpg|jpeg|gif|webp)(?:\?[^\s)]*)?)/gi;
+
+interface ChatContentParts {
+  imageUrls: string[];
+  text: string;
+}
+
+function splitContent(content: string): ChatContentParts {
+  const imageUrls: string[] = [];
+  const text = content.replace(IMAGE_URL_RE, (match) => {
+    imageUrls.push(match);
+    return "";
+  });
+  return { imageUrls, text: text.trim() };
+}
+
 export default function GameChatPanel({
   open,
   onClose,
@@ -34,6 +56,7 @@ export default function GameChatPanel({
   otherPlayerPubkey,
   participantPubkeys,
   onToast,
+  onCaptureSnapshot,
 }: GameChatPanelProps) {
   const { messages, myPubkey, send, markRead } = useGameChat({
     gameId,
@@ -43,6 +66,7 @@ export default function GameChatPanel({
 
   const [composeText, setComposeText] = useState("");
   const [sending, setSending] = useState(false);
+  const [snapshotting, setSnapshotting] = useState(false);
   const [profiles, setProfiles] = useState<Map<string, NostrProfile>>(
     new Map(),
   );
@@ -124,6 +148,24 @@ export default function GameChatPanel({
     [handleSend],
   );
 
+  const handleSendSnapshot = useCallback(async () => {
+    if (!onCaptureSnapshot || snapshotting || sending) return;
+    setSnapshotting(true);
+    try {
+      const image = await onCaptureSnapshot();
+      if (!image) return;
+      await send(composeText.trim(), image);
+      setComposeText("");
+    } catch (err) {
+      onToast?.(
+        err instanceof Error ? err.message : "Snapshot failed",
+        "error",
+      );
+    } finally {
+      setSnapshotting(false);
+    }
+  }, [onCaptureSnapshot, snapshotting, sending, send, composeText, onToast]);
+
   const headerLabel = useMemo(() => "Game Chat", []);
 
   return (
@@ -171,7 +213,32 @@ export default function GameChatPanel({
                     {!isMine && (
                       <div className="game-chat-author">{name}</div>
                     )}
-                    <div className="game-chat-text">{msg.content}</div>
+                    {(() => {
+                      const { imageUrls, text } = splitContent(msg.content);
+                      return (
+                        <>
+                          {imageUrls.map((url) => (
+                            <a
+                              key={url}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="game-chat-image-link"
+                            >
+                              <img
+                                src={url}
+                                alt="Board snapshot"
+                                className="game-chat-image"
+                                loading="lazy"
+                              />
+                            </a>
+                          ))}
+                          {text && (
+                            <div className="game-chat-text">{text}</div>
+                          )}
+                        </>
+                      );
+                    })()}
                     <div className="game-chat-meta">
                       <span className="game-chat-time">
                         {formatMessageTime(msg.createdAt)}
@@ -194,6 +261,33 @@ export default function GameChatPanel({
         </div>
 
         <div className="game-chat-compose">
+          {onCaptureSnapshot && (
+            <button
+              className="game-chat-snapshot"
+              onClick={handleSendSnapshot}
+              disabled={snapshotting || sending || !myPubkey}
+              type="button"
+              aria-label="Send board snapshot"
+              title="Send board snapshot"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="game-chat-snapshot-icon"
+                aria-hidden="true"
+              >
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              {snapshotting && (
+                <span className="game-chat-snapshot-spinner" aria-hidden="true" />
+              )}
+            </button>
+          )}
           <textarea
             className="game-chat-input"
             value={composeText}

@@ -3,7 +3,9 @@ import type { TilePlacement } from "../types/game";
 import { useGame } from "../hooks/useGame";
 import { useWallet } from "../hooks/useWallet";
 import { getCurrentUser, createEvent, publishEvent } from "../nostr/client";
-import { publishShareMessage } from "../nostr/share";
+import { publishShareMessage, type ShareImageAttachment } from "../nostr/share";
+import { renderBoardSnapshot } from "../utils/boardSnapshot";
+import { uploadImageBlob } from "../nostr/imageUpload";
 import Board from "./Board";
 import ZoomableBoard from "./ZoomableBoard";
 import Rack from "./Rack";
@@ -122,6 +124,7 @@ export function GameView({
   );
   const [opponentPicture, setOpponentPicture] = useState<string | null>(null);
   const [myPicture, setMyPicture] = useState<string | null>(null);
+  const [myDisplayName, setMyDisplayName] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<
     "forfeit" | "delete" | "pass" | "abandon" | null
   >(null);
@@ -241,10 +244,14 @@ export function GameView({
     let cancelled = false;
     fetchProfile(myPubkey)
       .then((profile) => {
-        if (!cancelled) setMyPicture(profile?.picture || null);
+        if (cancelled) return;
+        setMyPicture(profile?.picture || null);
+        setMyDisplayName(profile?.displayName || profile?.name || null);
       })
       .catch(() => {
-        if (!cancelled) setMyPicture(null);
+        if (cancelled) return;
+        setMyPicture(null);
+        setMyDisplayName(null);
       });
     return () => {
       cancelled = true;
@@ -584,6 +591,71 @@ export function GameView({
     setShowZapAnimation(false);
   }, []);
 
+  const captureBoardSnapshot = useCallback(
+    async (): Promise<ShareImageAttachment | null> => {
+      if (!gameState) return null;
+      const history = gameState.scoring.history;
+      const lastMove = history[history.length - 1];
+      const moveCoords = new Set<string>(lastMove?.coords ?? []);
+      const bonusCoords = new Set<string>();
+      for (const m of history) {
+        if (m.bonusWordCoords) {
+          for (const c of m.bonusWordCoords) bonusCoords.add(c);
+        }
+      }
+      const truncatedMine =
+        myDisplayName ||
+        (myPubkey ? `${myPubkey.slice(0, 6)}…${myPubkey.slice(-4)}` : "");
+      const truncatedOpp =
+        opponentDisplayName ||
+        (opponentPubkey
+          ? `${opponentPubkey.slice(0, 6)}…${opponentPubkey.slice(-4)}`
+          : "");
+      const isPlayerOne = gameState.meta.playerOne === myPubkey;
+      const p1Name = isPlayerOne ? truncatedMine : truncatedOpp;
+      const p2Name = isPlayerOne ? truncatedOpp : truncatedMine;
+      const snap = await renderBoardSnapshot({
+        board: gameState.board,
+        highlightCoords: moveCoords,
+        bonusWordCoords: bonusCoords,
+        moveIndex: gameState.turn.index,
+        player1: {
+          name: p1Name,
+          score: gameState.scoring.p1Score,
+          isActive:
+            gameState.turn.activePlayer === gameState.meta.playerOne,
+        },
+        player2: {
+          name: p2Name,
+          score: gameState.scoring.p2Score,
+          isActive:
+            gameState.turn.activePlayer === gameState.meta.playerTwo,
+        },
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+      const url = await uploadImageBlob(
+        snap.blob,
+        `wwz-${gameId}-move-${gameState.turn.index}.png`,
+      );
+      return {
+        url,
+        hash: snap.hash,
+        mime: snap.mime,
+        width: snap.width,
+        height: snap.height,
+        alt: `Words With Zaps board after move ${gameState.turn.index}`,
+      };
+    },
+    [
+      gameId,
+      gameState,
+      myDisplayName,
+      myPubkey,
+      opponentDisplayName,
+      opponentPubkey,
+    ],
+  );
+
   const handlePlay = useCallback(async () => {
     if (!validation?.valid) return;
 
@@ -667,6 +739,7 @@ export function GameView({
       zapAmount: number;
       shareMode: "none" | "public" | "public-reply" | "private" | "private-dm";
       replyTo?: string;
+      attachSnapshot?: boolean;
     }) => {
       const word = pendingMoveSummary?.word || "Your move";
       const points = pendingMoveSummary?.points ?? 0;
@@ -696,6 +769,26 @@ export function GameView({
               );
             })
           : null;
+
+      // Optional board snapshot: render + upload up front so the URL
+      // is in scope before we publish the share event.
+      let snapshotImage: ShareImageAttachment | null = null;
+      const isPublicShareMode =
+        options.shareMode === "public" ||
+        options.shareMode === "public-reply";
+      if (options.attachSnapshot && isPublicShareMode) {
+        try {
+          snapshotImage = await captureBoardSnapshot();
+        } catch (err) {
+          console.warn("[snapshot] failed to attach board snapshot:", err);
+          onToast?.(
+            err instanceof Error
+              ? `Snapshot failed: ${err.message}`
+              : "Snapshot failed",
+            "error",
+          );
+        }
+      }
 
       // Build share promise (if applicable)
       let sharePromise: Promise<void> | null = null;
@@ -765,6 +858,7 @@ export function GameView({
           shareMode: options.shareMode,
           recipientPubkey: opponentPubkey || "",
           replyTo: options.replyTo,
+          image: snapshotImage || undefined,
         }).then(() => {
           onToast?.(toastLabel, "success");
         });
@@ -793,7 +887,7 @@ export function GameView({
       }
     },
     [
-      gameId,
+      captureBoardSnapshot,
       gameLink,
       onToast,
       opponentLabel,
@@ -808,6 +902,7 @@ export function GameView({
       isWalletConnected,
       zapUser,
       zapsDisabled,
+      gameId,
     ],
   );
 
@@ -1740,6 +1835,7 @@ export function GameView({
             gameState.meta.playerTwo,
           ].filter(Boolean)}
           onToast={onToast}
+          onCaptureSnapshot={captureBoardSnapshot}
         />
       )}
     </div>
