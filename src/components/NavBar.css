@@ -3,13 +3,20 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 20px;
-    background: rgba(12, 12, 12, 0.85);
-    border-bottom: none;
-    backdrop-filter: blur(8px);
+    background: rgba(12, 12, 12, 0.55);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
     position: sticky;
     top: 0;
     z-index: 900;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .main-nav {
+        background: rgba(12, 12, 12, 0.92);
+    }
 }
 
 .nav-left {
